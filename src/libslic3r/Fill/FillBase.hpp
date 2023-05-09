@@ -13,13 +13,13 @@
 #include "../BoundingBox.hpp"
 #include "../Exception.hpp"
 #include "../Utils.hpp"
+#include "../Surface.hpp"
 #include "../ExPolygon.hpp"
 //BBS: necessary header for new function
 #include "../PrintConfig.hpp"
 #include "../Flow.hpp"
 #include "../ExtrusionEntity.hpp"
 #include "../ExtrusionEntityCollection.hpp"
-#include "../ShortestPath.hpp"
 
 namespace Slic3r {
 
@@ -68,6 +68,8 @@ struct FillParams
     bool        use_arachne{ false };
     // Layer height for Concentric infill with Arachne.
     coordf_t    layer_height    { 0.f };
+    //BBS
+    bool        with_loop       { false };
 
     // BBS
     Flow            flow;
@@ -77,7 +79,6 @@ struct FillParams
     float           no_extrusion_overlap{ 0.0 };
     const           PrintRegionConfig* config{ nullptr };
     bool            dont_sort{ false }; // do not sort the lines, just simply connect them
-    bool            can_reverse{true};
 };
 static_assert(IsTriviallyCopyable<FillParams>::value, "FillParams class is not POD (and it should be - see constructor).");
 
@@ -106,11 +107,6 @@ public:
     // Octree builds on mesh for usage in the adaptive cubic infill
     FillAdaptive::Octree* adapt_fill_octree = nullptr;
 
-    // PrintConfig and PrintObjectConfig are used by infills that use Arachne (Concentric and FillEnsuring).
-    // Orca: also used by gap fill function.
-    const PrintConfig       *print_config        = nullptr;
-    const PrintObjectConfig *print_object_config = nullptr;
-
     // BBS: all no overlap expolygons in same layer
     ExPolygons  no_overlap_expolygons;
 
@@ -130,13 +126,16 @@ public:
     // Use bridge flow for the fill?
     virtual bool use_bridge_flow() const { return false; }
 
+    // Get spacing of fill
+    coordf_t get_spacing() const { return spacing; }
+
     // Do not sort the fill lines to optimize the print head path?
     virtual bool no_sort() const { return false; }
 
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
     virtual ThickPolylines fill_surface_arachne(const Surface* surface, const FillParams& params);
-    
+
     // BBS: this method is used to fill the ExtrusionEntityCollection.
     // It call fill_surface by default
     virtual void fill_surface_extrusion(const Surface* surface, const FillParams& params, ExtrusionEntitiesPtr& out);
@@ -161,24 +160,26 @@ protected:
         const FillParams                & /* params */, 
         unsigned int                      /* thickness_layers */,
         const std::pair<float, Point>   & /* direction */, 
+        const Polyline                    /* pedestal */,
         ExPolygon                         /* expolygon */,
-        Polylines                       & /* polylines_out */) {};
+        Polylines                       & /* polylines_out */) {
+            BOOST_LOG_TRIVIAL(error)<<"Error, the fill is not implemented!";
+        };
 
     // Used for concentric infill to generate ThickPolylines using Arachne.
     virtual void _fill_surface_single(const FillParams& params,
         unsigned int                   thickness_layers,
         const std::pair<float, Point>& direction,
         ExPolygon                      expolygon,
-        ThickPolylines& thick_polylines_out) {}
+        ThickPolylines& thick_polylines_out) {
+            BOOST_LOG_TRIVIAL(error)<<"Error, the fill is not implemented!";
+        }
 
     virtual float _layer_angle(size_t idx) const { return (idx & 1) ? float(M_PI/2.) : 0; }
 
     virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
+    virtual Polyline _infill_pedestal(const Surface *surface) const;
     
-    // Orca: Dedicated function to calculate gap fill lines for the provided surface, according to the print object parameters
-    // and append them to the out ExtrusionEntityCollection.
-    void _create_gap_fill(const Surface* surface, const FillParams& params, ExtrusionEntityCollection* out);
-
 public:
     static void connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const double spacing, const FillParams &params);
     static void connect_infill(Polylines &&infill_ordered, const Polygons &boundary, const BoundingBox& bbox, Polylines &polylines_out, const double spacing, const FillParams &params);
