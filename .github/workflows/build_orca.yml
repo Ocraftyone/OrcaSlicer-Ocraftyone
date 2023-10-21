@@ -103,7 +103,7 @@ jobs:
         if: matrix.os == 'macos-12'
         working-directory: ${{ github.workspace }}
         run: |
-          find . -type f -name '*' -exec sed -i -e 's|/Users/runner/work/OrcaSlicer/OrcaSlicer|${{ github.workspace }}|g' {} \;
+          LC_ALL=C find . -type f -name '*' -exec sed -i -e 's|/Users/runner/work/OrcaSlicer/OrcaSlicer|${{ github.workspace }}|g' {} \;
 
       - name: Build slicer mac
         if: matrix.os == 'macos-12'
