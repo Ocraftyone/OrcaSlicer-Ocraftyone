@@ -99,6 +99,11 @@ jobs:
           tree ${{ github.workspace }}/deps/build_${{matrix.arch}}
           rm ./OrcaSlicer_dep_mac_${{matrix.arch}}_20231008.tar.gz
 
+      - name: Update prefixes mac
+        if: matrix.os == 'macos-12'
+        working-directory: ${{ github.workspace }}
+        run: |
+          find . -type f -name '*' -exec sed -i -e 's|/Users/runner/work/OrcaSlicer/OrcaSlicer|${{ github.workspace }}|g' {} \;
 
       - name: Build slicer mac
         if: matrix.os == 'macos-12'
@@ -175,7 +180,7 @@ jobs:
         shell: cmd
         run: '"C:/Program Files/7-Zip/7z.exe" x %temp%\OrcaSlicer_dep_win64_20230810_vs2022.zip'
 
-      - name: update prefixes
+      - name: update prefixes Windows
         if: matrix.os == 'windows-latest' && github.event.repository.name != 'OrcaSlicer'
         working-directory: ${{ github.workspace }}/deps/build/OrcaSlicer_dep/usr/local/lib/pkgconfig
         shell: powershell
@@ -279,6 +284,11 @@ jobs:
           ls -l ${{ github.workspace }}/deps/build/destdir
           rm OrcaSlicer_dep_ubuntu_20231008.zip
 
+      - name: Update prefixes Ubuntu
+        if: matrix.os == 'ubuntu-20.04'
+        shell: bash
+        run: |
+          find . -type f -name '*' -exec sed -i -e 's|/home/runner/work/OrcaSlicer/OrcaSlicer|${{ github.workspace }}|g' {} \;
 
       - name: Build slicer
         if: matrix.os == 'ubuntu-20.04'
