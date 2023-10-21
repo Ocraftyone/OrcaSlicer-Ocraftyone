@@ -177,7 +177,7 @@ jobs:
 
       - name: update prefixes
         if: matrix.os == 'windows-latest' && github.event.repository.name != 'OrcaSlicer'
-        working-directory: ${{ github.workspace }}/deps/build/OrcaSlicer_dep/usr/local
+        working-directory: ${{ github.workspace }}/deps/build/OrcaSlicer_dep/usr/local/lib/pkgconfig
         shell: powershell
         run: |
           $configFiles = Get-ChildItem . * -file -rec
