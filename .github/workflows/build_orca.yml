@@ -89,15 +89,6 @@ jobs:
       #   working-directory: ${{ github.workspace }}
       #   continue-on-error: true
       #   run: ./build_release_macos.sh -d -a ${{matrix.arch}}
-      - name: Download and extract deps
-        if: matrix.os == 'macos-12'
-        working-directory: ${{ github.workspace }}
-        run: |
-          curl -LJO https://github.com/SoftFever/OrcaSlicer_deps/releases/download/OrcaSlicer_deps_Oct2023/OrcaSlicer_dep_mac_${{matrix.arch}}_20231008.tar.gz
-          tar -zvxf ./OrcaSlicer_dep_mac_${{matrix.arch}}_20231008.tar.gz -C ${{ github.workspace }}/deps/build_${{matrix.arch}}
-          chown -R $(id -u):$(id -g) ${{ github.workspace }}/deps/build_${{matrix.arch}}
-          tree ${{ github.workspace }}/deps/build_${{matrix.arch}}
-          rm ./OrcaSlicer_dep_mac_${{matrix.arch}}_20231008.tar.gz
 
 
       - name: Build slicer mac
@@ -157,24 +148,6 @@ jobs:
         run: |
           dir "C:/Program Files (x86)/Windows Kits/10/Include"
           choco install nsis
-
-      - name: download deps
-        if: matrix.os == 'windows-latest'
-        shell: powershell
-        run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/SoftFever/OrcaSlicer_deps/releases/download/OrcaSlicer_deps_Oct2023/OrcaSlicer_dep_win64_20230810_vs2022.zip", "$env:temp\OrcaSlicer_dep_win64_20230810_vs2022.zip")'
-
-      - name: maker dir
-        if: matrix.os == 'windows-latest'
-        working-directory: ${{ github.workspace }}
-        run: |
-          mkdir ${{ github.workspace }}/deps/build
-          mkdir ${{ github.workspace }}/deps/build/OrcaSlicer_dep
-
-      - name: extract deps
-        if: matrix.os == 'windows-latest'
-        working-directory: ${{ github.workspace }}/deps/build
-        shell: cmd
-        run: '"C:/Program Files/7-Zip/7z.exe" x %temp%\OrcaSlicer_dep_win64_20230810_vs2022.zip'
       
       # - name: build deps
         # if: matrix.os == 'windows-latest'
@@ -245,6 +218,7 @@ jobs:
         if: matrix.os == 'ubuntu-20.04'
         shell: bash
         run: sudo chown $USER -R ./
+        
       # - name: Build deps
         # if: matrix.os == 'ubuntu-20.04'
         #   id: cache_deps
@@ -260,18 +234,6 @@ jobs:
       #   working-directory: ${{ github.workspace }}
       #   continue-on-error: true
       #   run: ./BuildLinux.sh -dr
-      - name: Download and extract deps
-        if: matrix.os == 'ubuntu-20.04'
-        working-directory: ${{ github.workspace }}
-        run: |
-          mkdir -p ${{ github.workspace }}/deps/build
-          mkdir -p ${{ github.workspace }}/deps/build/destdir
-          curl -LJO https://github.com/SoftFever/OrcaSlicer_deps/releases/download/OrcaSlicer_deps_Oct2023/OrcaSlicer_dep_ubuntu_20231008.zip
-          unzip ./OrcaSlicer_dep_ubuntu_20231008.zip -d ${{ github.workspace }}/deps/build/destdir
-          chown -R $(id -u):$(id -g) ${{ github.workspace }}/deps/build/destdir
-          ls -l ${{ github.workspace }}/deps/build/destdir
-          rm OrcaSlicer_dep_ubuntu_20231008.zip
-
 
       - name: Build slicer
         if: matrix.os == 'ubuntu-20.04'
