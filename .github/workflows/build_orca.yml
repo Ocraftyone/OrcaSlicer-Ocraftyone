@@ -89,7 +89,7 @@ jobs:
         continue-on-error: true
         run: |
           ./build_release_macos.sh -d -a ${{matrix.arch}}
-          find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
+          # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
 
 
       - name: Build slicer mac
@@ -216,7 +216,7 @@ jobs:
         continue-on-error: true
         run: |
           ./BuildLinux.sh -dr
-          find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
+          # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
 
       - name: Build slicer
         if: matrix.os == 'ubuntu-20.04'
