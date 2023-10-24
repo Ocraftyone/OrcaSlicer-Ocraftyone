@@ -79,7 +79,7 @@ jobs:
       - name: Install tools mac
         if: matrix.os == 'macos-12'
         run: |
-          brew install cmake git gettext zstd tree
+          brew install cmake git gettext zstd tree automake
           mkdir -p ${{ github.workspace }}/deps/build_${{matrix.arch}}
           mkdir -p ${{ github.workspace }}/deps/build_${{matrix.arch}}/OrcaSlicer_dep_${{matrix.arch}}
 
