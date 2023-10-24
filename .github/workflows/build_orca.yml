@@ -1,8 +1,8 @@
 name: Build OrcaSlicer
 
-on: 
+on:
     push:
-      branches: 
+      branches:
        - main
       paths:
        - 'src/**'
@@ -13,8 +13,8 @@ on:
        - ".github/workflows/build_orca.yml"
 
     pull_request:
-      branches: 
-       - main 
+      branches:
+       - main
       paths:
        - 'src/**'
        - '**/CMakeLists.txt'
@@ -74,21 +74,21 @@ jobs:
           mkdir -p ${{ github.workspace }}/deps/build_${{matrix.arch}}
           mkdir -p ${{ github.workspace }}/deps/build_${{matrix.arch}}/OrcaSlicer_dep_${{matrix.arch}}
 
-      # - name: build deps
-        # if: matrix.os == 'macos-12'
-        #   id: cache_deps
-      #   uses: actions/cache@v3
-      #   env:
-      #     cache-name: ${{ runner.os }}-cache-orcaslicer_deps_${{matrix.arch}}
-      #   with:
-      #     path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
-      #     key: build-${{ env.cache-name }}
+      - name: cache deps mac
+        if: matrix.os == 'macos-12'
+        id: cache_deps_mac
+        uses: actions/cache@v3
+        env:
+          cache-name: ${{ runner.os }}-${{matrix.arch}}-cache-orcaslicer_deps
+        with:
+          path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
+          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**/CMakeLists.txt') }}
 
-      # - if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
-      #   name: build deps
-      #   working-directory: ${{ github.workspace }}
-      #   continue-on-error: true
-      #   run: ./build_release_macos.sh -d -a ${{matrix.arch}}
+      - if: ${{ steps.cache_deps_mac.outputs.cache-hit != 'true' }}
+        name: build deps
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+        run: ./build_release_macos.sh -d -a ${{matrix.arch}}
 
 
       - name: Build slicer mac
@@ -149,23 +149,23 @@ jobs:
           dir "C:/Program Files (x86)/Windows Kits/10/Include"
           choco install nsis
       
-      # - name: build deps
-        # if: matrix.os == 'windows-latest'
-        #   id: cache_deps
-      #   uses: actions/cache@v3
-      #   env:
-      #     cache-name: ${{ runner.os }}-cache-orcaslicer_deps
-      #   with:
-      #     path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
-      #     key: ${{ runner.os }}-build-${{ env.cache-name }}
+      - name: cache deps windows
+        if: matrix.os == 'windows-latest'
+        id: cache_deps_windows
+        uses: actions/cache@v3
+        env:
+          cache-name: ${{ runner.os }}-cache-orcaslicer_deps
+        with:
+          path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
+          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**/CMakeLists.txt')}}
 
-      # - if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
-      #   name: build deps
-      #   working-directory: ${{ github.workspace }}
-      #   continue-on-error: true
-      #   run: .\build_release_vs2022.bat deps
+      - if: ${{ steps.cache_deps_windows.outputs.cache-hit != 'true' }}
+        name: build deps
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+        run: .\build_release_vs2022.bat deps
     
-      # - run:  Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
+      - run:  Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
 
       - name: Build slicer Win
         if: matrix.os == 'windows-latest'
@@ -219,21 +219,21 @@ jobs:
         shell: bash
         run: sudo chown $USER -R ./
         
-      # - name: Build deps
-        # if: matrix.os == 'ubuntu-20.04'
-        #   id: cache_deps
-      #   uses: actions/cache@v3
-      #   env:
-      #     cache-name: ${{ runner.os }}-cache-orcaslicer_deps_x64
-      #   with:
-      #     path: ${{ github.workspace }}/deps/build/destdir
-      #     key: build-${{ env.cache-name }}
+      - name: cache deps ubuntu
+        if: matrix.os == 'ubuntu-20.04'
+        id: cache_deps_linux
+        uses: actions/cache@v3
+        env:
+          cache-name: ${{ runner.os }}-cache-orcaslicer_deps
+        with:
+          path: ${{ github.workspace }}/deps/build/destdir
+          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**/CMakeLists.txt') }}
 
-      # - if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
-      #   name: Build deps
-      #   working-directory: ${{ github.workspace }}
-      #   continue-on-error: true
-      #   run: ./BuildLinux.sh -dr
+      - if: ${{ steps.cache_deps_linux.outputs.cache-hit != 'true' }}
+        name: Build deps
+        working-directory: ${{ github.workspace }}
+        continue-on-error: true
+        run: ./BuildLinux.sh -dr
 
       - name: Build slicer
         if: matrix.os == 'ubuntu-20.04'
