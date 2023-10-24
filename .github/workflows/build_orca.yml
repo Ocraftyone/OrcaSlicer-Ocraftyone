@@ -86,7 +86,7 @@ jobs:
       - if: ${{ matrix.os == 'macos-12' && steps.cache_deps.outputs.cache-hit != 'true' }}
         name: build deps
         working-directory: ${{ github.workspace }}
-        continue-on-error: true
+        # continue-on-error: true
         run: |
           ./build_release_macos.sh -d -a ${{matrix.arch}}
           # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
@@ -153,7 +153,7 @@ jobs:
       - if: ${{ matrix.os == 'windows-latest' && steps.cache_deps.outputs.cache-hit != 'true' }}
         name: build deps
         working-directory: ${{ github.workspace }}
-        continue-on-error: true
+        # continue-on-error: true
         run: |
           .\build_release_vs2022.bat deps
            Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
@@ -213,7 +213,7 @@ jobs:
       - if: ${{ matrix.os == 'ubuntu-20.04' && steps.cache_deps.outputs.cache-hit != 'true' }}
         name: Build deps
         working-directory: ${{ github.workspace }}
-        continue-on-error: true
+        # continue-on-error: true
         run: |
           ./BuildLinux.sh -dr
           # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
