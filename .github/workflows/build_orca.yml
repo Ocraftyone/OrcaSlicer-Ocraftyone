@@ -20,6 +20,8 @@ on:
        - '**/CMakeLists.txt'
        - 'version.inc'
        - ".github/workflows/build_orca.yml"
+
+    workflow_dispatch:
  
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
