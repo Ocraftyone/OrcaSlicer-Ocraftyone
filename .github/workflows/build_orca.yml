@@ -165,7 +165,10 @@ jobs:
         continue-on-error: true
         run: .\build_release_vs2022.bat deps
     
-      - run:  Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
+      - if: matrix.os == 'windows-latest'
+        run:  Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
+      - if: matrix.os != 'windows-latest'
+        run: find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
 
       - name: Build slicer Win
         if: matrix.os == 'windows-latest'
