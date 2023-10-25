@@ -1,25 +1,25 @@
 name: Build OrcaSlicer
 
 on:
-    push:
-      branches:
-       - main
-      paths:
-       - 'src/**'
-       - '**/CMakeLists.txt'
-       - 'version.inc'
-       - 'localization/**'
-       - 'resources/**'
-       - ".github/workflows/build_orca.yml"
+    # push:
+    #   branches:
+    #    - main
+    #   paths:
+    #    - 'src/**'
+    #    - '**/CMakeLists.txt'
+    #    - 'version.inc'
+    #    - 'localization/**'
+    #    - 'resources/**'
+    #    - ".github/workflows/build_orca.yml"
 
-    pull_request:
-      branches:
-       - main
-      paths:
-       - 'src/**'
-       - '**/CMakeLists.txt'
-       - 'version.inc'
-       - ".github/workflows/build_orca.yml"
+    # pull_request:
+    #   branches:
+    #    - main
+    #   paths:
+    #    - 'src/**'
+    #    - '**/CMakeLists.txt'
+    #    - 'version.inc'
+    #    - ".github/workflows/build_orca.yml"
 
     workflow_dispatch:
  
@@ -40,6 +40,9 @@ jobs:
           - os: macos-12
             arch: arm64
     runs-on: ${{ matrix.os }}
+    env:
+      date:
+      ver:
 
     steps:
       - name: Checkout
@@ -72,10 +75,12 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         env:
+          _arch: _${{ matrix.os == 'macos-12' && matrix.arch }}
           cache-name: ${{ runner.os }}-${{matrix.arch}}-cache-orcaslicer_deps
+          cache-path: ${{ github.workspace }}/deps/build${{ matrix.os == 'macos-12' && env._arch}}/${{ matrix.os == 'windows' && 'OrcaSlicer_dep' || matrix.os == 'macos-12' && ('OrcaSlicer_dep_') || 'destdir' }}${{ matrix.os == 'macos-12' && matrix.arch}}
         with:
-          path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
-          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**/CMakeLists.txt') }}
+          path: ${{ env.cache-path }}
+          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**', '.github/workflows/build_deps.yml') }} # cache only updates if deps update
         
 #   Mac
       - name: Install tools mac

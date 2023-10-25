@@ -2,18 +2,18 @@
 name: Build deps
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'deps/**'
-      - .github/workflows/build_deps.yml
-  push:
-    branches:
-      - main
-    paths:
-      - 'deps/**'
-      - .github/workflows/build_deps.yml
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'deps/**'
+  #     - .github/workflows/build_deps.yml
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'deps/**'
+  #     - .github/workflows/build_deps.yml
   workflow_dispatch:
 
 concurrency:
