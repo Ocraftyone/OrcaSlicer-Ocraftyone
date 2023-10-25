@@ -60,8 +60,8 @@ jobs:
         id: set_outputs
         env:
           # helper vars to make more readable
-          underscore-arch: ${{ matrix.os == 'macos-12' && '_' || ''}}${{ matrix.os == 'macos-12' && matrix.arch || '' }} # if is macos, make a string that does "_{arch}", else output nothing
-          dash-arch: ${{ matrix.os == 'macos-12' && '-' || ''}}${{ matrix.os == 'macos-12' && matrix.arch || '' }} # if is macos, make a string that does "-{arch}", else output nothing
+          underscore-arch: "${{ matrix.os == 'macos-12' && '_' || ''}}${{ matrix.os == 'macos-12' && matrix.arch || '' }}" # if is macos, make a string that does "_{arch}", else output nothing
+          dash-arch: "${{ matrix.os == 'macos-12' && '-' || ''}}${{ matrix.os == 'macos-12' && matrix.arch || '' }}" # if is macos, make a string that does "-{arch}", else output nothing
           dep-folder-name: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-12') && 'OrcaSlicer_dep' || 'destdir' }}${{ env.underscore-arch }}
           # vars to be outputed
           cache-name: ${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
