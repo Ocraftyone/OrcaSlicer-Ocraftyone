@@ -43,7 +43,7 @@ jobs:
             arch: x86_64
           - os: macos-12
             arch: arm64
-    runs-on: ubuntu-20.04 # any machine works, just checking validity of cache for each machine
+    runs-on: ${{ matrix.os }}
     outputs:
       cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
     steps:
