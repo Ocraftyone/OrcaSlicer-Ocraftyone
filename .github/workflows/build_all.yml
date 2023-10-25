@@ -12,7 +12,6 @@ on:
        - 'localization/**'
        - 'resources/**'
        - ".github/workflows/build_all.yml"
-       - ".github/workflows/build_all.yml"
 
     pull_request:
       branches:
@@ -22,7 +21,6 @@ on:
        - 'src/**'
        - '**/CMakeLists.txt'
        - 'version.inc'
-       - ".github/workflows/build_all.yml"
        - ".github/workflows/build_all.yml"
 
     workflow_dispatch: # allows for manual dispatch
@@ -191,7 +189,6 @@ jobs:
           
   build_orca:
     needs: [check_cache, build_deps]
-    if: needs.check_cache.outputs.cache-hit == 'true'
     strategy:
       fail-fast: false
       matrix:
