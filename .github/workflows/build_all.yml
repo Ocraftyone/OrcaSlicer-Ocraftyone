@@ -60,12 +60,12 @@ jobs:
         id: set_outputs
         env:
           # helper vars to make more readable
-          underscore-arch: _${{ matrix.arch }} # if is macos, make a string that does "_{arch}", else output nothing
-          dash-arch: -${{ matrix.arch }}
-          dep-folder-name: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-12') && 'OrcaSlicer_dep' || 'destdir' }}${{ matrix.os == 'macos-12' && env.underscore-arch || '' }}
+          underscore-arch: ${{ join('_', matrix.os) }} # if is macos, make a string that does "_{arch}", else output nothing
+          dash-arch: ${{ matrix.os == 'macos-12' && join('-', matrix.arch) || '' }}
+          dep-folder-name: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-12') && 'OrcaSlicer_dep' || 'destdir' }}${{ env.underscore-arch }}
           # vars to be outputed
-          cache-name: ${{ matrix.name }}${{ matrix.os == 'macos-12' && env.dash-arch || '' }}-cache-orcaslicer_deps
-          cache-path: ${{ github.workspace }}/deps/build${{ matrix.os == 'macos-12' && env.underscore-arch || '' }}/${{ env.dep-folder-name }}
+          cache-name: ${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
+          cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}
         # output above vars plus a hash of the original deps folder
         run: |
           echo "cache-name=${{ env.cache-name }}" >> "$GITHUB_OUTPUT"
