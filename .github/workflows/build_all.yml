@@ -46,11 +46,10 @@ jobs:
           - os: macos-12
             arch: arm64
             name: macOS
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-20.04
     outputs:
       cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
-      cache-name: ${{ steps.set_outputs.outputs.cache-name }}
-      cache-path: ${{ steps.set_outputs.outputs.cache-path }}
+      outputs: ${{ steps.set_outputs.outputs }}
       hash: ${{ steps.set_outputs.outputs.hash }} # pass on so that it is not recomputed after build dir is created
     steps:
       - name: Checkout
@@ -65,8 +64,8 @@ jobs:
           dep-folder-name: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-12') && 'OrcaSlicer_dep' || 'destdir' }}
         # output above vars plus a hash of the original deps folder
         run: |
-          echo "cache-name=${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps" >> "$GITHUB_OUTPUT"
-          echo "cache-path=${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}" >> "$GITHUB_OUTPUT"
+          echo "${{matrix.os}}${{matrix.arch}}cache-name=${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps" >> "$GITHUB_OUTPUT"
+          echo "${{matrix.os}}${{matrix.arch}}cache-path=${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}" >> "$GITHUB_OUTPUT"
           echo "hash=${{ hashFiles('deps/**') }}" >> "$GITHUB_OUTPUT"
         
       # doesn't do anyting with cache here. only used to output if there is a cache hit to determine if next job should run
@@ -74,8 +73,8 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ steps.set_outputs.outputs.cache-path }}
-          key: ${{ steps.set_outputs.outputs.cache-name }}-build-${{ steps.set_outputs.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ steps.set_outputs.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-path')] }}
+          key: ${{ steps.set_outputs.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-name')] }}-build-${{ steps.set_outputs.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
     
   build_deps: # build deps if needed. if so, build, cache, and upload artifacts
     needs: [check_cache]
@@ -93,6 +92,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       date: #get rid of intellisense error
+      outputs: ${{ needs.check_cache.outputs }}
 
     steps:
         # SETUP
@@ -119,8 +119,8 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ needs.check_cache.outputs.cache-path }}
-          key: ${{ needs.check_cache.outputs.cache-name }}-build-${{ needs.check_cache.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ env.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-path')] }}
+          key: ${{ env.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-name')] }}-build-${{ env.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
 
         # BUILD
       - name: Build deps on Windows
@@ -200,6 +200,7 @@ jobs:
     env:
       date:
       ver:
+      outputs: ${{ needs.check_cache.outputs }}
 
     steps:
       - name: Checkout
@@ -232,8 +233,8 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ needs.check_cache.outputs.cache-path }}
-          key: ${{ needs.check_cache.outputs.cache-name }}-build-${{ needs.check_cache.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ env.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-path')] }}
+          key: ${{ env.outputs[format('{0}{1}{2}', matrix.os, matrix.arch, '-cache-name')] }}-build-${{ env.outputs.hash }} # hash of deps folder used to only rebuild if deps are modified
         
 #   Mac
       - name: Install tools mac
