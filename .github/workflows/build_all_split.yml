@@ -100,6 +100,9 @@ jobs:
       date: #get rid of intellisense error
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
       - name: deploy instance
         uses: ./.github/workflows/build_deps.yml
         with:
@@ -130,6 +133,9 @@ jobs:
       ver:
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
       - name: deploy instance
         uses: ./.github/workflows/build_orca.yml
         with:
