@@ -46,7 +46,7 @@ jobs:
           - os: macos-12
             arch: arm64
             name: macOS
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     outputs:
       cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
       cache-name: ${{ steps.set_outputs.outputs.cache-name }}
