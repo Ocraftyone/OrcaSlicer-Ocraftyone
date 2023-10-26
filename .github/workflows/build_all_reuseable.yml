@@ -43,7 +43,7 @@ jobs:
             arch: arm64
     runs-on: ${{ matrix.os }}
     outputs:
-      cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
+      cache-hit: ${{ steps.cache_deps.outputs.cache-hit }}
       json-output: ${{ steps.outputs.outputs.result }}
     steps:
       - name: Checkout
@@ -64,22 +64,16 @@ jobs:
             cache-name: ${{ runner.os }}${{ env.dash-arch }}-cache-orcaslicer_deps
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
             hash: ${{ hashFiles('deps/**') }}
-        
-      - name: load temp check_cache outputs
-        id: temp_outputs
-        uses: cloudposse/github-action-matrix-outputs-read@main
-        with:
-          matrix-step-name: check_cache
             
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
         env:
-          vars: ${{ steps.temp_outputs.outputs.result }}
+          vars: ${{ steps.set_outputs.outputs.result }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
-          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(env.vars).cache-path }}
+          key: ${{ fromJson(env.vars).cache-name }}-build-${{ fromJson(env.vars).hash }} # hash of deps folder used to only rebuild if deps are modified
           
       - name: set validity output
         uses: cloudposse/github-action-matrix-outputs-write@main
@@ -87,7 +81,7 @@ jobs:
           matrix-step-name: ${{ github.job }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
           outputs: |-
-            valid-cache: ${{ steps.cache_deps.outputs.cache.cache-hit }}
+            valid-cache: ${{ steps.cache_deps.outputs.cache-hit }}
             
       - name: load final check_cache outputs
         id: outputs
