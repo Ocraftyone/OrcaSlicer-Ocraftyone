@@ -81,7 +81,7 @@ jobs:
           matrix-step-name: ${{ github.job }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
           outputs: |-
-            valid-cache: ${{ steps.cache_deps.outputs.cache-hit }}
+            valid-cache: ${{ steps.cache_deps.outputs.cache-hit || false }}
             
       - name: load final check_cache outputs
         id: outputs
