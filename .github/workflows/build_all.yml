@@ -62,7 +62,7 @@ jobs:
           matrix-step-name: ${{ github.job }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
           outputs: |-
-            cache-name: ${{ runner.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
+            cache-name: ${{ runner.os }}${{ env.dash-arch }}-cache-orcaslicer_deps
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
             hash: ${{ hashFiles('deps/**') }}
         
