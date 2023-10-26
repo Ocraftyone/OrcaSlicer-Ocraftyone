@@ -81,15 +81,19 @@ jobs:
           path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
           key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
           
-      - name: delete artifacts
+      - name: download artifacts
         uses: actions/download-artifact@v3
         with:
           path: ${{ github.workspace }}/artifacts
-      - id: count_artifacts
+          
+      - name: count artifacts
+        id: count_artifacts
         run: |
           cd ${{ github.workspace }}/artifacts
           echo "count=" `ls -1 | wc -l` >> $GITHUB_OUTPUT
-      - if: ${{ steps.count_artifacts.outputs.count }} >= 4
+          
+      - name: delete artifacts
+        if: ${{ steps.count_artifacts.outputs.count }} >= 4
         uses: geekyeggo/delete-artifact@v2
         with:
           name: |
