@@ -69,13 +69,18 @@ jobs:
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
             hash: ${{ hashFiles('deps/**') }}
         
-      # doesn't do anyting with cache here. only used to output if there is a cache hit to determine if next job should run
+      - name: load check_cache outputs
+        id: outputs
+        uses: cloudposse/github-action-matrix-outputs-read@main
+        with:
+          matrix-step-name: check_cache
+        
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ steps.set_outputs.outputs[join(matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.set_outputs.outputs[join(matrix.os, matrix.arch)].cache-name }}-build-${{ steps.set_outputs.outputs[join(matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
+          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
     
   build_deps: # build deps if needed. if so, build, cache, and upload artifacts
     needs: [check_cache]
@@ -124,8 +129,8 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
+          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
 
         # BUILD
       - name: Build deps on Windows
@@ -243,8 +248,8 @@ jobs:
         id: cache_deps
         uses: actions/cache@v3
         with:
-          path: ${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[join(matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
+          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
         
 #   Mac
       - name: Install tools mac
