@@ -93,7 +93,7 @@ jobs:
           echo "count=" `ls -1 | wc -l` >> $GITHUB_OUTPUT
           
       - name: delete artifacts
-        if: ${{ steps.count_artifacts.outputs.count }} >= 4
+        if: ${{ steps.count_artifacts.outputs.count }} == '4'
         uses: geekyeggo/delete-artifact@v2
         with:
           name: |
