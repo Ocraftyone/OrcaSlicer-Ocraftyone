@@ -37,16 +37,12 @@ jobs:
       matrix:
         include:
           - os: ubuntu-20.04
-            name: Linux
           - os: windows-latest
-            name: Windows
           - os: macos-12
             arch: x86_64
-            name: macOS
           - os: macos-12
             arch: arm64
-            name: macOS
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     outputs:
       cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
       json-output: ${{ steps.outputs.outputs.result }}
@@ -66,7 +62,7 @@ jobs:
           matrix-step-name: ${{ github.job }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
           outputs: |-
-            cache-name: ${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
+            cache-name: ${{ runner.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
             hash: ${{ hashFiles('deps/**') }}
         
