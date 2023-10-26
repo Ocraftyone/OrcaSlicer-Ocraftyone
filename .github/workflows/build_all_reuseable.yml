@@ -90,10 +90,11 @@ jobs:
         id: count_artifacts
         run: |
           cd ${{ github.workspace }}/artifacts
-          echo "count=" `ls -1 | wc -l` >> $GITHUB_OUTPUT
+          COUNT=$(ls | wc -l)
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
           
       - name: delete artifacts
-        if: ${{ steps.count_artifacts.outputs.count }} == '4'
+        if: ${{ steps.count_artifacts.outputs.count }} >= 4
         uses: geekyeggo/delete-artifact@v2
         with:
           name: |
