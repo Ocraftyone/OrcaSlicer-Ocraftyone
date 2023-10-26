@@ -141,7 +141,7 @@ jobs:
           name: OrcaSlicer_dep_ubuntu_${{ env.date }}
           path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep_ubuntu_*.tar.gz
           
-      - name: cache deps
+      - name: load cached deps
         uses: actions/cache@v3
         with:
           path: ${{ inputs.cache-path }}

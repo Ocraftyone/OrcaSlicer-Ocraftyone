@@ -99,7 +99,7 @@ jobs:
           name: |
             *
         
-  build_deps:
+  build_all:
     strategy:
       fail-fast: false
       matrix:

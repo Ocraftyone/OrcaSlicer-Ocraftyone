@@ -46,8 +46,6 @@ on:
 
 jobs:
   build_orca:
-    strategy:
-      fail-fast: false
     runs-on: ${{ inputs.os }}
     env:
       date:
@@ -80,33 +78,19 @@ jobs:
           echo "date: ${{ env.date }} version: $ver"
         shell: pwsh
         
-      - name: load cache
-        id: cache_deps
+      - name: load cached deps
         uses: actions/cache@v3
-        env:
-          _arch: _${{ inputs.os == 'macos-12' && inputs.arch }}
-          cache-name: ${{ runner.os }}-${{inputs.arch}}-cache-orcaslicer_deps
-          cache-path: ${{ github.workspace }}/deps/build${{ inputs.os == 'macos-12' && env._arch}}/${{ inputs.os == 'windows' && 'OrcaSlicer_dep' || inputs.os == 'macos-12' && ('OrcaSlicer_dep_') || 'destdir' }}${{ inputs.os == 'macos-12' && inputs.arch}}
         with:
-          path: ${{ env.cache-path }}
-          key: ${{ env.cache-name }}-build-${{ hashFiles('deps/**', '.github/workflows/build_deps.yml') }} # cache only updates if deps update
+          path: ${{ inputs.cache-path }}
+          key: ${{ inputs.cache-name }}-build-${{ inputs.hash }}
         
 #   Mac
       - name: Install tools mac
         if: inputs.os == 'macos-12'
         run: |
-          brew install cmake git gettext zstd tree automake
+          brew install cmake git gettext zstd tree
           mkdir -p ${{ github.workspace }}/deps/build_${{inputs.arch}}
           mkdir -p ${{ github.workspace }}/deps/build_${{inputs.arch}}/OrcaSlicer_dep_${{inputs.arch}}
-
-      - if: ${{ inputs.os == 'macos-12' && steps.cache_deps.outputs.cache-hit != 'true' }}
-        name: build deps
-        working-directory: ${{ github.workspace }}
-        # continue-on-error: true
-        run: |
-          ./build_release_macos.sh -d -a ${{inputs.arch}}
-          # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
-
 
       - name: Build slicer mac
         if: inputs.os == 'macos-12'
@@ -166,14 +150,6 @@ jobs:
           dir "C:/Program Files (x86)/Windows Kits/10/Include"
           choco install nsis
 
-      - if: ${{ inputs.os == 'windows-latest' && steps.cache_deps.outputs.cache-hit != 'true' }}
-        name: build deps
-        working-directory: ${{ github.workspace }}
-        # continue-on-error: true
-        run: |
-          .\build_release_vs2022.bat deps
-           Get-ChildItem ${{ github.workspace }}/deps/build/ -Exclude OrcaSlicer_dep | Remove-Item -Recurse -Force
-
       - name: Build slicer Win
         if: inputs.os == 'windows-latest'
         working-directory: ${{ github.workspace }}
@@ -225,14 +201,6 @@ jobs:
         if: inputs.os == 'ubuntu-20.04'
         shell: bash
         run: sudo chown $USER -R ./
-
-      - if: ${{ inputs.os == 'ubuntu-20.04' && steps.cache_deps.outputs.cache-hit != 'true' }}
-        name: Build deps
-        working-directory: ${{ github.workspace }}
-        # continue-on-error: true
-        run: |
-          ./BuildLinux.sh -dr
-          # find ${{ github.workspace }}/deps/build/ ! -name 'OrcaSlicer_dep' -type d -exec rm -rf {} +
 
       - name: Build slicer
         if: inputs.os == 'ubuntu-20.04'
