@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       cache-hit: ${{ steps.cache_deps.outputs.cache.cache-hit }}
+      json-output: ${{ steps.outputs.outputs.result }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,7 +64,7 @@ jobs:
           dep-folder-name: ${{ (matrix.os == 'windows-latest' || matrix.os == 'macos-12') && 'OrcaSlicer_dep' || 'destdir' }}
         with:
           matrix-step-name: ${{ github.job }}
-          matrix-key: ${{ join(matrix.os, matrix.arch) }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
           outputs: |-
             cache-name: ${{ matrix.name }}${{ env.dash-arch }}-cache-orcaslicer_deps
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
@@ -78,9 +79,12 @@ jobs:
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
+        env:
+          vars: ${{ steps.outputs.outputs.result }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
     
   build_deps: # build deps if needed. if so, build, cache, and upload artifacts
     needs: [check_cache]
@@ -119,18 +123,15 @@ jobs:
         run: echo "date=$(Get-Date -Format 'yyyyMMdd')" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
         shell: pwsh
         
-      - name: load check_cache outputs
-        id: outputs
-        uses: cloudposse/github-action-matrix-outputs-read@main
-        with:
-          matrix-step-name: check_cache
-        
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
+        env:
+          vars: ${{ needs.check_cache.outputs.json-output }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
 
         # BUILD
       - name: Build deps on Windows
@@ -247,9 +248,12 @@ jobs:
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
+        env:
+          vars: ${{ needs.check_cache.outputs.json-output }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-path }}
-          key: ${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].cache-name }}-build-${{ steps.outputs.outputs[format('{0}{1}', matrix.os, matrix.arch)].hash }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
         
 #   Mac
       - name: Install tools mac
