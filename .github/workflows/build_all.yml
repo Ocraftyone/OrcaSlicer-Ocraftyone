@@ -118,16 +118,6 @@ jobs:
         id: get-date-windows
         run: echo "date=$(Get-Date -Format 'yyyyMMdd')" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
         shell: pwsh
-        
-      - name: load cache
-        id: cache_deps
-        uses: actions/cache@v3
-        env:
-          vars: ${{ needs.check_cache.outputs.json-output }}
-          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
-        with:
-          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
-          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
 
         # BUILD
       - name: Build deps on Windows
@@ -189,6 +179,16 @@ jobs:
         with:
           name: OrcaSlicer_dep_ubuntu_${{ env.date }}
           path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep_ubuntu_*.tar.gz
+          
+      - name: load cache
+        id: cache_deps
+        uses: actions/cache@v3
+        env:
+          vars: ${{ needs.check_cache.outputs.json-output }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
+        with:
+          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
           
           
   build_orca:
