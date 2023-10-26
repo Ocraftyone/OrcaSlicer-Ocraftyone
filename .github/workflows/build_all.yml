@@ -83,8 +83,8 @@ jobs:
           vars: ${{ steps.outputs.outputs.result }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
-          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
     
   build_deps: # build deps if needed. if so, build, cache, and upload artifacts
     needs: [check_cache]
@@ -130,8 +130,8 @@ jobs:
           vars: ${{ needs.check_cache.outputs.json-output }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
-          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
 
         # BUILD
       - name: Build deps on Windows
@@ -252,8 +252,8 @@ jobs:
           vars: ${{ needs.check_cache.outputs.json-output }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
-          path: ${{ fromJson(vars).cache-path[env.matrix-key] }}
-          key: ${{ fromJson(vars).cache-name[env.matrix-key] }}-build-${{ fromJson(vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
+          path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
+          key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
         
 #   Mac
       - name: Install tools mac
