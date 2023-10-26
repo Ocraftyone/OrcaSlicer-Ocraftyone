@@ -23,6 +23,9 @@ on:
       cache-name:
         required: true
         type: string
+      valid-cache:
+        required: true
+        type: boolean
       hash:
         required: true
         type: string
@@ -39,6 +42,7 @@ on:
 
 jobs:
   build_deps:
+    if: !inputs.valid-cache
     runs-on: ${{ inputs.os }}
     env:
       date:

@@ -65,22 +65,29 @@ jobs:
             cache-path: ${{ github.workspace }}/deps/build${{ env.underscore-arch }}/${{ env.dep-folder-name }}${{ env.underscore-arch }}
             hash: ${{ hashFiles('deps/**') }}
         
-      - name: load check_cache outputs
-        id: outputs
-        uses: cloudposse/github-action-matrix-outputs-read@main
-        with:
-          matrix-step-name: check_cache
-        
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
         env:
-          vars: ${{ steps.outputs.outputs.result }}
+          vars: ${{ steps.set_outputs.outputs.result }}
           matrix-key: ${{ matrix.os }}${{ matrix.arch }}
         with:
           path: ${{ fromJson(env.vars).cache-path[env.matrix-key] }}
           key: ${{ fromJson(env.vars).cache-name[env.matrix-key] }}-build-${{ fromJson(env.vars).hash[env.matrix-key] }} # hash of deps folder used to only rebuild if deps are modified
-
+          
+      - name: set validity output
+        uses: cloudposse/github-action-matrix-outputs-write@main    
+        with:
+          matrix-step-name: ${{ github.job }}
+          matrix-key: ${{ matrix.os }}${{ matrix.arch }}
+          outputs: |-
+            valid-cache: ${{ steps.cache_deps.outputs.cache.cache-hit }}
+            
+      - name: load final check_cache outputs
+        id: outputs
+        uses: cloudposse/github-action-matrix-outputs-read@main
+        with:
+          matrix-step-name: check_cache
           
   delete_extra_archives:
     needs: [check_cache]
@@ -104,33 +111,11 @@ jobs:
           - os: macos-12
             arch: arm64
     needs: [check_cache]
-    if: needs.check_cache.outputs.cache-hit != 'true'
     uses: ./.github/workflows/build_deps.yml
     with:
       cache-path: ${{ fromJson(needs.check_cache.outputs.json-output).cache-path[format('{0}{1}', matrix.os, matrix.arch)] }}
       cache-name: ${{ fromJson(needs.check_cache.outputs.json-output).cache-name[format('{0}{1}', matrix.os, matrix.arch)] }}
-      hash: ${{ fromJson(needs.check_cache.outputs.json-output).hash[format('{0}{1}', matrix.os, matrix.arch)] }}
-      os: ${{ matrix.os }}
-      arch: ${{ matrix.arch }}
-      
-      
-  build_orca:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-20.04
-          - os: windows-latest
-          - os: macos-12
-            arch: x86_64
-          - os: macos-12
-            arch: arm64
-    needs: [check_cache]
-    if: needs.check_cache.outputs.cache-hit == 'true'
-    uses: ./.github/workflows/build_orca.yml
-    with:
-      cache-path: ${{ fromJson(needs.check_cache.outputs.json-output).cache-path[format('{0}{1}', matrix.os, matrix.arch)] }}
-      cache-name: ${{ fromJson(needs.check_cache.outputs.json-output).cache-name[format('{0}{1}', matrix.os, matrix.arch)] }}
+      valid-cache: ${{ fromJson(needs.check_cache.outputs.json-output).valid-cache[format('{0}{1}', matrix.os, matrix.arch)] }}
       hash: ${{ fromJson(needs.check_cache.outputs.json-output).hash[format('{0}{1}', matrix.os, matrix.arch)] }}
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
