@@ -42,7 +42,7 @@ on:
 
 jobs:
   build_deps:
-    if: !inputs.valid-cache
+    if: inputs.valid-cache != true
     runs-on: ${{ inputs.os }}
     env:
       date:
