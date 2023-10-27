@@ -62,8 +62,9 @@ orcaslicer_add_cmake_project(CURL
   URL                 https://github.com/curl/curl/archive/refs/tags/curl-7_75_0.zip
   URL_HASH            SHA256=a63ae025bb0a14f119e73250f2c923f4bf89aa93b8d4fafa4a9f5353a96a765a
   DEPENDS             ${ZLIB_PKG}
-  # PATCH_COMMAND       ${GIT_EXECUTABLE} checkout -f -- . && git clean -df && 
+  # PATCH_COMMAND       ${GIT_EXECUTABLE} checkout -f -- . && git clean -df &&
   #                     ${GIT_EXECUTABLE} apply --whitespace=fix ${CMAKE_CURRENT_LIST_DIR}/curl-mods.patch
+  PATCH_COMMAND       patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/specify-openssl-ver.patch
   CMAKE_ARGS
     -DBUILD_TESTING:BOOL=OFF
     -DBUILD_CURL_EXE:BOOL=OFF

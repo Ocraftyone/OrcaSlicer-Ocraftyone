@@ -1,0 +1,15 @@
+Subject: [Patch] Set OpenSSL version required to 1
+<+>UTF-8
+===================================================================
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt	(revision 2f33be817cbce6ad7a36f27dd7ada9219f13584c)
++++ b/CMakeLists.txt	(date 1698399944886)
+@@ -384,7 +384,7 @@
+ endif()
+
+ if(CMAKE_USE_OPENSSL)
+-  find_package(OpenSSL REQUIRED)
++  find_package(OpenSSL 1 REQUIRED)
+   set(SSL_ENABLED ON)
+   set(USE_OPENSSL ON)
+
