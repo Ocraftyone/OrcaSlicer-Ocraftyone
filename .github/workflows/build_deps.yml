@@ -80,6 +80,8 @@ jobs:
       - name: Build on Mac x86_64
         if: inputs.os == 'macos-12' && inputs.arch == 'x86_64'
         working-directory: ${{ github.workspace }}
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/deps/build_x86_64/OrcaSlicer_dep_x86_64/usr/local/lib/pkgconfig
         run: |
             brew install cmake git gettext automake
             echo $PKG_CONFIG_PATH
@@ -90,6 +92,8 @@ jobs:
       - name: Build on Mac arm64
         if: inputs.os == 'macos-12' && inputs.arch == 'arm64'
         working-directory: ${{ github.workspace }}
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64/usr/local/lib/pkgconfig
         run: |
             brew install cmake git gettext automake
             echo $PKG_CONFIG_PATH
@@ -151,7 +155,7 @@ jobs:
           
   build_orca:
     needs: [build_deps]
-    if: ${{inputs.valid-cache == true && failure() || inputs.valid-cache != true && success() }}
+    if: ${{inputs.valid-cache == true && needs.build_deps.result == 'skipped' || inputs.valid-cache != true && success() }}
     uses: ./.github/workflows/build_orca.yml
     with:
       cache-path: ${{ inputs.cache-path }}
