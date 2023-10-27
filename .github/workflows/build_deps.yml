@@ -152,7 +152,7 @@ jobs:
           
   build_orca:
     needs: [build_deps]
-    if: ${{inputs.valid-cache == true && always() || inputs.valid-cache != true && success() }}
+    if: ${{inputs.valid-cache == true && failure() || inputs.valid-cache != true && success() }}
     uses: ./.github/workflows/build_orca.yml
     with:
       cache-path: ${{ inputs.cache-path }}
