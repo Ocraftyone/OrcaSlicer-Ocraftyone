@@ -82,7 +82,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install cmake git gettext automake
-            brew remove openssl
+            brew uninstall --ignore-dependencies openssl
             mkdir -p ${{ github.workspace }}/deps/build_x86_64
             mkdir -p ${{ github.workspace }}/deps/build_x86_64/OrcaSlicer_dep_x86_64
             ./build_release_macos.sh -dp -a x86_64
@@ -92,8 +92,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install cmake git gettext automake
-            brew tap beeftornado/rmtree
-            brew rmtree openssl
+            brew uninstall --ignore-dependencies openssl
             mkdir -p ${{ github.workspace }}/deps/build_arm64
             mkdir -p ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
             ./build_release_macos.sh -dp -a arm64

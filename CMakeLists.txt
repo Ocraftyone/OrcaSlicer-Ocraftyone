@@ -425,8 +425,7 @@ find_package(TBB REQUIRED)
 # The Intel TBB library will use the std::exception_ptr feature of C++11.
 # add_definitions(-DTBB_USE_CAPTURED_EXCEPTION=0)
 
-set(MINIMUM_OPENSSL_VERSION "1")
-find_package(OpenSSL ${MINIMUM_OPENSSL_VERSION} REQUIRED)
+find_package(OpenSSL REQUIRED)
 if (APPLE)
 find_package(CURL CONFIG REQUIRED)
 else()
@@ -524,7 +523,7 @@ add_custom_target(gettext_make_pot
     COMMAND xgettext --keyword=L --keyword=_L --keyword=_u8L --keyword=L_CONTEXT:1,2c --keyword=_L_PLURAL:1,2 --add-comments=TRN --from-code=UTF-8 --no-location --debug --boost
         -f "${BBL_L18N_DIR}/list.txt"
         -o "${BBL_L18N_DIR}/OrcaSlicer.pot"
-	COMMAND hintsToPot ${SLIC3R_RESOURCES_DIR} ${BBL_L18N_DIR}
+	COMMAND hintsToPot ${SLIC3R_RESOURCES_DIR} ${BBL_L18N_DIR}	
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Generate pot file from strings in the source tree"
 )
@@ -724,7 +723,7 @@ endif()
 if (WIN32)
     install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "./resources")
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
-    include(InstallRequiredSystemLibraries)
+    include(InstallRequiredSystemLibraries) 
     install (PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION ".")
 elseif (SLIC3R_FHS)
     # CMAKE_INSTALL_FULL_DATAROOTDIR: read-only architecture-independent data root (share)

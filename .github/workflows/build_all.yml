@@ -1,27 +1,27 @@
 name: Build all
 
 on:
-    push:
-      branches:
-       - main
-      paths:
-       - 'deps/**'
-       - 'src/**'
-       - '**/CMakeLists.txt'
-       - 'version.inc'
-       - 'localization/**'
-       - 'resources/**'
-       - ".github/workflows/build_all.yml"
+    # push:
+    #   branches:
+    #    - main
+    #   paths:
+    #    - 'deps/**'
+    #    - 'src/**'
+    #    - '**/CMakeLists.txt'
+    #    - 'version.inc'
+    #    - 'localization/**'
+    #    - 'resources/**'
+    #    - ".github/workflows/build_all.yml"
 
-    pull_request:
-      branches:
-       - main
-      paths:
-       - 'deps/**'
-       - 'src/**'
-       - '**/CMakeLists.txt'
-       - 'version.inc'
-       - ".github/workflows/build_all.yml"
+    # pull_request:
+    #   branches:
+    #    - main
+    #   paths:
+    #    - 'deps/**'
+    #    - 'src/**'
+    #    - '**/CMakeLists.txt'
+    #    - 'version.inc'
+    #    - ".github/workflows/build_all.yml"
 
     workflow_dispatch: # allows for manual dispatch
 
