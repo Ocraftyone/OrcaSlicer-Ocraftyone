@@ -92,7 +92,8 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             brew install cmake git gettext automake
-            brew remove openssl
+            brew tap beeftornado/rmtree
+            brew rmtree openssl
             mkdir -p ${{ github.workspace }}/deps/build_arm64
             mkdir -p ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
             ./build_release_macos.sh -dp -a arm64
