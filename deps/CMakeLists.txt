@@ -38,7 +38,7 @@ option(DEP_DEBUG "Build debug variants (only applicable on Windows)" OFF)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(DEP_WX_GTK3 "Build wxWidgets against GTK3" OFF)
-else() 
+else()
     if(POLICY CMP0135) # DOWNLOAD_EXTRACT_TIMESTAMP
         cmake_policy(SET CMP0135 NEW)
     endif()
@@ -63,7 +63,7 @@ if (APPLE)
 endif ()
 
 
-# On developer machines, it can be enabled to speed up compilation and suppress warnings coming from IGL. 
+# On developer machines, it can be enabled to speed up compilation and suppress warnings coming from IGL.
 # FIXME:
 # Enabling this option is not safe. IGL will compile itself with its own version of Eigen while
 # Slic3r compiles with a different version which will cause runtime errors.
@@ -75,7 +75,7 @@ message(STATUS "OrcaSlicer deps debug build: ${DEP_DEBUG}")
 
 find_package(Git REQUIRED)
 
-# The default command line for patching. Only works for newer 
+# The default command line for patching. Only works for newer
 set(PATCH_CMD ${GIT_EXECUTABLE} apply --verbose --ignore-space-change --whitespace=fix)
 
 get_property(_is_multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -188,17 +188,17 @@ else()
 endif()
 
 set(ZLIB_PKG "")
-if (NOT ZLIB_FOUND) 
+if (NOT ZLIB_FOUND)
     include(ZLIB/ZLIB.cmake)
     set(ZLIB_PKG dep_ZLIB)
 endif ()
 set(PNG_PKG "")
-if (NOT PNG_FOUND) 
+if (NOT PNG_FOUND)
     include(PNG/PNG.cmake)
     set(PNG_PKG dep_PNG)
 endif ()
 set(EXPAT_PKG "")
-if (NOT EXPAT_FOUND) 
+if (NOT EXPAT_FOUND)
     include(EXPAT/EXPAT.cmake)
     set(EXPAT_PKG dep_EXPAT)
 endif ()
@@ -229,8 +229,14 @@ include(OpenSSL/OpenSSL.cmake)
 
 set(CURL_PKG "")
 if (NOT CURL_FOUND)
+    if (APPLE)
+        set(ENV{PKG_CONFIG_PATH} "${DESTDIR}/deps/build_${CMAKE_OSX_ARCHS}/OrcaSlicer_dep_${CMAKE_OSX_ARCHS}/usr/local/lib/pkgconfig")
+    endif ()
     include(CURL/CURL.cmake)
     set(CURL_PKG dep_CURL)
+    if (APPLE)
+        set(ENV{PKG_CONFIG_PATH} "")
+    endif ()
 endif ()
 
 include(JPEG/JPEG.cmake)
