@@ -70,6 +70,7 @@ orcaslicer_add_cmake_project(CURL
     -DBUILD_CURL_EXE:BOOL=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCURL_STATICLIB=${_curl_static}
+    -DDESTDIR=${DESTDIR}
     ${_curl_platform_flags}
 )
 
