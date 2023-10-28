@@ -64,13 +64,13 @@ orcaslicer_add_cmake_project(CURL
   DEPENDS             ${ZLIB_PKG}
   # PATCH_COMMAND       ${GIT_EXECUTABLE} checkout -f -- . && git clean -df &&
   #                     ${GIT_EXECUTABLE} apply --whitespace=fix ${CMAKE_CURRENT_LIST_DIR}/curl-mods.patch
-  PATCH_COMMAND       patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/specify-openssl-ver.patch
+#  PATCH_COMMAND       patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/specify-openssl-ver.patch
   CMAKE_ARGS
     -DBUILD_TESTING:BOOL=OFF
     -DBUILD_CURL_EXE:BOOL=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCURL_STATICLIB=${_curl_static}
-    -DDESTDIR=${DESTDIR}
+#    -DDESTDIR=${DESTDIR}
     ${_curl_platform_flags}
 )
 
