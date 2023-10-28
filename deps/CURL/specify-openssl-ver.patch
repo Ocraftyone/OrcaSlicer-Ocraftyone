@@ -9,7 +9,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 
  if(CMAKE_USE_OPENSSL)
 -  find_package(OpenSSL REQUIRED)
-+  find_package(OpenSSL 1...<2 REQUIRED)
++  find_package(OpenSSL 1...<2 REQUIRED PATH "${DESTDIR}/usr/local")
    set(SSL_ENABLED ON)
    set(USE_OPENSSL ON)
 
