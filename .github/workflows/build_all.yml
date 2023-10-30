@@ -51,4 +51,4 @@ jobs:
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
-      build-deps-only: ${{ inputs.build-deps-only }}
+      build-deps-only: ${{ inputs.build-deps-only || false }}
