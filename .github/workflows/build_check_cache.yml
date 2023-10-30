@@ -42,6 +42,7 @@ jobs:
         with:
           path: ${{ steps.set_outputs.outputs.cache-path }}
           key: ${{ steps.set_outputs.outputs.cache-key }}
+          lookup-only: true
         
   build_deps: # call next step
     name: Build Deps
