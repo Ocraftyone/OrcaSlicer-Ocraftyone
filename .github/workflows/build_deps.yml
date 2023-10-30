@@ -1,5 +1,3 @@
-name: Build Deps
-
 on:
   workflow_call:
     inputs:
@@ -120,6 +118,7 @@ jobs:
           path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep_ubuntu_*.tar.gz
           
   build_orca:
+    name: Build OrcaSlicer
     needs: [build_deps]
     if: ${{ !inputs.build-deps-only && (inputs.valid-cache == true && needs.build_deps.result == 'skipped') || (inputs.valid-cache != true && success()) }}
     uses: ./.github/workflows/build_orca.yml

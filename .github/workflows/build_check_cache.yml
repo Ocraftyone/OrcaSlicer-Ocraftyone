@@ -39,13 +39,13 @@ jobs:
       - name: load cache
         id: cache_deps
         uses: actions/cache@v3
-        env:
-          vars: ${{ steps.set_outputs.outputs }}
         with:
-          path: ${{ env.vars.cache-path }}
-          key: ${{ env.vars.cache-key }}
+          path: ${{ steps.set_outputs.outputs.cache-path }}
+          key: ${{ steps.set_outputs.outputs.
+          cache-key }}
         
   build_deps: # call next step
+    name: Build Deps
     needs: [check_cache]
     uses: ./.github/workflows/build_deps.yml
     with:
