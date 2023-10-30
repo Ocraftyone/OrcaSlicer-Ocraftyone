@@ -1,36 +1,10 @@
-name: Build OrcaSlicer
-
 on:
-    # push:
-    #   branches:
-    #    - main
-    #   paths:
-    #    - 'src/**'
-    #    - '**/CMakeLists.txt'
-    #    - 'version.inc'
-    #    - 'localization/**'
-    #    - 'resources/**'
-    #    - ".github/workflows/build_orca.yml"
-
-    # pull_request:
-    #   branches:
-    #    - main
-    #   paths:
-    #    - 'src/**'
-    #    - '**/CMakeLists.txt'
-    #    - 'version.inc'
-    #    - ".github/workflows/build_orca.yml"
-
-    workflow_dispatch:
     workflow_call:
       inputs:
+        cache-key:
+          required: true
+          type: string
         cache-path:
-          required: true
-          type: string
-        cache-name:
-          required: true
-          type: string
-        hash:
           required: true
           type: string
         os:
@@ -39,13 +13,10 @@ on:
         arch:
           required: false
           type: string
- 
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-#   cancel-in-progress: true
 
 jobs:
   build_orca:
+    name: Build OrcaSlicer
     runs-on: ${{ inputs.os }}
     env:
       date:
@@ -57,7 +28,6 @@ jobs:
 
       - name: Get the version and date on Ubuntu and macOS
         if: inputs.os != 'windows-latest'
-        id: get-version-unix
         run: |
           ver=$(grep 'set(SoftFever_VERSION' version.inc | cut -d '"' -f2)
           echo "ver=$ver" >> $GITHUB_ENV
@@ -66,7 +36,6 @@ jobs:
 
       - name: Get the version and date on Windows
         if: inputs.os == 'windows-latest'
-        id: get-version-windows
         run: |
           echo "date=$(Get-Date -Format 'yyyyMMdd')" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           # Extract the version from the file
@@ -82,7 +51,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ inputs.cache-path }}
-          key: ${{ inputs.cache-name }}-build-${{ inputs.hash }}
+          key: ${{ inputs.cache-key }}
         
 #   Mac
       - name: Install tools mac
@@ -161,12 +130,6 @@ jobs:
         run: |
           cpack -G NSIS
 
-      # - name: pack app
-        # if: inputs.os == 'windows-latest'
-        #   working-directory: ${{ github.workspace }}/build
-      #   shell: cmd
-      #   run: '"C:/Program Files/7-Zip/7z.exe" a -tzip OrcaSlicer_dev_build.zip ${{ github.workspace }}/build/OrcaSlicer'
-
       - name: Upload artifacts Win zip
         if: inputs.os == 'windows-latest'
         uses: actions/upload-artifact@v3
@@ -180,8 +143,8 @@ jobs:
         with:
           name: OrcaSlicer_Windows_V${{ env.ver }}
           path: ${{ github.workspace }}/build/OrcaSlicer*.exe
+          
 # Ubuntu
-
       - name: Install dependencies
         if: inputs.os == 'ubuntu-20.04'
         run: |
