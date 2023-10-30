@@ -37,6 +37,7 @@ concurrency:
 
 jobs:
   build_all:
+    name: Build All
     strategy:
       fail-fast: false
       matrix:
