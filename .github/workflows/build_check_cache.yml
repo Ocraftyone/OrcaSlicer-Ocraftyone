@@ -50,7 +50,7 @@ jobs:
     with:
       cache-key: ${{ needs.check_cache.outputs.cache-key }}
       cache-path: ${{ needs.check_cache.outputs.cache-path }}
-      valid-cache: ${{ needs.check_cache.outputs.valid-cache && true || false }}
+      valid-cache: ${{ needs.check_cache.outputs.valid-cache }}
       os: ${{ inputs.os }}
       arch: ${{ inputs.arch }}
       build-deps-only: ${{ inputs.build-deps-only }}
