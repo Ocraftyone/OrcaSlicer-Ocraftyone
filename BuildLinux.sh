@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # exit on first error
 
 export ROOT=`pwd`
 export NCORES=`nproc --all`
@@ -6,39 +7,24 @@ export CMAKE_BUILD_PARALLEL_LEVEL=${NCORES}
 FOUND_GTK2=$(dpkg -l libgtk* | grep gtk2)
 FOUND_GTK3=$(dpkg -l libgtk* | grep gtk-3)
 
-set -e # exit on first error
-
 function check_available_memory_and_disk() {
     FREE_MEM_GB=$(free -g -t | grep 'Mem:' | rev | cut -d" " -f1 | rev)
-    MIN_MEM_GB=10
+    MIN_MEM_GB=4
 
     FREE_DISK_KB=$(df -k . | tail -1 | awk '{print $4}')
-    MIN_DISK_KB=$((10 * 1024 * 1024))
+    MIN_DISK_KB=$((8 * 1024 * 1024))
 
     if [ ${FREE_MEM_GB} -le ${MIN_MEM_GB} ]; then
-        echo -e "\nERROR: Orca Slicer Builder requires at least ${MIN_MEM_GB}G of 'available' mem (systen has only ${FREE_MEM_GB}G available)"
+        echo -e "\nERROR: Bambu Studio Builder requires at least ${MIN_MEM_GB}G of 'available' mem (systen has only ${FREE_MEM_GB}G available)"
         echo && free -h && echo
         exit 2
     fi
 
     if [[ ${FREE_DISK_KB} -le ${MIN_DISK_KB} ]]; then 
-        echo -e "\nERROR: Orca Slicer Builder requires at least $(echo $MIN_DISK_KB |awk '{ printf "%.1fG\n", $1/1024/1024; }') (systen has only $(echo ${FREE_DISK_KB} | awk '{ printf "%.1fG\n", $1/1024/1024; }') disk free)"
+        echo -e "\nERROR: Bambu Studio Builder requires at least $(echo $MIN_DISK_KB |awk '{ printf "%.1fG\n", $1/1024/1024; }') (systen has only $(echo ${FREE_DISK_KB} | awk '{ printf "%.1fG\n", $1/1024/1024; }') disk free)"
         echo && df -h . && echo
         exit 1
     fi
-}
-
-function usage() {
-    echo "Usage: ./BuildLinux.sh [-i][-u][-d][-s][-b][-g]"
-    echo "   -i: Generate appimage (optional)"
-    echo "   -g: force gtk2 build"
-    echo "   -b: build in debug mode"
-    echo "   -d: build deps (optional)"
-    echo "   -s: build orca-slicer (optional)"
-    echo "   -u: only update clock & dependency packets (optional and need sudo)"
-    echo "   -r: skip free ram check (low ram compiling)"
-    echo "For a first use, you want to 'sudo ./BuildLinux.sh -u'"
-    echo "   and then './BuildLinux.sh -dsi'"
 }
 
 unset name
@@ -54,7 +40,7 @@ while getopts ":dsiuhgbr" opt; do
         BUILD_DEPS="1"
         ;;
     s )
-        BUILD_ORCA="1"
+        BUILD_BAMBU_STUDIO="1"
         ;;
     b )
         BUILD_DEBUG="1"
@@ -65,7 +51,16 @@ while getopts ":dsiuhgbr" opt; do
     r )
 	SKIP_RAM_CHECK="1"
 	;;
-    h ) usage
+    h ) echo "Usage: ./BuildLinux.sh [-i][-u][-d][-s][-b][-g]"
+        echo "   -i: Generate appimage (optional)"
+        echo "   -g: force gtk2 build"
+        echo "   -b: build in debug mode"
+        echo "   -d: build deps (optional)"
+        echo "   -s: build bambu-studio (optional)"
+        echo "   -u: only update clock & dependency packets (optional and need sudo)"
+	echo "   -r: skip free ram check (low ram compiling)"
+        echo "For a first use, you want to 'sudo ./BuildLinux.sh -u'"
+        echo "   and then './BuildLinux.sh -dsi'"
         exit 0
         ;;
   esac
@@ -73,16 +68,31 @@ done
 
 if [ $OPTIND -eq 1 ]
 then
-    usage
+    echo "Usage: ./BuildLinux.sh [-i][-u][-d][-s][-b][-g]"
+    echo "   -i: Generate appimage (optional)"
+    echo "   -g: force gtk2 build"
+    echo "   -b: build in debug mode"
+    echo "   -d: build deps (optional)"
+    echo "   -s: build bambu-studio (optional)"
+    echo "   -u: only update clock & dependency packets (optional and need sudo)"
+    echo "   -r: skip free ram check (low ram compiling)"
+    echo "For a first use, you want to 'sudo ./BuildLinux.sh -u'"
+    echo "   and then './BuildLinux.sh -dsi'"
     exit 0
 fi
 
-# Addtional Dev packages for OrcaSlicer
-export REQUIRED_DEV_PACKAGES="libmspack-dev libgstreamerd-3-dev libsecret-1-dev libwebkit2gtk-4.0-dev libosmesa6-dev libssl-dev libcurl4-openssl-dev eglexternalplatform-dev libudev-dev libdbus-1-dev extra-cmake-modules texinfo"
+# mkdir build
+if [ ! -d "build" ]
+then
+    mkdir build
+fi
+
+# Addtional Dev packages for BambuStudio
+export REQUIRED_DEV_PACKAGES="libmspack-dev libgstreamerd-3-dev libsecret-1-dev libwebkit2gtk-4.0-dev libosmesa6-dev libssl-dev libcurl4-openssl-dev eglexternalplatform-dev libudev-dev libdbus-1-dev extra-cmake-modules"
 # libwebkit2gtk-4.1-dev ??
 export DEV_PACKAGES_COUNT=$(echo ${REQUIRED_DEV_PACKAGES} | wc -w)
 if [ $(dpkg --get-selections | grep -E "$(echo ${REQUIRED_DEV_PACKAGES} | tr ' ' '|')" | wc -l) -lt ${DEV_PACKAGES_COUNT} ]; then
-    sudo apt install -y ${REQUIRED_DEV_PACKAGES} git cmake wget file gettext
+    sudo apt install -y ${REQUIRED_DEV_PACKAGES} git cmake wget file
 fi
 
 #FIXME: require root for -u option
@@ -99,11 +109,11 @@ then
         echo -e "\nFind libgtk-3, installing: libgtk-3-dev libglew-dev libudev-dev libdbus-1-dev cmake git\n"
         apt install -y libgtk-3-dev libglew-dev libudev-dev libdbus-1-dev cmake git
     fi
-    # for ubuntu 22+ and 23+:
-    ubu_major_version="$(grep VERSION_ID /etc/os-release | cut -d "=" -f 2 | cut -d "." -f 1 | tr -d /\"/)"
-    if [ $ubu_major_version == "22" ] || [ $ubu_major_version == "23" ]
+    # for ubuntu 22.04:
+    ubu_version="$(cat /etc/issue)" 
+    if [[ $ubu_version == "Ubuntu 22.04"* ]]
     then
-        apt install -y curl libfuse-dev libssl-dev libcurl4-openssl-dev m4
+        apt install -y curl libssl-dev libcurl4-openssl-dev m4
     fi
     if [[ -n "$BUILD_DEBUG" ]]
     then
@@ -163,10 +173,9 @@ then
     fi
     if [[ -n "$BUILD_DEBUG" ]]
     then
-        # have to build deps with debug & release or the cmake won't find everything it needs
+        # have to build deps with debug & release or the cmake won't find evrything it needs
         mkdir deps/build/release
         pushd deps/build/release
-            echo -e "cmake ../.. -DDESTDIR=\"../destdir\" $BUILD_ARGS"
             cmake ../.. -DDESTDIR="../destdir" $BUILD_ARGS
             make -j$NCORES
         popd
@@ -175,16 +184,15 @@ then
     
     # cmake deps
     pushd deps/build
-        echo "cmake .. $BUILD_ARGS"
         cmake .. $BUILD_ARGS
         echo "done"
         
         # make deps
         echo "[4/9] Building dependencies..."
-        make deps -j$NCORES
+        make -j$NCORES
         echo "done"
 
-        # rename wxscintilla # TODO: DeftDawg: Does OrcaSlicer need this?
+        # rename wxscintilla # TODO: DeftDawg: Does BambuStudio need this?
         # echo "[5/9] Renaming wxscintilla library..."
         # pushd destdir/usr/local/lib
         #     if [[ -z "$FOUND_GTK3_DEV" ]]
@@ -204,13 +212,7 @@ then
     echo "done"
 fi
 
-# Create main "build" directory
-if [ ! -d "build" ]
-then
-    mkdir build
-fi
-
-if [[ -n "$BUILD_ORCA" ]]
+if [[ -n "$BUILD_BAMBU_STUDIO" ]]
 then
     echo "[7/9] Configuring Slic3r..."
     BUILD_ARGS=""
@@ -227,15 +229,17 @@ then
     
     # cmake
     pushd build
-        echo -e "cmake .. -DCMAKE_PREFIX_PATH=\"$PWD/../deps/build/destdir/usr/local\" -DSLIC3R_STATIC=1 ${BUILD_ARGS}"
         cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1 ${BUILD_ARGS}
         echo "done"
         
         # make Slic3r
         echo "[8/9] Building Slic3r..."
-        make -j$NCORES OrcaSlicer # Slic3r
+        make -j$NCORES BambuStudio # Slic3r
+
+        # make .mo
+        # make gettext_po_to_mo # FIXME: DeftDawg: complains about msgfmt not existing even in SuperSlicer, did this ever work?
+    
     popd
-    ./run_gettext.sh
     echo "done"
 fi
 

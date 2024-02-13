@@ -167,6 +167,12 @@ wxBoxSizer *PreferencesDialog::create_item_language_combobox(
         else if (vlist[i] == wxLocale::GetLanguageInfo(wxLANGUAGE_TURKISH)) {
             language_name = wxString::FromUTF8("Turkish");
         }
+        else if (vlist[i] == wxLocale::GetLanguageInfo(wxLANGUAGE_POLISH)) {
+            language_name = wxString::FromUTF8("Polski");
+        }
+        else if (vlist[i] == wxLocale::GetLanguageInfo(wxLANGUAGE_CATALAN)) {
+            language_name = wxString::FromUTF8("Catalan");
+        }
 
         if (app_config->get(param) == vlist[i]->CanonicalName) {
             m_current_language_selected = i;
@@ -222,7 +228,7 @@ wxBoxSizer *PreferencesDialog::create_item_language_combobox(
             auto check = [this](bool yes_or_no) {
                 // if (yes_or_no)
                 //    return true;
-                int act_btns = UnsavedChangesDialog::ActionButtons::SAVE;
+                int act_btns = ActionButtons::SAVE;
                 return wxGetApp().check_and_keep_current_preset_changes(_L("Switching application language"),
                                                                         _L("Switching application language while some presets are modified."), act_btns);
             };
@@ -664,6 +670,7 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxWindow *pa
             } else {
                 wxGetApp().stop_sync_user_preset();
             }
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: " << (sync ? "true" : "false");
         }
 
         #ifdef __WXMSW__
@@ -969,8 +976,9 @@ wxWindow* PreferencesDialog::create_general_page()
         wxLANGUAGE_KOREAN,
         wxLANGUAGE_RUSSIAN,
         wxLANGUAGE_UKRAINIAN,
-        wxLANGUAGE_TURKISH
-
+        wxLANGUAGE_TURKISH,
+        wxLANGUAGE_POLISH,
+        wxLANGUAGE_CATALAN
     };
 
     auto translations = wxTranslations::Get()->GetAvailableTranslations(SLIC3R_APP_KEY);
@@ -1051,6 +1059,8 @@ wxWindow* PreferencesDialog::create_general_page()
     //downloads
     auto title_downloads = create_item_title(_L("Downloads"), page, _L("Downloads"));
     auto item_downloads = create_item_downloads(page,50,"download_path");
+    auto ps_download_url_registered = create_item_checkbox(_L("Allow downloads from Printables.com"), page,
+                                                           _L("Allow downloads from Printables.com"), 50, "ps_url_registered");
 
     //dark mode
 #ifdef _WIN32
@@ -1105,6 +1115,7 @@ wxWindow* PreferencesDialog::create_general_page()
 
     sizer_page->Add(title_downloads, 0, wxTOP| wxEXPAND, FromDIP(20));
     sizer_page->Add(item_downloads, 0, wxEXPAND, FromDIP(3));
+    sizer_page->Add(ps_download_url_registered, 0, wxTOP | wxEXPAND, FromDIP(20));
 
 #ifdef _WIN32
     sizer_page->Add(title_darkmode, 0, wxTOP | wxEXPAND, FromDIP(20));

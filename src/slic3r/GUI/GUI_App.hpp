@@ -1,6 +1,13 @@
 #ifndef slic3r_GUI_App_hpp_
 #define slic3r_GUI_App_hpp_
 
+#include <wx/app.h>
+#include <wx/colour.h>
+#include <wx/font.h>
+#include <wx/string.h>
+#include <wx/snglinst.h>
+#include <wx/msgdlg.h>
+
 #include <memory>
 #include <string>
 #include "ImGuiWrapper.hpp"
@@ -16,13 +23,6 @@
 #include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
 #include "slic3r/GUI/HttpServer.hpp"
 #include "../Utils/PrintHost.hpp"
-
-#include <wx/app.h>
-#include <wx/colour.h>
-#include <wx/font.h>
-#include <wx/string.h>
-#include <wx/snglinst.h>
-#include <wx/msgdlg.h>
 
 #include <mutex>
 #include <stack>
@@ -70,6 +70,7 @@ class ObjectLayers;
 class Plater;
 class ParamsPanel;
 class NotificationManager;
+class Downloader;
 struct GUI_InitParams;
 class ParamsDialog;
 class HMSQuery;
@@ -85,6 +86,7 @@ enum FileType
     FT_3MF,
     FT_GCODE,
     FT_MODEL,
+    FT_ZIP,
     FT_PROJECT,
     FT_GALLERY,
 
@@ -270,6 +272,8 @@ private:
     //std::string m_instance_hash_string;
 	//size_t m_instance_hash_int;
 
+    std::unique_ptr<Downloader> m_downloader;
+
     //BBS
     bool m_is_closing {false};
     Slic3r::DeviceManager* m_device_manager { nullptr };
@@ -411,6 +415,7 @@ private:
     void            keyboard_shortcuts();
     void            load_project(wxWindow *parent, wxString& input_file) const;
     void            import_model(wxWindow *parent, wxArrayString& input_files) const;
+    void            import_zip(wxWindow* parent, wxString& input_file) const;
     void            load_gcode(wxWindow* parent, wxString& input_file) const;
 
     wxString transition_tridid(int trid_id);
@@ -544,6 +549,7 @@ private:
     ParamsDialog*        params_dialog();
     Model&      		 model();
     NotificationManager * notification_manager();
+    Downloader*          downloader();
 
 
     std::string         m_mall_model_download_url;
@@ -625,6 +631,10 @@ private:
     void            associate_files(std::wstring extend);
     void            disassociate_files(std::wstring extend);
 #endif // __WXMSW__
+
+    // URL download - PrusaSlicer gets system call to open prusaslicer:// URL which should contain address of download
+    void            start_download(std::string url);
+
     std::string     get_plugin_url(std::string name, std::string country_code);
     int             download_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr);
     int             install_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr);
@@ -664,6 +674,7 @@ private:
     std::string             m_older_data_dir_path;
     boost::optional<Semver> m_last_config_version;
     bool                    m_config_corrupted { false };
+    std::string             m_open_method;
 };
 
 DECLARE_APP(GUI_App)
