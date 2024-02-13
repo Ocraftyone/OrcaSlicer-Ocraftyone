@@ -89,3 +89,4 @@ The GNU Affero General Public License, version 3 ensures that if you use any par
 
 The bambu networking plugin is based on non-free libraries. It is optional to the Orca Slicer and provides extended functionalities for users.
 
+CurviSlicer for curved printing on standard, off-the-shelf, 3-axis FDM printers. (in progress)
