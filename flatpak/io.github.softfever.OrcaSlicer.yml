@@ -120,62 +120,16 @@ modules:
         url: https://github.com/KDE/extra-cmake-modules
         tag: v5.249.0
     cleanup:
-      - / 
- 
-  - name: orca_wxwidgets
-    buildsystem: simple
-    build-commands:
-      - |
-        mkdir builddir && cd builddir
-        cmake ../ -GNinja \
-          -DwxBUILD_PRECOMP=ON \
-          -DwxBUILD_TOOLKIT=gtk3 \
-          -DwxBUILD_DEBUG_LEVEL=0 \
-          -DwxBUILD_SAMPLES=OFF \
-          -DwxBUILD_SHARED=ON \
-          -DwxUSE_MEDIACTRL=ON \
-          -DwxUSE_DETECT_SM=OFF \
-          -DwxUSE_UNICODE=ON \
-          -DwxUSE_PRIVATE_FONTS=ON \
-          -DwxUSE_OPENGL=ON \
-          -DwxUSE_WEBREQUEST=ON \
-          -DwxUSE_WEBVIEW=ON \
-          -DwxUSE_WEBVIEW_EDGE=OFF \
-          -DwxUSE_WEBVIEW_IE=OFF \
-          -DwxUSE_REGEX=builtin \
-          -DwxUSE_LIBSDL=OFF \
-          -DwxUSE_XTEST=OFF \
-          -DwxUSE_STC=OFF \
-          -DwxUSE_AUI=ON \
-          -DwxUSE_LIBPNG=sys \
-          -DwxUSE_ZLIB=sys \
-          -DwxUSE_LIBJPEG=sys \
-          -DwxUSE_LIBTIFF=sys \
-          -DwxUSE_EXPAT=sys \
-          -DBUILD_SHARED_LIBS:BOOL=ON \
-          -DCMAKE_INSTALL_PREFIX:STRING=/app \
-          -DCMAKE_PREFIX_PATH=/app \
-          -DCMAKE_BUILD_TYPE=Release
-        cmake --build . --target install -j$FLATPAK_BUILDER_N_JOBS
-    sources:
-      - type: git
-        url: https://github.com/SoftFever/Orca-deps-wxWidgets
-        branch: master
-        path: ../
-    cleanup:
-      - "*.la"
-      - "*.a"
-      - "*.cmake"
-      - /include
-      - /app/bin/*
+      - /
 
   - name: orca_deps
     buildsystem: simple
     build-commands:
       # start build
       - |
-        mkdir deps/build && cd deps/build
-        cmake ../ \
+        cd deps
+        cmake . -B build \
+          -GNinja \
           -DDEP_WX_GTK3=ON \
           -DDEP_DOWNLOAD_DIR=/run/build/orca_deps/external-packages \
           -DCMAKE_PREFIX_PATH=/app \
@@ -183,15 +137,16 @@ modules:
           -DCMAKE_INSTALL_LIBDIR=/app/lib \
           -DFLATPAK=ON \
           -DCMAKE_INSTALL_PREFIX=/app
-        cmake --build . 
-        rm -r /run/build/orca_deps/external-packages
-    
+        cmake --build build --target dep_wxWidgets
+        cmake --build build
+
     cleanup:
       - /app/include
       - "*.a"
       - "*.la"
+      - "*.cmake"
       - /app/lib/cmake
-    
+
     sources:
       # -
       # Section bellow fetches all OrcaSlicer dependencies before the build process and stores them in external-packages/*/* .
@@ -199,9 +154,9 @@ modules:
       #
       # NOTE: The url, dest folder name and sha256 must match from OrcaSlicer's cmake scripts and folder names in OrcaSlicer/deps/
       # -
-      
+
       # OrcaSlicer Source Archive
-      - type: dir 
+      - type: dir
         path: ../
 
       # Blosc
@@ -281,7 +236,7 @@ modules:
         url: https://github.com/oneapi-src/oneTBB/archive/refs/tags/v2021.5.0.zip
         dest: external-packages/TBB
         sha256: 83ea786c964a384dd72534f9854b419716f412f9d43c0be88d41874763e7bb47
-      
+
       # Boost
       - type: file
         url: https://github.com/boostorg/boost/releases/download/boost-1.84.0/boost-1.84.0.tar.gz

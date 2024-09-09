@@ -38,13 +38,11 @@ else()
     endif ()
 endif()
 
-ExternalProject_Add(dep_OpenSSL
-    #EXCLUDE_FROM_ALL ON
+orcaslicer_add_cmake_project(OpenSSL
     URL "https://github.com/openssl/openssl/archive/OpenSSL_1_1_1w.tar.gz"
     URL_HASH SHA256=2130E8C2FB3B79D1086186F78E59E8BC8D1A6AEDF17AB3907F4CB9AE20918C41
     # URL "https://github.com/openssl/openssl/archive/refs/tags/openssl-3.1.2.tar.gz"
     # URL_HASH SHA256=8c776993154652d0bb393f506d850b811517c8bd8d24b1008aef57fbe55d3f31
-    DOWNLOAD_DIR ${DEP_DOWNLOAD_DIR}/OpenSSL
 	CONFIGURE_COMMAND ${_conf_cmd} ${_cross_arch}
         "--openssldir=${DESTDIR}"
         "--prefix=${DESTDIR}"
