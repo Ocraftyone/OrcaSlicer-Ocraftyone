@@ -67,6 +67,14 @@ class Spoolman
     std::map<unsigned int, SpoolmanFilamentShrPtr> m_filaments{};
     std::map<unsigned int, SpoolmanSpoolShrPtr>    m_spools{};
 
+    struct LaneInfo
+    {
+        unsigned int lane_index{0};
+        std::string  lane_label;
+    };
+
+    std::map<unsigned int, LaneInfo> m_moonraker_lane_cache{};
+
     Spoolman()
     {
         m_instance    = this;
@@ -80,6 +88,10 @@ class Spoolman
     /// puts the provided data to the specified API endpoint
     /// \returns the json response
     static pt::ptree put_spoolman_json(const std::string& api_endpoint, const pt::ptree& data);
+
+    static bool                              moonraker_query(const std::string& request_body, pt::ptree& response);
+    static std::vector<std::string>          get_moonraker_candidate_urls();
+    bool                                     update_moonraker_lane_cache();
 
     /// get all the spools from the api and store them
     /// \returns if succeeded
@@ -145,6 +157,7 @@ public:
         m_spools.clear();
         m_filaments.clear();
         m_vendors.clear();
+        m_moonraker_lane_cache.clear();
         m_initialized = false;
     }
 
