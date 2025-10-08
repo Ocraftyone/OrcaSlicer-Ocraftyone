@@ -320,6 +320,28 @@ bool Spoolman::update_moonraker_lane_cache()
         return allocated;
     };
 
+    auto parse_lane_integer = [](const std::string& value) -> std::optional<unsigned int> {
+        try {
+            size_t parsed_chars = 0;
+            auto   parsed       = std::stoul(value, &parsed_chars);
+            if (parsed_chars == value.size())
+                return static_cast<unsigned int>(parsed);
+        } catch (...) {
+        }
+
+        std::string digits;
+        std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
+            return std::isdigit(static_cast<unsigned char>(ch));
+        });
+        if (!digits.empty()) {
+            try {
+                return static_cast<unsigned int>(std::stoul(digits));
+            } catch (...) {
+            }
+        }
+        return std::nullopt;
+    };
+
     for (const auto& lane_name : lane_names) {
         const auto lane_details_query = build_query_body({{"AFC_lane " + lane_name, {"name", "lane", "spool_id"}}});
 
@@ -339,26 +361,10 @@ bool Spoolman::update_moonraker_lane_cache()
         std::optional<unsigned int> lane_index_candidate;
         if (auto lane_index_opt = lane_node.get_optional<unsigned int>("lane"))
             lane_index_candidate = *lane_index_opt;
-        else if (auto lane_index_str = lane_node.get_optional<std::string>("lane")) {
-            try {
-                lane_index_candidate = static_cast<unsigned int>(std::stoul(*lane_index_str));
-            } catch (...) {
-                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Failed to parse lane index for lane '" << lane_name << "'";
-            }
-        } else {
-            std::string digits;
-            std::copy_if(lane_name.begin(), lane_name.end(), std::back_inserter(digits), [](char ch) {
-                return std::isdigit(static_cast<unsigned char>(ch));
-            });
-            if (!digits.empty()) {
-                try {
-                    lane_index_candidate = static_cast<unsigned int>(std::stoul(digits));
-                } catch (...) {
-                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Failed to parse lane index from lane name '" << lane_name
-                                                << "'";
-                }
-            }
-        }
+        else if (auto lane_index_str = lane_node.get_optional<std::string>("lane"))
+            lane_index_candidate = parse_lane_integer(boost::algorithm::trim_copy(*lane_index_str));
+        else
+            lane_index_candidate = parse_lane_integer(lane_name);
 
         unsigned int lane_index = 0;
         if (lane_index_candidate && used_lane_indices.insert(*lane_index_candidate).second) {
@@ -389,20 +395,21 @@ bool Spoolman::update_moonraker_lane_cache()
         if (spool_id_string.size() >= 2 && spool_id_string.front() == '"' && spool_id_string.back() == '"')
             spool_id_string = spool_id_string.substr(1, spool_id_string.size() - 2);
 
-        try {
-            auto spool_id = static_cast<unsigned int>(std::stoul(spool_id_string));
-            if (spool_id == 0)
-                continue;
-
-            LaneInfo info;
-            info.lane_index = lane_index;
-            info.lane_label = std::move(lane_label);
-
-            m_moonraker_lane_cache.emplace(spool_id, std::move(info));
-        } catch (...) {
+        auto spool_id_candidate = parse_lane_integer(spool_id_string);
+        if (!spool_id_candidate) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Failed to parse spool id '" << spool_id_string
                                         << "' for lane '" << lane_name << "'";
+            continue;
         }
+
+        if (*spool_id_candidate == 0)
+            continue;
+
+        LaneInfo info;
+        info.lane_index = lane_index;
+        info.lane_label = std::move(lane_label);
+
+        m_moonraker_lane_cache.emplace(*spool_id_candidate, std::move(info));
     }
 
     return lane_queries_succeeded;
@@ -515,24 +522,6 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
         auto spool = it->second;
         if (!spool)
             continue;
-        spool->loaded_lane_index.reset();
-        spool->loaded_lane_label.clear();
-    }
-
-    if (!update_moonraker_lane_cache())
-        return lanes;
-
-    for (const auto& [spool_id, lane_info] : m_moonraker_lane_cache) {
-        auto it = spools.find(spool_id);
-        if (it == spools.end())
-            continue;
-
-        auto spool = it->second;
-        if (!spool)
-            continue;
-
-        spool->loaded_lane_index = lane_info.lane_index;
-        spool->loaded_lane_label = lane_info.lane_label;
 
         spool->loaded_lane_index = lane_info.lane_index;
         spool->loaded_lane_label = lane_info.lane_label;
