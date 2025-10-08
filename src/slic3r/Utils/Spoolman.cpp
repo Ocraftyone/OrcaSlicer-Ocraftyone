@@ -1,6 +1,7 @@
 #include <slic3r/GUI/GUI_App.hpp>
 #include <slic3r/GUI/MainFrame.hpp>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <functional>
 #include <iterator>
