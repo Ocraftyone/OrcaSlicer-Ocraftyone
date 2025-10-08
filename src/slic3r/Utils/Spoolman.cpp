@@ -1,6 +1,7 @@
 #include <slic3r/GUI/GUI_App.hpp>
 #include <slic3r/GUI/MainFrame.hpp>
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <iterator>
 #include <optional>
@@ -343,7 +344,8 @@ bool Spoolman::update_moonraker_lane_cache()
     };
 
     for (const auto& lane_name : lane_names) {
-        const auto lane_details_query = build_query_body({{"AFC_lane " + lane_name, {"name", "lane", "spool_id"}}});
+        const auto lane_details_query = build_query_body({{"AFC_lane " + lane_name, {"name", "lane", "spool_id"}},
+                                                          {"AFC_stepper " + lane_name, {"name", "lane", "spool_id"}}});
 
         pt::ptree lane_details_response;
         if (!moonraker_query(lane_details_query, lane_details_response))
@@ -355,19 +357,30 @@ bool Spoolman::update_moonraker_lane_cache()
         if (!status_node_opt)
             continue;
 
-        const auto lane_key = std::string("AFC_lane ") + lane_name;
+        const auto lane_key     = std::string("AFC_lane ") + lane_name;
+        const auto stepper_key  = std::string("AFC_stepper ") + lane_name;
         auto       lane_node_opt = status_node_opt->get_child_optional(pt::ptree::path_type(lane_key, '\0'));
-        if (!lane_node_opt)
+        auto       stepper_node_opt = status_node_opt->get_child_optional(pt::ptree::path_type(stepper_key, '\0'));
+
+        if (!lane_node_opt && !stepper_node_opt)
             continue;
 
-        const auto& lane_node = *lane_node_opt;
+        std::array<const pt::ptree*, 2> lane_nodes{nullptr, nullptr};
+        size_t                          lane_nodes_count = 0;
+        if (lane_node_opt)
+            lane_nodes[lane_nodes_count++] = &*lane_node_opt;
+        if (stepper_node_opt)
+            lane_nodes[lane_nodes_count++] = &*stepper_node_opt;
 
         std::optional<unsigned int> lane_index_candidate;
-        if (auto lane_index_opt = lane_node.get_optional<unsigned int>("lane"))
-            lane_index_candidate = *lane_index_opt;
-        else if (auto lane_index_str = lane_node.get_optional<std::string>("lane"))
-            lane_index_candidate = parse_lane_integer(boost::algorithm::trim_copy(*lane_index_str));
-        else
+        for (size_t i = 0; i < lane_nodes_count && !lane_index_candidate; ++i) {
+            const auto& node = *lane_nodes[i];
+            if (auto lane_index_opt = node.get_optional<unsigned int>("lane"))
+                lane_index_candidate = *lane_index_opt;
+            else if (auto lane_index_str = node.get_optional<std::string>("lane"))
+                lane_index_candidate = parse_lane_integer(boost::algorithm::trim_copy(*lane_index_str));
+        }
+        if (!lane_index_candidate)
             lane_index_candidate = parse_lane_integer(lane_name);
 
         unsigned int lane_index = 0;
@@ -379,18 +392,23 @@ bool Spoolman::update_moonraker_lane_cache()
             lane_index = allocate_lane_index();
         }
 
-        std::string lane_label = lane_node.get("name", lane_name);
-        boost::algorithm::trim(lane_label);
+        std::string lane_label;
+        for (size_t i = 0; i < lane_nodes_count && lane_label.empty(); ++i) {
+            lane_label = lane_nodes[i]->get("name", "");
+            boost::algorithm::trim(lane_label);
+        }
         if (lane_label.empty())
             lane_label = lane_name;
 
         std::string spool_id_string;
-        if (auto spool_id_opt = lane_node.get_optional<std::string>("spool_id")) {
-            spool_id_string = boost::algorithm::trim_copy(*spool_id_opt);
-        } else if (auto spool_id_unsigned = lane_node.get_optional<unsigned int>("spool_id")) {
-            spool_id_string = std::to_string(*spool_id_unsigned);
-        } else if (auto spool_id_signed = lane_node.get_optional<int>("spool_id")) {
-            spool_id_string = std::to_string(*spool_id_signed);
+        for (size_t i = 0; i < lane_nodes_count && spool_id_string.empty(); ++i) {
+            if (auto spool_id_opt = lane_nodes[i]->get_optional<std::string>("spool_id")) {
+                spool_id_string = boost::algorithm::trim_copy(*spool_id_opt);
+            } else if (auto spool_id_unsigned = lane_nodes[i]->get_optional<unsigned int>("spool_id")) {
+                spool_id_string = std::to_string(*spool_id_unsigned);
+            } else if (auto spool_id_signed = lane_nodes[i]->get_optional<int>("spool_id")) {
+                spool_id_string = std::to_string(*spool_id_signed);
+            }
         }
 
         if (spool_id_string.empty())
