@@ -515,6 +515,24 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
         auto spool = it->second;
         if (!spool)
             continue;
+        spool->loaded_lane_index.reset();
+        spool->loaded_lane_label.clear();
+    }
+
+    if (!update_moonraker_lane_cache())
+        return lanes;
+
+    for (const auto& [spool_id, lane_info] : m_moonraker_lane_cache) {
+        auto it = spools.find(spool_id);
+        if (it == spools.end())
+            continue;
+
+        auto spool = it->second;
+        if (!spool)
+            continue;
+
+        spool->loaded_lane_index = lane_info.lane_index;
+        spool->loaded_lane_label = lane_info.lane_label;
 
         spool->loaded_lane_index = lane_info.lane_index;
         spool->loaded_lane_label = lane_info.lane_label;
