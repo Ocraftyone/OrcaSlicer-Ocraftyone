@@ -351,8 +351,12 @@ bool Spoolman::update_moonraker_lane_cache()
 
         lane_queries_succeeded = true;
 
-        const auto lane_key = std::string("result.status.AFC_lane ") + lane_name;
-        auto       lane_node_opt = lane_details_response.get_child_optional(pt::ptree::path_type(lane_key, '\0'));
+        auto status_node_opt = lane_details_response.get_child_optional("result.status");
+        if (!status_node_opt)
+            continue;
+
+        const auto lane_key = std::string("AFC_lane ") + lane_name;
+        auto       lane_node_opt = status_node_opt->get_child_optional(pt::ptree::path_type(lane_key, '\0'));
         if (!lane_node_opt)
             continue;
 
