@@ -89,10 +89,10 @@ static std::string build_query_body(const std::map<std::string, std::vector<std:
             value.put("", field);
             field_array.push_back({"", value});
         }
-        objects_node.add_child(name, field_array);
+        objects_node.add_child(pt::ptree::path_type(name, '\0'), field_array);
     }
 
-    request.add_child("objects", objects_node);
+    request.add_child(pt::ptree::path_type("objects", '\0'), objects_node);
 
     std::ostringstream stream;
     pt::write_json(stream, request, false);
