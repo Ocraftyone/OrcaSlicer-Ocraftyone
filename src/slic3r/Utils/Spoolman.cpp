@@ -334,8 +334,8 @@ bool Spoolman::update_moonraker_lane_cache()
         "spool_id",
         "loaded_spool_id",
         "spool",
-        "spoolman_spool_id",
         "spoolman",
+        "spoolman_spool_id",
         "metadata",
     };
     for (const auto& lane_name : lane_names) {
@@ -422,53 +422,54 @@ bool Spoolman::update_moonraker_lane_cache()
         return std::nullopt;
     };
 
-    auto parse_unsigned_field = [&](const pt::ptree& node, const std::string& path) -> std::optional<unsigned int> {
-        if (auto unsigned_value = node.get_optional<unsigned int>(path)) {
-            if (*unsigned_value != 0)
+    auto parse_node_value = [&](const pt::ptree& node) -> std::optional<unsigned int> {
+        if (auto unsigned_value = node.get_value_optional<unsigned int>()) {
+            if (*unsigned_value > 0)
                 return *unsigned_value;
-            return std::nullopt;
         }
 
-        if (auto signed_value = node.get_optional<int>(path)) {
+        if (auto signed_value = node.get_value_optional<int>()) {
             if (*signed_value > 0)
                 return static_cast<unsigned int>(*signed_value);
-            return std::nullopt;
         }
 
-        if (auto string_value = node.get_optional<std::string>(path))
+        if (auto string_value = node.get_value_optional<std::string>())
             return parse_unsigned_string(*string_value);
 
         return std::nullopt;
     };
 
-    const std::array<const char*, 18> spool_id_paths{{
-        "spool_id",
-        "loaded_spool_id",
-        "spool.id",
-        "spool.spool_id",
-        "spool.spoolman_id",
-        "spool.spoolman_spool_id",
-        "spoolman_spool_id",
-        "spoolman.id",
-        "spoolman.spool_id",
-        "metadata.spool_id",
-        "metadata.loaded_spool_id",
-        "metadata.loaded_spool.spoolman_id",
-        "metadata.loaded_spool.id",
-        "metadata.loaded_spool.spoolman_spool_id",
-        "metadata.loaded_spool.spool_id",
-        "metadata.spoolman_spool_id",
-        "metadata.spool.id",
-        "metadata.spool.spool_id",
-        "metadata.spool.spoolman_id",
-        "metadata.spool.spoolman_spool_id",
-    }};
+    auto extract_spool_id = [&](const pt::ptree& root) -> std::optional<unsigned int> {
+        struct NodeEntry {
+            const pt::ptree* node{nullptr};
+            bool             spool_related{false};
+        };
 
-    auto extract_spool_id = [&](const pt::ptree& node) -> std::optional<unsigned int> {
-        for (const auto* path : spool_id_paths) {
-            if (auto value = parse_unsigned_field(node, path))
-                return value;
+        std::vector<NodeEntry> stack{{NodeEntry{&root, false}}};
+
+        while (!stack.empty()) {
+            NodeEntry entry = stack.back();
+            stack.pop_back();
+
+            for (const auto& child : *entry.node) {
+                const auto& key = child.first;
+                auto        key_lower = boost::algorithm::to_lower_copy(key);
+                bool        child_spool_related = entry.spool_related || key_lower.find("spool") != std::string::npos;
+
+                bool key_contains_id = key_lower.find("id") != std::string::npos;
+                bool looks_like_spool_id = key_lower.find("spool_id") != std::string::npos ||
+                                           key_lower.find("spoolman_id") != std::string::npos ||
+                                           (child_spool_related && key_contains_id);
+
+                if (looks_like_spool_id) {
+                    if (auto parsed = parse_node_value(child.second))
+                        return parsed;
+                }
+
+                stack.push_back(NodeEntry{&child.second, child_spool_related});
+            }
         }
+
         return std::nullopt;
     };
 
@@ -477,8 +478,20 @@ bool Spoolman::update_moonraker_lane_cache()
             if (!node)
                 continue;
 
-            if (auto value = parse_unsigned_field(*node, "lane"))
-                return value;
+            if (auto value = node->get_optional<unsigned int>("lane")) {
+                if (*value > 0)
+                    return *value;
+            }
+
+            if (auto signed_value = node->get_optional<int>("lane")) {
+                if (*signed_value > 0)
+                    return static_cast<unsigned int>(*signed_value);
+            }
+
+            if (auto lane_string = node->get_optional<std::string>("lane")) {
+                if (auto parsed = parse_lane_integer(*lane_string))
+                    return parsed;
+            }
 
             if (auto name_value = node->get_optional<std::string>("name")) {
                 if (auto parsed = parse_lane_integer(*name_value))
