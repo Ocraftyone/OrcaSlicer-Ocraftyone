@@ -298,14 +298,32 @@ bool Spoolman::update_moonraker_lane_cache()
     if (!lanes_node_opt)
         return true;
 
-    std::vector<std::string> lane_names;
-    for (const auto& entry : *lanes_node_opt) {
-        std::string lane_name = entry.second.get_value<std::string>("");
-        boost::algorithm::trim(lane_name);
-        if (!lane_name.empty())
-            lane_names.emplace_back(std::move(lane_name));
+    std::set<std::string> lane_name_set;
+    std::vector<const pt::ptree*> stack{&lanes_node_opt.get()};
+
+    auto add_lane_name = [&](const std::string& value) {
+        auto trimmed = boost::algorithm::trim_copy(value);
+        if (!trimmed.empty())
+            lane_name_set.insert(std::move(trimmed));
+    };
+
+    while (!stack.empty()) {
+        const pt::ptree* node = stack.back();
+        stack.pop_back();
+
+        for (const auto& child : *node) {
+            if (!child.first.empty())
+                add_lane_name(child.first);
+
+            if (auto value = child.second.get_value_optional<std::string>())
+                add_lane_name(*value);
+
+            if (!child.second.empty())
+                stack.push_back(&child.second);
+        }
     }
 
+    std::vector<std::string> lane_names{lane_name_set.begin(), lane_name_set.end()};
     if (lane_names.empty())
         return true;
 
@@ -335,7 +353,7 @@ bool Spoolman::update_moonraker_lane_cache()
     if (!status_node_opt)
         return true;
 
-    auto& status_node = status_node_opt.get();
+    const auto& status_node = status_node_opt.get();
 
     std::set<unsigned int> used_lane_indices;
     unsigned int           next_lane_index = 0;
@@ -344,23 +362,27 @@ bool Spoolman::update_moonraker_lane_cache()
         while (used_lane_indices.count(next_lane_index) != 0)
             ++next_lane_index;
 
-        unsigned int allocated = next_lane_index;
+        const unsigned int allocated = next_lane_index;
         used_lane_indices.insert(allocated);
         ++next_lane_index;
         return allocated;
     };
 
     auto parse_lane_integer = [](const std::string& value) -> std::optional<unsigned int> {
+        std::string trimmed = boost::algorithm::trim_copy(value);
+        if (trimmed.empty())
+            return std::nullopt;
+
         try {
             size_t parsed_chars = 0;
-            auto   parsed       = std::stoul(value, &parsed_chars);
-            if (parsed_chars == value.size())
+            auto   parsed       = std::stoul(trimmed, &parsed_chars);
+            if (parsed_chars == trimmed.size())
                 return static_cast<unsigned int>(parsed);
         } catch (...) {
         }
 
         std::string digits;
-        std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
+        std::copy_if(trimmed.begin(), trimmed.end(), std::back_inserter(digits), [](char ch) {
             return std::isdigit(static_cast<unsigned char>(ch));
         });
         if (!digits.empty()) {
@@ -369,48 +391,38 @@ bool Spoolman::update_moonraker_lane_cache()
             } catch (...) {
             }
         }
+
+        return std::nullopt;
+    };
+
+    auto parse_unsigned_string = [&](const std::string& value) -> std::optional<unsigned int> {
+        auto trimmed = boost::algorithm::trim_copy(value);
+        if (trimmed.empty())
+            return std::nullopt;
+
+        try {
+            size_t parsed_chars = 0;
+            auto   parsed       = std::stoul(trimmed, &parsed_chars, 10);
+            if (parsed_chars == trimmed.size())
+                return static_cast<unsigned int>(parsed);
+        } catch (...) {
+        }
+
+        std::string digits;
+        std::copy_if(trimmed.begin(), trimmed.end(), std::back_inserter(digits), [](char ch) {
+            return std::isdigit(static_cast<unsigned char>(ch));
+        });
+        if (!digits.empty()) {
+            try {
+                return static_cast<unsigned int>(std::stoul(digits));
+            } catch (...) {
+            }
+        }
+
         return std::nullopt;
     };
 
     auto parse_unsigned_field = [&](const pt::ptree& node, const std::string& path) -> std::optional<unsigned int> {
-        if (path.empty()) {
-            if (auto unsigned_value = node.get_value_optional<unsigned int>()) {
-                if (*unsigned_value != 0)
-                    return *unsigned_value;
-            }
-
-            if (auto signed_value = node.get_value_optional<int>()) {
-                if (*signed_value > 0)
-                    return static_cast<unsigned int>(*signed_value);
-            }
-
-            if (auto string_value = node.get_value_optional<std::string>()) {
-                auto value = boost::algorithm::trim_copy(*string_value);
-                if (!value.empty()) {
-                    try {
-                        size_t parsed_chars = 0;
-                        auto   parsed       = std::stoul(value, &parsed_chars, 10);
-                        if (parsed_chars == value.size())
-                            return static_cast<unsigned int>(parsed);
-                    } catch (...) {
-                    }
-
-                    std::string digits;
-                    std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
-                        return std::isdigit(static_cast<unsigned char>(ch));
-                    });
-                    if (!digits.empty()) {
-                        try {
-                            return static_cast<unsigned int>(std::stoul(digits));
-                        } catch (...) {
-                        }
-                    }
-                }
-            }
-
-            return std::nullopt;
-        }
-
         if (auto unsigned_value = node.get_optional<unsigned int>(path)) {
             if (*unsigned_value != 0)
                 return *unsigned_value;
@@ -423,35 +435,13 @@ bool Spoolman::update_moonraker_lane_cache()
             return std::nullopt;
         }
 
-        if (auto string_value = node.get_optional<std::string>(path)) {
-            auto value = boost::algorithm::trim_copy(*string_value);
-            if (value.empty())
-                return std::nullopt;
-
-            try {
-                size_t parsed_chars = 0;
-                auto   parsed       = std::stoul(value, &parsed_chars, 10);
-                if (parsed_chars == value.size())
-                    return static_cast<unsigned int>(parsed);
-            } catch (...) {
-            }
-
-            std::string digits;
-            std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
-                return std::isdigit(static_cast<unsigned char>(ch));
-            });
-            if (!digits.empty()) {
-                try {
-                    return static_cast<unsigned int>(std::stoul(digits));
-                } catch (...) {
-                }
-            }
-        }
+        if (auto string_value = node.get_optional<std::string>(path))
+            return parse_unsigned_string(*string_value);
 
         return std::nullopt;
     };
 
-    const std::array<std::string, 18> spool_id_paths{{
+    const std::array<const char*, 18> spool_id_paths{{
         "spool_id",
         "loaded_spool_id",
         "spool.id",
@@ -463,8 +453,8 @@ bool Spoolman::update_moonraker_lane_cache()
         "spoolman.spool_id",
         "metadata.spool_id",
         "metadata.loaded_spool_id",
-        "metadata.loaded_spool.id",
         "metadata.loaded_spool.spoolman_id",
+        "metadata.loaded_spool.id",
         "metadata.loaded_spool.spoolman_spool_id",
         "metadata.loaded_spool.spool_id",
         "metadata.spoolman_spool_id",
@@ -475,35 +465,10 @@ bool Spoolman::update_moonraker_lane_cache()
     }};
 
     auto extract_spool_id = [&](const pt::ptree& node) -> std::optional<unsigned int> {
-        std::vector<const pt::ptree*> stack{&node};
-
-        while (!stack.empty()) {
-            const pt::ptree* current = stack.back();
-            stack.pop_back();
-
-            if (!current)
-                continue;
-
-            for (const auto& path : spool_id_paths) {
-                if (auto value = parse_unsigned_field(*current, path))
-                    return value;
-            }
-
-            for (const auto& child : *current) {
-                if (child.first.empty())
-                    continue;
-
-                auto lower_key = boost::algorithm::to_lower_copy(child.first);
-                if (lower_key.find("spool") == std::string::npos || lower_key.find("id") == std::string::npos)
-                    continue;
-
-                if (auto value = parse_unsigned_field(child.second, ""))
-                    return value;
-
-                stack.push_back(&child.second);
-            }
+        for (const auto* path : spool_id_paths) {
+            if (auto value = parse_unsigned_field(node, path))
+                return value;
         }
-
         return std::nullopt;
     };
 
