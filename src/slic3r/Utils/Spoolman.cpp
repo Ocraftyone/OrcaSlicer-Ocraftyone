@@ -89,10 +89,10 @@ static std::string build_query_body(const std::map<std::string, std::vector<std:
             value.put("", field);
             field_array.push_back({"", value});
         }
-        objects_node.add_child(pt::ptree::path_type(name, '\0'), field_array);
+        objects_node.add_child(name, field_array);
     }
 
-    request.add_child(pt::ptree::path_type("objects", '\0'), objects_node);
+    request.add_child("objects", objects_node);
 
     std::ostringstream stream;
     pt::write_json(stream, request, false);
@@ -299,39 +299,43 @@ bool Spoolman::update_moonraker_lane_cache()
         return true;
 
     std::vector<std::string> lane_names;
-    lane_names.reserve(lanes_node_opt->size());
-    std::set<std::string> seen_lane_names;
-
-    auto try_add_lane_name = [&](std::string lane_name) {
+    for (const auto& entry : *lanes_node_opt) {
+        std::string lane_name = entry.second.get_value<std::string>("");
         boost::algorithm::trim(lane_name);
-        if (lane_name.empty())
-            return;
+        if (!lane_name.empty())
+            lane_names.emplace_back(std::move(lane_name));
+    }
 
-        if (seen_lane_names.insert(lane_name).second)
-            lane_names.push_back(std::move(lane_name));
+    if (lane_names.empty())
+        return true;
+
+    std::map<std::string, std::vector<std::string>> lane_object_requests;
+    const std::vector<std::string>                  lane_fields{
+        "name",
+        "lane",
+        "spool_id",
+        "loaded_spool_id",
+        "spool",
+        "spoolman_spool_id",
+        "spoolman",
+        "metadata",
     };
+    for (const auto& lane_name : lane_names) {
+        lane_object_requests["AFC_stepper " + lane_name] = lane_fields;
+        lane_object_requests["AFC_lane " + lane_name]    = lane_fields;
+    }
 
-    std::function<void(const pt::ptree&)> collect_lane_names;
-    collect_lane_names = [&](const pt::ptree& node) {
-        for (const auto& entry : node) {
-            if (!entry.first.empty())
-                try_add_lane_name(entry.first);
+    const auto lane_objects_query = build_query_body(lane_object_requests);
 
-            if (entry.second.empty()) {
-                if (auto value = entry.second.get_value_optional<std::string>())
-                    try_add_lane_name(*value);
-            } else {
-                if (auto value = entry.second.get_value_optional<std::string>())
-                    try_add_lane_name(*value);
+    pt::ptree lane_objects_response;
+    if (!moonraker_query(lane_objects_query, lane_objects_response))
+        return false;
 
-                collect_lane_names(entry.second);
-            }
-        }
-    };
+    auto status_node_opt = lane_objects_response.get_child_optional("result.status");
+    if (!status_node_opt)
+        return true;
 
-    collect_lane_names(*lanes_node_opt);
-
-    bool lane_queries_succeeded = lane_names.empty();
+    auto& status_node = status_node_opt.get();
 
     std::set<unsigned int> used_lane_indices;
     unsigned int           next_lane_index = 0;
@@ -368,183 +372,227 @@ bool Spoolman::update_moonraker_lane_cache()
         return std::nullopt;
     };
 
-    const auto lane_fields = std::vector<std::string>{
-        "name",
-        "lane",
+    auto parse_unsigned_field = [&](const pt::ptree& node, const std::string& path) -> std::optional<unsigned int> {
+        if (path.empty()) {
+            if (auto unsigned_value = node.get_value_optional<unsigned int>()) {
+                if (*unsigned_value != 0)
+                    return *unsigned_value;
+            }
+
+            if (auto signed_value = node.get_value_optional<int>()) {
+                if (*signed_value > 0)
+                    return static_cast<unsigned int>(*signed_value);
+            }
+
+            if (auto string_value = node.get_value_optional<std::string>()) {
+                auto value = boost::algorithm::trim_copy(*string_value);
+                if (!value.empty()) {
+                    try {
+                        size_t parsed_chars = 0;
+                        auto   parsed       = std::stoul(value, &parsed_chars, 10);
+                        if (parsed_chars == value.size())
+                            return static_cast<unsigned int>(parsed);
+                    } catch (...) {
+                    }
+
+                    std::string digits;
+                    std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
+                        return std::isdigit(static_cast<unsigned char>(ch));
+                    });
+                    if (!digits.empty()) {
+                        try {
+                            return static_cast<unsigned int>(std::stoul(digits));
+                        } catch (...) {
+                        }
+                    }
+                }
+            }
+
+            return std::nullopt;
+        }
+
+        if (auto unsigned_value = node.get_optional<unsigned int>(path)) {
+            if (*unsigned_value != 0)
+                return *unsigned_value;
+            return std::nullopt;
+        }
+
+        if (auto signed_value = node.get_optional<int>(path)) {
+            if (*signed_value > 0)
+                return static_cast<unsigned int>(*signed_value);
+            return std::nullopt;
+        }
+
+        if (auto string_value = node.get_optional<std::string>(path)) {
+            auto value = boost::algorithm::trim_copy(*string_value);
+            if (value.empty())
+                return std::nullopt;
+
+            try {
+                size_t parsed_chars = 0;
+                auto   parsed       = std::stoul(value, &parsed_chars, 10);
+                if (parsed_chars == value.size())
+                    return static_cast<unsigned int>(parsed);
+            } catch (...) {
+            }
+
+            std::string digits;
+            std::copy_if(value.begin(), value.end(), std::back_inserter(digits), [](char ch) {
+                return std::isdigit(static_cast<unsigned char>(ch));
+            });
+            if (!digits.empty()) {
+                try {
+                    return static_cast<unsigned int>(std::stoul(digits));
+                } catch (...) {
+                }
+            }
+        }
+
+        return std::nullopt;
+    };
+
+    const std::array<std::string, 18> spool_id_paths{{
         "spool_id",
         "loaded_spool_id",
-        "spool",
         "spool.id",
         "spool.spool_id",
         "spool.spoolman_id",
         "spool.spoolman_spool_id",
-        "spoolman",
-        "spoolman.id",
         "spoolman_spool_id",
-        "metadata",
-        "metadata.spool_id"
+        "spoolman.id",
+        "spoolman.spool_id",
+        "metadata.spool_id",
+        "metadata.loaded_spool_id",
+        "metadata.loaded_spool.id",
+        "metadata.loaded_spool.spoolman_id",
+        "metadata.loaded_spool.spoolman_spool_id",
+        "metadata.loaded_spool.spool_id",
+        "metadata.spoolman_spool_id",
+        "metadata.spool.id",
+        "metadata.spool.spool_id",
+        "metadata.spool.spoolman_id",
+        "metadata.spool.spoolman_spool_id",
+    }};
+
+    auto extract_spool_id = [&](const pt::ptree& node) -> std::optional<unsigned int> {
+        for (const auto& path : spool_id_paths) {
+            if (auto value = parse_unsigned_field(node, path))
+                return value;
+        }
+
+        for (const auto& child : node) {
+            if (child.first.empty())
+                continue;
+
+            auto lower_key = boost::algorithm::to_lower_copy(child.first);
+            if (lower_key.find("spool") == std::string::npos || lower_key.find("id") == std::string::npos)
+                continue;
+
+            if (auto value = parse_unsigned_field(child.second, ""))
+                return value;
+
+            if (auto nested = extract_spool_id(child.second))
+                return nested;
+        }
+
+        return std::nullopt;
+    };
+
+    auto extract_lane_index = [&](const std::string& lane_name, const std::array<const pt::ptree*, 2>& nodes) {
+        for (const auto* node : nodes) {
+            if (!node)
+                continue;
+
+            if (auto value = parse_unsigned_field(*node, "lane"))
+                return value;
+
+            if (auto name_value = node->get_optional<std::string>("name")) {
+                if (auto parsed = parse_lane_integer(*name_value))
+                    return parsed;
+            }
+        }
+
+        if (auto parsed = parse_lane_integer(lane_name))
+            return parsed;
+
+        return std::optional<unsigned int>{};
+    };
+
+    auto extract_lane_label = [&](const std::string& lane_name, unsigned int lane_index,
+                                  const std::array<const pt::ptree*, 2>& nodes) {
+        for (const auto* node : nodes) {
+            if (!node)
+                continue;
+
+            auto label = node->get("name", "");
+            boost::algorithm::trim(label);
+            if (!label.empty())
+                return label;
+        }
+
+        std::string label = lane_name;
+        boost::algorithm::trim(label);
+        if (!label.empty())
+            return label;
+
+        return std::string("Lane ") + std::to_string(lane_index);
     };
 
     for (const auto& lane_name : lane_names) {
-        const auto lane_details_query = build_query_body({
-            {"AFC_lane " + lane_name, lane_fields},
-            {"AFC_stepper " + lane_name, lane_fields},
-        });
+        const auto stepper_key = "AFC_stepper " + lane_name;
+        const auto lane_key    = "AFC_lane " + lane_name;
 
-        pt::ptree lane_details_response;
-        if (!moonraker_query(lane_details_query, lane_details_response))
+        const pt::ptree* stepper_node = nullptr;
+        const pt::ptree* lane_node    = nullptr;
+
+        if (auto node_opt = status_node.get_child_optional(stepper_key))
+            stepper_node = &node_opt.get();
+        if (auto node_opt = status_node.get_child_optional(lane_key))
+            lane_node = &node_opt.get();
+
+        if (!stepper_node && !lane_node)
             continue;
 
-        lane_queries_succeeded = true;
+        const std::array<const pt::ptree*, 2> nodes{{stepper_node, lane_node}};
 
-        auto status_node_opt = lane_details_response.get_child_optional("result.status");
-        if (!status_node_opt)
-            continue;
-
-        const auto lane_key         = std::string("AFC_lane ") + lane_name;
-        const auto lane_stepper_key = std::string("AFC_stepper ") + lane_name;
-        auto       lane_node_opt    = status_node_opt->get_child_optional(pt::ptree::path_type(lane_key, '\0'));
-        if (!lane_node_opt) {
-            lane_node_opt = status_node_opt->get_child_optional(pt::ptree::path_type(lane_stepper_key, '\0'));
-            if (!lane_node_opt)
+        std::optional<unsigned int> spool_id;
+        for (const auto* node : nodes) {
+            if (!node)
                 continue;
+            if ((spool_id = extract_spool_id(*node)))
+                break;
         }
 
-        const auto& lane_node = *lane_node_opt;
+        if (!spool_id) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
+                                       << ": Failed to resolve spool id for lane '" << lane_name << "'";
+            continue;
+        }
 
-        std::optional<unsigned int> lane_index_candidate;
-        if (auto lane_index_opt = lane_node.get_optional<unsigned int>("lane"))
-            lane_index_candidate = *lane_index_opt;
-        else if (auto lane_index_str = lane_node.get_optional<std::string>("lane"))
-            lane_index_candidate = parse_lane_integer(boost::algorithm::trim_copy(*lane_index_str));
-        else
-            lane_index_candidate = parse_lane_integer(lane_name);
-
-        unsigned int lane_index = 0;
-        if (lane_index_candidate && used_lane_indices.insert(*lane_index_candidate).second) {
-            lane_index = *lane_index_candidate;
-            if (*lane_index_candidate >= next_lane_index)
-                next_lane_index = *lane_index_candidate + 1;
+        auto lane_index_opt = extract_lane_index(lane_name, nodes);
+        unsigned int lane_index;
+        if (lane_index_opt && used_lane_indices.insert(*lane_index_opt).second) {
+            lane_index = *lane_index_opt;
+            if (*lane_index_opt >= next_lane_index)
+                next_lane_index = *lane_index_opt + 1;
         } else {
             lane_index = allocate_lane_index();
         }
 
-        std::string lane_label = lane_node.get("name", lane_name);
-        boost::algorithm::trim(lane_label);
-        if (lane_label.empty())
-            lane_label = lane_name;
-
-        std::optional<unsigned int> spool_id_candidate;
-        auto assign_candidate = [&](std::optional<unsigned int> candidate) {
-            if (!spool_id_candidate && candidate && *candidate != 0)
-                spool_id_candidate = candidate;
-        };
-
-        auto parse_string_value = [&](std::string value) -> std::optional<unsigned int> {
-            boost::algorithm::trim(value);
-            if (value.empty())
-                return std::nullopt;
-
-            if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
-                value = value.substr(1, value.size() - 2);
-
-            return parse_lane_integer(value);
-        };
-
-        auto try_path = [&](const std::string& path) {
-            if (spool_id_candidate)
-                return;
-
-            if (auto unsigned_value = lane_node.get_optional<unsigned int>(path)) {
-                assign_candidate(*unsigned_value);
-                return;
-            }
-
-            if (auto signed_value = lane_node.get_optional<int>(path)) {
-                if (*signed_value > 0)
-                    assign_candidate(static_cast<unsigned int>(*signed_value));
-                return;
-            }
-
-            if (auto string_value = lane_node.get_optional<std::string>(path))
-                assign_candidate(parse_string_value(*string_value));
-        };
-
-        const std::array<std::string, 9> spool_id_paths{{
-            "spool_id",
-            "loaded_spool_id",
-            "spool.id",
-            "spool.spool_id",
-            "spool.spoolman_id",
-            "spool.spoolman_spool_id",
-            "spoolman_spool_id",
-            "spoolman.id",
-            "metadata.spool_id",
-        }};
-
-        for (const auto& path : spool_id_paths)
-            try_path(path);
-
-        if (!spool_id_candidate) {
-            std::function<std::optional<unsigned int>(const pt::ptree&, const std::string&)> find_nested_spool_id;
-            find_nested_spool_id = [&](const pt::ptree& node, const std::string& key_path)
-                -> std::optional<unsigned int> {
-                auto consider_value = [&](const pt::ptree& value_node, const std::string& path)
-                    -> std::optional<unsigned int> {
-                    if (path.empty())
-                        return std::nullopt;
-
-                    auto lower = boost::algorithm::to_lower_copy(path);
-                    if (lower.find("spool") == std::string::npos || lower.find("id") == std::string::npos)
-                        return std::nullopt;
-
-                    if (auto unsigned_value = value_node.get_value_optional<unsigned int>()) {
-                        if (*unsigned_value != 0)
-                            return *unsigned_value;
-                    }
-
-                    if (auto signed_value = value_node.get_value_optional<int>()) {
-                        if (*signed_value > 0)
-                            return static_cast<unsigned int>(*signed_value);
-                    }
-
-                    if (auto string_value = value_node.get_value_optional<std::string>())
-                        return parse_string_value(*string_value);
-
-                    return std::nullopt;
-                };
-
-                if (auto direct = consider_value(node, key_path))
-                    return direct;
-
-                for (const auto& child : node) {
-                    std::string child_path = key_path;
-                    if (!child.first.empty())
-                        child_path = key_path.empty() ? child.first : key_path + "." + child.first;
-
-                    if (auto nested = find_nested_spool_id(child.second, child_path))
-                        return nested;
-                }
-
-                return std::nullopt;
-            };
-
-            spool_id_candidate = find_nested_spool_id(lane_node, "");
-        }
-
-        if (!spool_id_candidate) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Failed to resolve spool id for lane '" << lane_name << "'";
-            continue;
-        }
+        auto lane_label = extract_lane_label(lane_name, lane_index, nodes);
 
         LaneInfo info;
         info.lane_index = lane_index;
         info.lane_label = std::move(lane_label);
 
-        m_moonraker_lane_cache.emplace(*spool_id_candidate, std::move(info));
+        auto [cache_it, inserted] = m_moonraker_lane_cache.emplace(*spool_id, std::move(info));
+        if (!inserted) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Spool " << *spool_id
+                                       << " is assigned to multiple Moonraker lanes.";
+        }
     }
 
-    return lane_queries_succeeded;
+    return true;
 }
 
 bool Spoolman::pull_spoolman_spools()
