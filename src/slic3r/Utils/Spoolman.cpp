@@ -5,6 +5,7 @@
 #include <cctype>
 #include <functional>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -473,7 +474,8 @@ bool Spoolman::update_moonraker_lane_cache()
         return std::nullopt;
     };
 
-    auto extract_lane_index = [&](const std::string& lane_name, const std::array<const pt::ptree*, 2>& nodes) {
+    auto extract_lane_index = [&](const std::string& lane_name,
+                                  const std::array<const pt::ptree*, 2>& nodes) -> std::optional<unsigned int> {
         for (const auto* node : nodes) {
             if (!node)
                 continue;
@@ -502,7 +504,7 @@ bool Spoolman::update_moonraker_lane_cache()
         if (auto parsed = parse_lane_integer(lane_name))
             return parsed;
 
-        return std::optional<unsigned int>{};
+        return std::nullopt;
     };
 
     auto extract_lane_label = [&](const std::string& lane_name, unsigned int lane_index,
