@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <functional>
+#include <deque>
 #include <iterator>
 #include <map>
 #include <optional>
@@ -299,18 +299,22 @@ bool Spoolman::update_moonraker_lane_cache()
     if (!lanes_node_opt)
         return true;
 
-    std::set<std::string> lane_name_set;
-    std::vector<const pt::ptree*> stack{&lanes_node_opt.get()};
+    std::set<std::string>        seen_lane_names;
+    std::vector<std::string>     lane_names;
+    std::deque<const pt::ptree*> queue{&lanes_node_opt.get()};
 
     auto add_lane_name = [&](const std::string& value) {
         auto trimmed = boost::algorithm::trim_copy(value);
-        if (!trimmed.empty())
-            lane_name_set.insert(std::move(trimmed));
+        if (trimmed.empty())
+            return;
+
+        if (seen_lane_names.insert(trimmed).second)
+            lane_names.emplace_back(std::move(trimmed));
     };
 
-    while (!stack.empty()) {
-        const pt::ptree* node = stack.back();
-        stack.pop_back();
+    while (!queue.empty()) {
+        const pt::ptree* node = queue.front();
+        queue.pop_front();
 
         for (const auto& child : *node) {
             if (!child.first.empty())
@@ -320,11 +324,10 @@ bool Spoolman::update_moonraker_lane_cache()
                 add_lane_name(*value);
 
             if (!child.second.empty())
-                stack.push_back(&child.second);
+                queue.push_back(&child.second);
         }
     }
 
-    std::vector<std::string> lane_names{lane_name_set.begin(), lane_name_set.end()};
     if (lane_names.empty())
         return true;
 
