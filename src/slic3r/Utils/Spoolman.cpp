@@ -475,24 +475,33 @@ bool Spoolman::update_moonraker_lane_cache()
     }};
 
     auto extract_spool_id = [&](const pt::ptree& node) -> std::optional<unsigned int> {
-        for (const auto& path : spool_id_paths) {
-            if (auto value = parse_unsigned_field(node, path))
-                return value;
-        }
+        std::vector<const pt::ptree*> stack{&node};
 
-        for (const auto& child : node) {
-            if (child.first.empty())
+        while (!stack.empty()) {
+            const pt::ptree* current = stack.back();
+            stack.pop_back();
+
+            if (!current)
                 continue;
 
-            auto lower_key = boost::algorithm::to_lower_copy(child.first);
-            if (lower_key.find("spool") == std::string::npos || lower_key.find("id") == std::string::npos)
-                continue;
+            for (const auto& path : spool_id_paths) {
+                if (auto value = parse_unsigned_field(*current, path))
+                    return value;
+            }
 
-            if (auto value = parse_unsigned_field(child.second, ""))
-                return value;
+            for (const auto& child : *current) {
+                if (child.first.empty())
+                    continue;
 
-            if (auto nested = extract_spool_id(child.second))
-                return nested;
+                auto lower_key = boost::algorithm::to_lower_copy(child.first);
+                if (lower_key.find("spool") == std::string::npos || lower_key.find("id") == std::string::npos)
+                    continue;
+
+                if (auto value = parse_unsigned_field(child.second, ""))
+                    return value;
+
+                stack.push_back(&child.second);
+            }
         }
 
         return std::nullopt;
