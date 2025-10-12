@@ -1889,7 +1889,17 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         auto filament_color = ams.opt_string("filament_colour", 0u);
         auto filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
         auto filament_multi_color = ams.opt<ConfigOptionStrings>("filament_multi_colors")->values;
-        if (filament_id.empty()) continue;
+        if (filament_id.empty()) {
+            // No updated filament for this lane. Keep the previously
+            // selected preset (if any) so that lane ordering stays intact
+            // when syncing with Spoolman.
+            if (filament_presets.size() < this->filament_presets.size()) {
+                filament_presets.push_back(this->filament_presets[filament_presets.size()]);
+                filament_colors.push_back(filament_color);
+                ams_multi_color_filment.push_back(filament_multi_color);
+            }
+            continue;
+        }
         if (!filament_changed && this->filament_presets.size() > filament_presets.size()) {
             filament_presets.push_back(this->filament_presets[filament_presets.size()]);
             filament_colors.push_back(filament_color);
