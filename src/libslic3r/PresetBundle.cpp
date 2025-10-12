@@ -1886,22 +1886,22 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     std::vector<std::vector<std::string>> filament_multi_colors = ams_multi_color_filment;
 
     const size_t existing_count = filament_presets.size();
-    size_t required_count = existing_count;
-    for (const auto &entry : filament_ams_list) {
-        if (entry.first >= 0)
-            required_count = std::max(required_count, static_cast<size_t>(entry.first + 1));
-    }
 
-    auto ensure_size = [&](size_t count) {
-        if (filament_presets.size() < count)
-            filament_presets.resize(count);
-        if (filament_colors.size() < count)
-            filament_colors.resize(count);
-        if (filament_multi_colors.size() < count)
-            filament_multi_colors.resize(count);
+    if (filament_colors.size() < existing_count)
+        filament_colors.resize(existing_count);
+    if (filament_multi_colors.size() < existing_count)
+        filament_multi_colors.resize(existing_count);
+
+    auto ensure_slot = [&](size_t slot) {
+        if (filament_presets.size() <= slot)
+            filament_presets.resize(slot + 1);
+        if (filament_colors.size() <= slot)
+            filament_colors.resize(slot + 1);
+        if (filament_multi_colors.size() <= slot)
+            filament_multi_colors.resize(slot + 1);
     };
-    ensure_size(required_count);
 
+    size_t slot = 0;
     for (auto &entry : filament_ams_list) {
         const size_t lane_index = static_cast<size_t>(std::max(entry.first, 0));
         ensure_size(lane_index + 1);
@@ -1912,21 +1912,33 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         auto filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
         auto *multi_color_opt = ams.opt<ConfigOptionStrings>("filament_multi_colors");
         auto filament_multi_color = multi_color_opt ? multi_color_opt->values : std::vector<std::string>{};
+        const bool has_existing = slot < existing_count;
+        const bool filament_exists = ams.opt_bool("filament_exist", !filament_id.empty());
 
-        if (filament_id.empty()) {
-            // No updated filament for this lane. Keep whatever preset was
-            // there previously so the AMS lane ordering remains stable.
-            if (!filament_color.empty())
-                filament_colors[lane_index] = filament_color;
-            if (!filament_multi_color.empty())
-                filament_multi_colors[lane_index] = filament_multi_color;
+        if (!has_existing && (!filament_exists || filament_id.empty())) {
+            ++slot;
             continue;
         }
 
-        if (!filament_changed && lane_index < existing_count) {
+        ensure_slot(slot);
+
+        if (!filament_exists || filament_id.empty()) {
+            if (has_existing) {
+                if (!filament_color.empty())
+                    filament_colors[slot] = filament_color;
+                if (multi_color_opt != nullptr)
+                    filament_multi_colors[slot] = filament_multi_color;
+            }
+            ++slot;
+            continue;
+        }
+
+        if (!filament_changed && has_existing) {
             if (!filament_color.empty())
-                filament_colors[lane_index] = filament_color;
-            filament_multi_colors[lane_index] = filament_multi_color;
+                filament_colors[slot] = filament_color;
+            if (multi_color_opt != nullptr)
+                filament_multi_colors[slot] = filament_multi_color;
+            ++slot;
             continue;
         }
 
@@ -1973,30 +1985,41 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             }
             if (iter == filaments.end()) {
                 // Prefer old selection if one exists for this lane.
-                if (lane_index < existing_count) {
+                if (has_existing) {
                     ++unknowns;
                     if (!filament_color.empty())
-                        filament_colors[lane_index] = filament_color;
-                    filament_multi_colors[lane_index] = filament_multi_color;
+                        filament_colors[slot] = filament_color;
+                    if (multi_color_opt != nullptr)
+                        filament_multi_colors[slot] = filament_multi_color;
+                    ++slot;
                     continue;
                 }
                 iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
                         return f.is_compatible && f.is_system;
                 });
-                if (iter == filaments.end())
+                if (iter == filaments.end()) {
+                    ++slot;
                     continue;
+                }
             }
             ++unknowns;
             filament_id = iter->filament_id;
         }
-        filament_presets[lane_index] = iter->name;
+        filament_presets[slot] = iter->name;
         if (!filament_color.empty())
-            filament_colors[lane_index] = filament_color;
-        filament_multi_colors[lane_index] = filament_multi_color;
+            filament_colors[slot] = filament_color;
+        if (multi_color_opt != nullptr)
+            filament_multi_colors[slot] = filament_multi_color;
+        ++slot;
     }
 
     if (!filament_ams_list.empty() && filament_presets.empty())
         return 0;
+
+    const size_t final_size = std::max(existing_count, filament_presets.size());
+    filament_presets.resize(final_size);
+    filament_colors.resize(final_size);
+    filament_multi_colors.resize(final_size);
 
     this->filament_presets = filament_presets;
     if (filament_color_option != nullptr) {
