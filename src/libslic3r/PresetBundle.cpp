@@ -1903,6 +1903,9 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
 
     size_t slot = 0;
     for (auto &entry : filament_ams_list) {
+        const size_t lane_index = static_cast<size_t>(std::max(entry.first, 0));
+        ensure_size(lane_index + 1);
+
         auto & ams = entry.second;
         auto filament_id = ams.opt_string("filament_id", 0u);
         auto filament_color = ams.opt_string("filament_colour", 0u);
