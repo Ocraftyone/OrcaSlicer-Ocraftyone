@@ -1880,27 +1880,61 @@ void PresetBundle::set_num_filaments(unsigned int n, std::string new_color)
 
 unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
 {
-    std::vector<std::string> filament_presets;
-    std::vector<std::string> filament_colors;
-    ams_multi_color_filment.clear();
+    const std::vector<std::string> previous_presets = this->filament_presets;
+    ConfigOptionStrings *          color_option     = project_config.option<ConfigOptionStrings>("filament_colour");
+    const std::vector<std::string> previous_colors  = color_option ? color_option->values : std::vector<std::string>();
+    const std::vector<std::vector<std::string>> previous_multi_colors = ams_multi_color_filment;
+
+    size_t lane_count = previous_presets.size();
+    int    highest_lane = -1;
+    for (const auto &entry : filament_ams_list)
+        highest_lane = std::max(highest_lane, entry.first);
+    if (highest_lane >= 0)
+        lane_count = std::max(lane_count, static_cast<size_t>(highest_lane + 1));
+
+    std::vector<std::string> filament_presets(lane_count);
+    std::vector<std::string> filament_colors(lane_count);
+    ams_multi_color_filment.assign(lane_count, {});
+
+    for (size_t lane = 0; lane < lane_count; ++lane) {
+        if (lane < previous_presets.size())
+            filament_presets[lane] = previous_presets[lane];
+        if (lane < previous_colors.size())
+            filament_colors[lane] = previous_colors[lane];
+        if (lane < previous_multi_colors.size())
+            ams_multi_color_filment[lane] = previous_multi_colors[lane];
+    }
+
     for (auto &entry : filament_ams_list) {
-        auto & ams = entry.second;
-        auto filament_id = ams.opt_string("filament_id", 0u);
-        auto filament_color = ams.opt_string("filament_colour", 0u);
-        auto filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
-        auto filament_multi_color = ams.opt<ConfigOptionStrings>("filament_multi_colors")->values;
-        if (filament_id.empty()) continue;
-        if (!filament_changed && this->filament_presets.size() > filament_presets.size()) {
-            filament_presets.push_back(this->filament_presets[filament_presets.size()]);
-            filament_colors.push_back(filament_color);
-            ams_multi_color_filment.push_back(filament_multi_color);
+        const int lane = entry.first;
+        if (lane < 0)
+            continue;
+
+        const size_t lane_index = static_cast<size_t>(lane);
+        if (lane_index >= filament_presets.size())
+            continue;
+
+        auto &      ams                  = entry.second;
+        std::string filament_id          = ams.opt_string("filament_id", 0u);
+        const std::string filament_color = ams.opt_string("filament_colour", 0u);
+        const bool filament_changed      = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
+        const auto filament_multi_color  = ams.opt<ConfigOptionStrings>("filament_multi_colors")->values;
+
+        if (!filament_color.empty())
+            filament_colors[lane_index] = filament_color;
+
+        if (filament_id.empty())
+            continue;
+
+        if (!filament_changed && lane_index < previous_presets.size()) {
+            filament_presets[lane_index]        = previous_presets[lane_index];
+            ams_multi_color_filment[lane_index] = filament_multi_color;
             continue;
         }
 
         const int spoolman_spool_id = ams.opt_int("spoolman_spool_id", 0u);
 
         auto find_preset = [&](bool user_only, bool by_spool_id) {
-
             return std::find_if(filaments.begin(), filaments.end(), [&](auto &f) {
                 if (!f.is_compatible)
                     return false;
@@ -1914,7 +1948,6 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
                 return f.filament_id == filament_id;
             });
         };
-
 
         auto iter = filaments.end();
         if (spoolman_spool_id > 0) {
@@ -1939,15 +1972,14 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
                 });
             }
             if (iter == filaments.end()) {
-                // Prefer old selection
-                if (filament_presets.size() < this->filament_presets.size()) {
-                    filament_presets.push_back(this->filament_presets[filament_presets.size()]);
-                    filament_colors.push_back(filament_color);
+                if (lane_index < previous_presets.size() && !previous_presets[lane_index].empty()) {
+                    filament_presets[lane_index]        = previous_presets[lane_index];
+                    ams_multi_color_filment[lane_index] = filament_multi_color;
                     ++unknowns;
                     continue;
                 }
-                iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
-                        return f.is_compatible && f.is_system;
+                iter = std::find_if(filaments.begin(), filaments.end(), [](auto &f) {
+                    return f.is_compatible && f.is_system;
                 });
                 if (iter == filaments.end())
                     continue;
@@ -1955,16 +1987,19 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             ++unknowns;
             filament_id = iter->filament_id;
         }
-        filament_presets.push_back(iter->name);
-        filament_colors.push_back(filament_color);
-        ams_multi_color_filment.push_back(filament_multi_color);
+
+        filament_presets[lane_index]        = iter->name;
+        ams_multi_color_filment[lane_index] = filament_multi_color;
     }
+
     if (filament_presets.empty())
         return 0;
+
     this->filament_presets = filament_presets;
-    ConfigOptionStrings *filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
-    filament_color->resize(filament_presets.size());
-    filament_color->values = filament_colors;
+    if (color_option) {
+        color_option->resize(filament_presets.size());
+        color_option->values = filament_colors;
+    }
     update_multi_material_filament_presets();
     return filament_presets.size();
 }
