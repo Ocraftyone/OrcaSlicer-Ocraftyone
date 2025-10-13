@@ -1905,18 +1905,13 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         return 0;
     }
 
-    std::vector<std::string> filament_presets(lane_count);
-    std::vector<std::string> filament_colors(lane_count);
-    std::vector<std::vector<std::string>> lane_multi_colors(lane_count);
+    std::vector<std::string> filament_presets = previous_presets;
+    std::vector<std::string> filament_colors  = previous_colors;
+    std::vector<std::vector<std::string>> lane_multi_colors = previous_multi;
 
-    for (size_t lane = 0; lane < lane_count; ++lane) {
-        if (lane < previous_presets.size())
-            filament_presets[lane] = previous_presets[lane];
-        if (lane < previous_colors.size())
-            filament_colors[lane] = previous_colors[lane];
-        if (lane < previous_multi.size())
-            lane_multi_colors[lane] = previous_multi[lane];
-    }
+    filament_presets.resize(lane_count);
+    filament_colors.resize(lane_count);
+    lane_multi_colors.resize(lane_count);
 
     for (auto &entry : filament_ams_list) {
         const int lane_key = entry.first;
@@ -1935,7 +1930,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         auto filament_id = ams.opt_string("filament_id", 0u);
         const auto filament_color = ams.opt_string("filament_colour", 0u);
         const bool filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
-        const auto filament_multi_color = ams.opt<ConfigOptionStrings>("filament_multi_colors")->values;
+        const auto *multi_color_opt = ams.opt<ConfigOptionStrings>("filament_multi_colors");
+        auto        filament_multi_color = multi_color_opt ? multi_color_opt->values : std::vector<std::string>{};
 
         if (filament_color_opt && !filament_color.empty())
             filament_colors[lane_index] = filament_color;
@@ -1943,7 +1939,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         if (filament_id.empty())
             continue;
 
-        lane_multi_colors[lane_index] = filament_multi_color;
+        lane_multi_colors[lane_index] = std::move(filament_multi_color);
 
         if (!filament_changed) {
             // Keep previous preset selection for this lane when the filament did not change.
