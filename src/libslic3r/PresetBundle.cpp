@@ -1884,6 +1884,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     ConfigOptionStrings *filament_color_opt = project_config.option<ConfigOptionStrings>("filament_colour");
     const std::vector<std::string> previous_colors = filament_color_opt ? filament_color_opt->values : std::vector<std::string>();
     const std::vector<std::vector<std::string>> previous_multi = ams_multi_color_filment;
+    ConfigOptionInts *spool_id_opt = project_config.option<ConfigOptionInts>("spoolman_spool_id", true);
+    const std::vector<int> previous_spool_ids = spool_id_opt ? spool_id_opt->values : std::vector<int>();
 
     size_t lane_count = previous_presets.size();
     int    max_lane   = -1;
@@ -1905,6 +1907,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         ams_multi_color_filment.clear();
         if (filament_color_opt)
             filament_color_opt->values.clear();
+        if (spool_id_opt)
+            spool_id_opt->values.clear();
         update_multi_material_filament_presets();
         return 0;
     }
@@ -1915,6 +1919,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     filament_colors.resize(lane_count);
     std::vector<std::vector<std::string>> lane_multi_colors = previous_multi;
     lane_multi_colors.resize(lane_count);
+    std::vector<int> lane_spool_ids = previous_spool_ids;
+    lane_spool_ids.resize(lane_count);
 
     std::vector<const DynamicPrintConfig*> lane_configs(lane_count, nullptr);
     for (const auto &entry : filament_ams_list) {
@@ -1953,6 +1959,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             continue;
 
         const int spoolman_spool_id = lane_cfg->opt_int("spoolman_spool_id", 0u);
+        if (lane_index < lane_spool_ids.size())
+            lane_spool_ids[lane_index] = spoolman_spool_id;
 
         auto find_preset = [&](bool user_only, bool by_spool_id) {
             return std::find_if(filaments.begin(), filaments.end(), [&](auto &f) {
@@ -2017,6 +2025,10 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     if (filament_color_opt) {
         filament_color_opt->resize(filament_presets.size());
         filament_color_opt->values = filament_colors;
+    }
+    if (spool_id_opt) {
+        spool_id_opt->resize(filament_presets.size());
+        spool_id_opt->values = lane_spool_ids;
     }
     ams_multi_color_filment = std::move(lane_multi_colors);
     update_multi_material_filament_presets();
