@@ -576,19 +576,23 @@ bool Spoolman::update_moonraker_lane_cache()
         }
 
         auto lane_index_opt = extract_lane_index(lane_name, nodes);
-        unsigned int lane_index;
+        unsigned int lane_label_index = 0;
+        unsigned int lane_slot        = 0;
         if (lane_index_opt && used_lane_indices.insert(*lane_index_opt).second) {
-            lane_index = *lane_index_opt;
+            lane_label_index = *lane_index_opt;
             if (*lane_index_opt >= next_lane_index)
                 next_lane_index = *lane_index_opt + 1;
+
+            lane_slot = lane_label_index > 0 ? lane_label_index - 1 : 0;
         } else {
-            lane_index = allocate_lane_index();
+            lane_slot        = allocate_lane_index();
+            lane_label_index = lane_slot;
         }
 
-        auto lane_label = extract_lane_label(lane_name, lane_index, nodes);
+        auto lane_label = extract_lane_label(lane_name, lane_label_index, nodes);
 
         LaneInfo info;
-        info.lane_index = lane_index;
+        info.lane_index = lane_slot;
         info.lane_label = std::move(lane_label);
 
         auto [cache_it, inserted] = m_moonraker_lane_cache.emplace(*spool_id, std::move(info));
@@ -710,8 +714,6 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
             continue;
 
         unsigned int lane_index = lane_info.lane_index;
-        if (lane_index > 0)
-            --lane_index;
 
         spool->loaded_lane_index = lane_index;
         spool->loaded_lane_label = lane_info.lane_label;

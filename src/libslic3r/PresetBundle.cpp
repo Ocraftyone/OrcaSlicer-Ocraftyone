@@ -1931,7 +1931,6 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         const auto filament_color = ams.opt_string("filament_colour", 0u);
         const bool filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
         const auto *multi_color_opt = ams.opt<ConfigOptionStrings>("filament_multi_colors");
-        auto        filament_multi_color = multi_color_opt ? multi_color_opt->values : std::vector<std::string>{};
 
         if (filament_color_opt && !filament_color.empty())
             filament_colors[lane_index] = filament_color;
@@ -1939,7 +1938,8 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         if (filament_id.empty())
             continue;
 
-        lane_multi_colors[lane_index] = std::move(filament_multi_color);
+        if (multi_color_opt)
+            lane_multi_colors[lane_index] = multi_color_opt->values;
 
         if (!filament_changed) {
             // Keep previous preset selection for this lane when the filament did not change.
