@@ -1892,17 +1892,58 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     if (filament_multi_colors.size() < existing_count)
         filament_multi_colors.resize(existing_count);
 
-    constexpr size_t lane_sequential_threshold = 64;
-    std::vector<std::pair<int, const DynamicPrintConfig *>> sequential_lanes;
-    size_t max_lane_slot = 0;
+    auto ensure_slot = [&](size_t slot) {
+        if (filament_presets.size() <= slot)
+            filament_presets.resize(slot + 1);
+        if (filament_colors.size() <= slot)
+            filament_colors.resize(slot + 1);
+        if (filament_multi_colors.size() <= slot)
+            filament_multi_colors.resize(slot + 1);
+    };
 
-    for (auto const &entry : filament_ams_list) {
+    size_t max_assigned_slot = existing_count > 0 ? existing_count - 1 : 0;
+    bool   saw_lane          = false;
+
+    for (auto &entry : filament_ams_list) {
         const int lane = entry.first;
         if (lane < 0)
             continue;
 
-        if (static_cast<size_t>(lane) >= lane_sequential_threshold) {
-            sequential_lanes.emplace_back(lane, &entry.second);
+        const size_t slot = static_cast<size_t>(lane);
+        saw_lane = true;
+        const bool slot_has_existing = slot < existing_count;
+
+        auto & ams = entry.second;
+        auto filament_id = ams.opt_string("filament_id", 0u);
+        auto filament_color = ams.opt_string("filament_colour", 0u);
+        auto filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
+        auto *multi_color_opt = ams.opt<ConfigOptionStrings>("filament_multi_colors");
+        auto filament_multi_color = multi_color_opt ? multi_color_opt->values : std::vector<std::string>{};
+        const bool filament_exists = ams.opt_bool("filament_exist", !filament_id.empty());
+
+        if (!slot_has_existing && (!filament_exists || filament_id.empty())) {
+            continue;
+        }
+
+        max_assigned_slot = std::max(max_assigned_slot, slot);
+
+        ensure_slot(slot);
+
+        if (!filament_exists || filament_id.empty()) {
+            if (slot_has_existing) {
+                if (!filament_color.empty())
+                    filament_colors[slot] = filament_color;
+                if (multi_color_opt != nullptr)
+                    filament_multi_colors[slot] = filament_multi_color;
+            }
+            continue;
+        }
+
+        if (!filament_changed && slot_has_existing) {
+            if (!filament_color.empty())
+                filament_colors[slot] = filament_color;
+            if (multi_color_opt != nullptr)
+                filament_multi_colors[slot] = filament_multi_color;
             continue;
         }
 
@@ -1984,62 +2025,52 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
                 });
             }
             if (iter == filaments.end()) {
+                // Prefer old selection if one exists for this lane.
                 if (slot_has_existing) {
                     ++unknowns;
                     if (!filament_color.empty())
                         filament_colors[slot] = filament_color;
                     if (multi_color_opt != nullptr)
                         filament_multi_colors[slot] = filament_multi_color;
-                    return;
+                    continue;
                 }
                 iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
                     return f.is_compatible && f.is_system;
                 });
-                if (iter == filaments.end())
-                    return;
+                if (iter == filaments.end()) {
+                    continue;
+                }
             }
             ++unknowns;
             filament_id = iter->filament_id;
         }
-
         filament_presets[slot] = iter->name;
         if (!filament_color.empty())
             filament_colors[slot] = filament_color;
         if (multi_color_opt != nullptr)
             filament_multi_colors[slot] = filament_multi_color;
-    };
-
-    for (auto const &entry : filament_ams_list) {
-        const int lane = entry.first;
-        if (lane < 0 || static_cast<size_t>(lane) >= lane_sequential_threshold)
-            continue;
-        update_slot_from_config(static_cast<size_t>(lane), entry.second);
     }
 
-    size_t sequential_base = max_lane_slot;
-    size_t sequential_index = 0;
-    for (auto const &lane_entry : sequential_lanes) {
-        const size_t slot = sequential_base + sequential_index;
-        ++sequential_index;
-        update_slot_from_config(slot, *lane_entry.second);
-    }
+    if (saw_lane && filament_presets.empty())
+        return 0;
 
-    if (!filament_ams_list.empty()) {
-        const size_t computed_size = filament_presets.size();
-        const size_t final_size = std::max(existing_count, computed_size);
-        filament_presets.resize(final_size);
-        filament_colors.resize(final_size);
-        filament_multi_colors.resize(final_size);
-    }
+    size_t computed_size = filament_presets.size();
+    if (saw_lane)
+        computed_size = std::max(computed_size, max_assigned_slot + 1);
 
-    this->filament_presets = std::move(filament_presets);
+    const size_t final_size = std::max(existing_count, computed_size);
+    filament_presets.resize(final_size);
+    filament_colors.resize(final_size);
+    filament_multi_colors.resize(final_size);
+
+    this->filament_presets = filament_presets;
     if (filament_color_option != nullptr) {
-        filament_color_option->resize(this->filament_presets.size());
-        filament_color_option->values = std::move(filament_colors);
+        filament_color_option->resize(filament_presets.size());
+        filament_color_option->values = filament_colors;
     }
     ams_multi_color_filment = std::move(filament_multi_colors);
     update_multi_material_filament_presets();
-    return this->filament_presets.empty() ? 0 : this->filament_presets.size();
+    return filament_presets.empty() ? 0 : filament_presets.size();
 }
 
 void PresetBundle::set_calibrate_printer(std::string name)
