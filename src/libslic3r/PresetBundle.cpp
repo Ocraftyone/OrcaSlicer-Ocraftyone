@@ -1919,7 +1919,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     lane_multi_colors.resize(lane_count);
 
     std::vector<const DynamicPrintConfig*> lane_configs(lane_count, nullptr);
-    for (auto &entry : filament_ams_list) {
+    for (const auto &entry : filament_ams_list) {
         const int lane_key = entry.first;
         if (lane_key < 0)
             continue;
