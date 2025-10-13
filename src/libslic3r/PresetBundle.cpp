@@ -1970,8 +1970,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
                     return false;
 
                 if (by_spool_id)
-                    return spoolman_spool_id > 0 &&
-                           f.config.opt_int("spoolman_spool_id", 0) == spoolman_spool_id;
+                    return spoolman_spool_id > 0 && f.config.opt_int("spoolman_spool_id", 0) == spoolman_spool_id;
 
                 return f.filament_id == filament_id;
             });
@@ -1994,22 +1993,26 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             auto filament_type = lane_cfg->opt_string("filament_type", 0u);
             if (!filament_type.empty()) {
                 filament_type = "Generic " + filament_type;
-                iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
-                    return f.is_compatible && f.is_system
-                        && boost::algorithm::starts_with(f.name, filament_type);
+                iter          = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
+                    return f.is_compatible && f.is_system && boost::algorithm::starts_with(f.name, filament_type);
                 });
             }
             if (iter == filaments.end()) {
                 if (lane_index < previous_presets.size() && !previous_presets[lane_index].empty()) {
                     filament_presets[lane_index] = previous_presets[lane_index];
                     ++unknowns;
+                    if (!filament_color.empty())
+                        filament_colors[slot] = filament_color;
+                    if (multi_color_opt != nullptr)
+                        filament_multi_colors[slot] = filament_multi_color;
                     continue;
                 }
                 iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
-                        return f.is_compatible && f.is_system;
+                    return f.is_compatible && f.is_system;
                 });
-                if (iter == filaments.end())
+                if (iter == filaments.end()) {
                     continue;
+                }
             }
             ++unknowns;
             filament_id = iter->filament_id;
@@ -2029,7 +2032,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     }
     ams_multi_color_filment = std::move(lane_multi_colors);
     update_multi_material_filament_presets();
-    return filament_presets.size();
+    return this->filament_presets.size();
 }
 
 void PresetBundle::set_calibrate_printer(std::string name)
