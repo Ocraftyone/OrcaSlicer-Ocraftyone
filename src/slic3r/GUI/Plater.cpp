@@ -1925,16 +1925,19 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
     p->ams_list_device               = "spoolman";
 
 
-    const int highest_lane = lane_configs.rbegin()->first;
-    std::vector<std::string> lane_ids(static_cast<size_t>(highest_lane) + 1);
+    std::vector<std::string> lane_ids;
+    lane_ids.reserve(lane_configs.size());
     for (auto& entry : lane_configs) {
+        if (entry.first < 0)
+            continue;
+
         auto& ams         = entry.second;
         auto  filament_id = ams.opt_string("filament_id", 0u);
         ams.set_key_value("filament_changed", new ConfigOptionBool{true});
-        const auto lane_index = static_cast<size_t>(entry.first);
-        if (lane_index < lane_ids.size())
-            lane_ids[lane_index] = filament_id;
 
+        const size_t slot = lane_ids.size();
+        lane_ids.resize(slot + 1);
+        lane_ids[slot] = filament_id;
     }
 
     std::vector<std::string> color_before_sync;

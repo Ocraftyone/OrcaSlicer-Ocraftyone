@@ -1901,16 +1901,16 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             filament_multi_colors.resize(slot + 1);
     };
 
-    size_t max_assigned_slot = existing_count > 0 ? existing_count - 1 : 0;
-    bool   saw_lane          = false;
+    bool   saw_lane  = false;
+    size_t next_slot = 0;
 
     for (auto &entry : filament_ams_list) {
         const int lane = entry.first;
         if (lane < 0)
             continue;
 
-        const size_t slot = static_cast<size_t>(lane);
-        saw_lane = true;
+        const size_t slot = next_slot++;
+        saw_lane          = true;
         const bool slot_has_existing = slot < existing_count;
 
         auto & ams = entry.second;
@@ -1922,6 +1922,26 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
         const bool filament_exists = ams.opt_bool("filament_exist", !filament_id.empty());
 
         if (!slot_has_existing && (!filament_exists || filament_id.empty())) {
+            continue;
+        }
+
+        ensure_slot(slot);
+
+        if (!filament_exists || filament_id.empty()) {
+            if (slot_has_existing) {
+                if (!filament_color.empty())
+                    filament_colors[slot] = filament_color;
+                if (multi_color_opt != nullptr)
+                    filament_multi_colors[slot] = filament_multi_color;
+            }
+            continue;
+        }
+
+        if (!filament_changed && slot_has_existing) {
+            if (!filament_color.empty())
+                filament_colors[slot] = filament_color;
+            if (multi_color_opt != nullptr)
+                filament_multi_colors[slot] = filament_multi_color;
             continue;
         }
 
@@ -2054,11 +2074,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     if (saw_lane && filament_presets.empty())
         return 0;
 
-    size_t computed_size = filament_presets.size();
-    if (saw_lane)
-        computed_size = std::max(computed_size, max_assigned_slot + 1);
-
-    const size_t final_size = std::max(existing_count, computed_size);
+    const size_t final_size = std::max(existing_count, filament_presets.size());
     filament_presets.resize(final_size);
     filament_colors.resize(final_size);
     filament_multi_colors.resize(final_size);
