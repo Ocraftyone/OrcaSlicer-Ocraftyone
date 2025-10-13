@@ -709,10 +709,14 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
         if (!spool)
             continue;
 
-        spool->loaded_lane_index = lane_info.lane_index;
+        unsigned int lane_index = lane_info.lane_index;
+        if (lane_index > 0)
+            --lane_index;
+
+        spool->loaded_lane_index = lane_index;
         spool->loaded_lane_label = lane_info.lane_label;
 
-        auto [lane_it, inserted] = lanes.emplace(lane_info.lane_index, spool);
+        auto [lane_it, inserted] = lanes.emplace(lane_index, spool);
         if (!inserted) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Multiple spools are assigned to lane "
                                        << lane_info.lane_index << ". Ignoring spool " << spool_id;
