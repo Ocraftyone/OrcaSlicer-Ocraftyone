@@ -400,16 +400,16 @@ bool Spoolman::update_moonraker_lane_cache()
 
     const auto& status_node = status_node_opt.get();
 
-    std::set<unsigned int> used_lane_indices;
-    unsigned int           next_lane_index = 0;
+    std::set<unsigned int> used_lane_slots;
+    unsigned int           next_lane_slot = 0;
 
-    auto allocate_lane_index = [&]() {
-        while (used_lane_indices.count(next_lane_index) != 0)
-            ++next_lane_index;
+    auto allocate_lane_slot = [&]() {
+        while (used_lane_slots.count(next_lane_slot) != 0)
+            ++next_lane_slot;
 
-        const unsigned int allocated = next_lane_index;
-        used_lane_indices.insert(allocated);
-        ++next_lane_index;
+        const unsigned int allocated = next_lane_slot;
+        used_lane_slots.insert(allocated);
+        ++next_lane_slot;
         return allocated;
     };
 
@@ -576,17 +576,22 @@ bool Spoolman::update_moonraker_lane_cache()
         }
 
         auto lane_index_opt = extract_lane_index(lane_name, nodes);
-        unsigned int lane_label_index = 0;
-        unsigned int lane_slot        = 0;
-        if (lane_index_opt && used_lane_indices.insert(*lane_index_opt).second) {
-            lane_label_index = *lane_index_opt;
-            if (*lane_index_opt >= next_lane_index)
-                next_lane_index = *lane_index_opt + 1;
+        unsigned int lane_slot;
+        unsigned int lane_label_index;
 
-            lane_slot = lane_label_index > 0 ? lane_label_index - 1 : 0;
+        if (lane_index_opt && *lane_index_opt > 0) {
+            const unsigned int requested_slot = *lane_index_opt - 1;
+            if (used_lane_slots.insert(requested_slot).second) {
+                lane_slot = requested_slot;
+                if (requested_slot >= next_lane_slot)
+                    next_lane_slot = requested_slot + 1;
+            } else {
+                lane_slot = allocate_lane_slot();
+            }
+            lane_label_index = lane_slot + 1;
         } else {
-            lane_slot        = allocate_lane_index();
-            lane_label_index = lane_slot;
+            lane_slot        = allocate_lane_slot();
+            lane_label_index = lane_slot + 1;
         }
 
         auto lane_label = extract_lane_label(lane_name, lane_label_index, nodes);

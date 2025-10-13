@@ -1887,7 +1887,7 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     const std::vector<int> previous_spool_ids = spoolman_ids_opt ? spoolman_ids_opt->values : std::vector<int>{};
     const std::vector<std::vector<std::string>> previous_multi = ams_multi_color_filment;
 
-    size_t lane_count = std::max({previous_presets.size(), previous_colors.size(), previous_multi.size()});
+    size_t lane_count = std::max({previous_presets.size(), previous_colors.size(), previous_multi.size(), previous_spool_ids.size()});
     for (const auto &entry : filament_ams_list) {
         if (entry.first < 0)
             continue;
