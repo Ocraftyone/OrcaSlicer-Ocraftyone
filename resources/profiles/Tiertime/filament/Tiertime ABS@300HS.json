@@ -1,11 +1,11 @@
 {
     "type": "filament",
-    "filament_id": "GFB00_01",
-    "setting_id": "GFSB00",
     "name": "Tiertime ABS@300HS",
-    "from": "system",
-    "instantiation": "true",
     "inherits": "fdm_filament_abs",
+    "from": "system",
+    "setting_id": "GFSB00",
+    "filament_id": "GFB00_01",
+    "instantiation": "true",
     "filament_flow_ratio": [
         "0.95"
     ],
@@ -13,7 +13,7 @@
         "24.99"
     ],
     "filament_vendor": [
-        "Tiertime Lab"
+        "Tiertime"
     ],
     "fan_max_speed": [
         "60"
@@ -26,6 +26,8 @@
     ],
     "compatible_printers": [
         "Tiertime UP300 HS 0.4 nozzle",
-        "Tiertime UP600 HS 0.4 nozzle"
+        "Tiertime UP600 HS 0.4 nozzle",
+        "Tiertime UP600 HS 0.6 nozzle",
+        "Tiertime UP600 HS 0.8 nozzle"
     ]
 }

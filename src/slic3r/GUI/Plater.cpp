@@ -139,6 +139,7 @@
 #include <libslic3r/CutUtils.hpp>
 #include <wx/glcanvas.h>    // Needs to be last because reasons :-/
 #include <libslic3r/miniz_extension.hpp>
+#include <Spoolman.hpp>
 #include "WipeTowerDialog.hpp"
 #include "ObjColorDialog.hpp"
 
@@ -154,6 +155,7 @@
 #include "FileArchiveDialog.hpp"
 #include "StepMeshDialog.hpp"
 #include "CloneDialog.hpp"
+#include "SpoolmanImportDialog.hpp"
 
 using boost::optional;
 namespace fs = boost::filesystem;
@@ -346,6 +348,10 @@ struct Sidebar::priv
     ScalableButton *  m_bpButton_add_filament;
     ScalableButton *  m_bpButton_del_filament;
     ScalableButton *  m_bpButton_ams_filament;
+
+    ScalableButton *  m_bpButton_spoolman_import = nullptr;
+
+    ScalableButton *  m_bpButton_spoolman_filament = nullptr;
     ScalableButton *  m_bpButton_set_filament;
     wxPanel* m_panel_filament_content;
     wxScrolledWindow* m_scrolledWindow_filament_content;
@@ -978,6 +984,33 @@ Sidebar::Sidebar(Plater *parent)
     p->m_bpButton_ams_filament = ams_btn;
 
     bSizer39->Add(ams_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+
+    const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
+    ScalableButton* spoolman_import_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "spoolman_import", wxEmptyString,
+                                                             wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 16);
+    spoolman_import_btn->SetToolTip(_L("Import filaments from Spoolman"));
+    spoolman_import_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        SpoolmanImportDialog dlg(wxGetApp().mainframe);
+        for (PlaterPresetComboBox* combo : p->combos_filament)
+            if (combo)
+                combo->update();
+    });
+    p->m_bpButton_spoolman_import = spoolman_import_btn;
+    spoolman_import_btn->Show(spoolman_enabled);
+    spoolman_import_btn->Enable(spoolman_enabled);
+    bSizer39->Add(spoolman_import_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+
+
+    ScalableButton* spoolman_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "spoolman_sync", wxEmptyString, wxDefaultSize,
+                                                      wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 16);
+    spoolman_btn->SetToolTip(_L("Sync filaments with Spoolman"));
+    spoolman_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) { sync_spoolman_loaded_lanes(true); });
+    p->m_bpButton_spoolman_filament = spoolman_btn;
+
+
+    spoolman_btn->Show(spoolman_enabled);
+    spoolman_btn->Enable(spoolman_enabled);
+    bSizer39->Add(spoolman_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
     //bSizer39->Add(FromDIP(10), 0, 0, 0, 0 );
 
     ScalableButton* set_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "settings");
@@ -1480,6 +1513,12 @@ void Sidebar::msw_rescale()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+
+    if (p->m_bpButton_spoolman_import)
+        p->m_bpButton_spoolman_import->msw_rescale();
+
+    if (p->m_bpButton_spoolman_filament)
+        p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
     p->m_flushing_volume_btn->Rescale();
     //BBS
@@ -1551,6 +1590,12 @@ void Sidebar::sys_color_changed()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+
+    if (p->m_bpButton_spoolman_import)
+        p->m_bpButton_spoolman_import->msw_rescale();
+
+    if (p->m_bpButton_spoolman_filament)
+        p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
     p->m_flushing_volume_btn->Rescale();
 
@@ -1770,8 +1815,191 @@ void Sidebar::load_ams_list(std::string const &device, MachineObject* obj)
         c->update();
 }
 
+bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
+{
+    using Slic3r::Spoolman;
+
+    if (!Spoolman::is_enabled()) {
+        if (show_feedback) {
+            MessageDialog dlg(this,
+                _L("Enable Spoolman integration in Preferences to sync filaments."),
+                _L("Sync filaments with Spoolman"),
+                wxOK);
+            dlg.ShowModal();
+        }
+        return false;
+    }
+
+    auto spoolman = Spoolman::get_instance();
+    auto lane_map = spoolman->get_spools_by_loaded_lane(true);
+    if (lane_map.empty()) {
+        if (show_feedback) {
+            if (!Spoolman::is_server_valid()) {
+                show_error(this, _L("Failed to get data from the Spoolman server. Make sure that the port is correct and the server is running."));
+            } else {
+                MessageDialog dlg(this,
+                    _L("No Spoolman spools are assigned to lanes. Assign spools to lanes in Spoolman and try again."),
+                    _L("Sync filaments with Spoolman"),
+                    wxOK);
+                dlg.ShowModal();
+            }
+        }
+        return false;
+    }
+
+    auto* preset_bundle = wxGetApp().preset_bundle;
+    std::map<int, DynamicPrintConfig> lane_configs = preset_bundle->filament_ams_list;
+    std::vector<std::string>          missing_presets;
+    bool                              updated_lane = false;
+
+    for (const auto& [lane, spool] : lane_map) {
+        if (!spool)
+            continue;
+
+        const Preset* preset = spoolman->find_preset_for_spool(spool->id);
+        if (!preset) {
+            std::string label = spool->get_preset_name();
+            if (!spool->loaded_lane_label.empty())
+                label += " (" + spool->loaded_lane_label + ")";
+            else
+                label += " (lane " + std::to_string(lane) + ")";
+            missing_presets.push_back(std::move(label));
+            continue;
+        }
+
+        DynamicPrintConfig config;
+        config.set_key_value("filament_id", new ConfigOptionStrings({preset->filament_id}));
+
+        std::string color = spool->m_filament_ptr ? spool->m_filament_ptr->color : std::string();
+        if (color.empty())
+            color = preset->config.opt_string("default_filament_colour", 0u);
+        if (color.empty())
+            color = preset->config.opt_string("filament_colour", 0u);
+        if (color.empty())
+            color = "#FFFFFF";
+
+        config.set_key_value("filament_colour", new ConfigOptionStrings({color}));
+        std::string material = spool->m_filament_ptr ? spool->m_filament_ptr->material : std::string();
+
+        if (material.empty())
+            material = preset->config.opt_string("filament_type", 0u);
+        config.set_key_value("filament_type", new ConfigOptionStrings({material}));
+
+        std::string tray_name = spool->loaded_lane_label;
+        if (tray_name.empty())
+            tray_name = "Lane " + std::to_string(lane + 1);
+        config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
+        config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
+        config.set_key_value("spoolman_spool_id", new ConfigOptionInts({spool->id}));
+        config.set_key_value("filament_exist", new ConfigOptionBools({true}));
+
+        config.set_key_value("filament_changed", new ConfigOptionBool{true});
+        config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
+
+        lane_configs[static_cast<int>(lane)] = std::move(config);
+        updated_lane                          = true;
+    }
+
+    if (!missing_presets.empty()) {
+        auto details = boost::algorithm::join(missing_presets, "\n");
+        MessageDialog dlg(this,
+            _L("The following Spoolman spools could not be matched to presets and will be skipped:\n") +
+                wxString::FromUTF8(details.c_str()),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+    }
+
+    if (!updated_lane) {
+        MessageDialog dlg(this,
+            _L("Unable to map any Spoolman spools to filament presets. Please import the spools first."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+        return true;
+    }
+
+    preset_bundle->filament_ams_list = lane_configs;
+    p->ams_list_device               = "spoolman";
+
+
+    const int highest_lane = lane_configs.rbegin()->first;
+    std::vector<std::string> lane_ids(static_cast<size_t>(highest_lane) + 1);
+    for (auto& entry : lane_configs) {
+        auto& ams         = entry.second;
+        auto  filament_id = ams.opt_string("filament_id", 0u);
+        ams.set_key_value("filament_changed", new ConfigOptionBool{true});
+        const auto lane_index = static_cast<size_t>(entry.first);
+        if (lane_index < lane_ids.size())
+            lane_ids[lane_index] = filament_id;
+
+    }
+
+    std::vector<std::string> color_before_sync;
+    std::vector<bool>   is_support_before;
+    DynamicPrintConfig& project_config = wxGetApp().preset_bundle->project_config;
+    ConfigOptionStrings* color_opt = project_config.option<ConfigOptionStrings>("filament_colour");
+    for (int i = 0; i < p->combos_filament.size(); ++i) {
+        is_support_before.push_back(is_support_filament(i));
+        color_before_sync.push_back(color_opt->values[i]);
+    }
+
+    unsigned int unknowns = 0;
+    auto         n        = preset_bundle->sync_ams_list(unknowns);
+    if (n == 0) {
+        MessageDialog dlg(this,
+            _L("There are no compatible filaments, and sync is not performed."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+        return true;
+    }
+
+
+    const std::string ams_filament_ids = boost::algorithm::join(lane_ids, ",");
+
+    wxGetApp().app_config->set("ams_filament_ids", p->ams_list_device, ams_filament_ids);
+
+    if (unknowns > 0) {
+        MessageDialog dlg(this,
+            _L("There are some unknown filaments mapped to generic preset. Please update Orca Slicer or restart Orca Slicer to check if there is an update to system presets."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+    }
+
+    wxGetApp().plater()->on_filaments_change(n);
+    for (auto& c : p->combos_filament)
+        c->update();
+    wxGetApp().get_tab(Preset::TYPE_FILAMENT)->select_preset(wxGetApp().preset_bundle->filament_presets[0]);
+    wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+    update_dynamic_filament_list();
+    p->m_panel_filament_content->SetMaxSize({-1, -1});
+
+    ConfigOptionStrings* color_opt_after = project_config.option<ConfigOptionStrings>("filament_colour");
+    for (int i = 0; i < p->combos_filament.size(); ++i) {
+        if (i >= color_before_sync.size()) {
+            auto_calc_flushing_volumes(i);
+        } else {
+            if (color_before_sync[i] != color_opt_after->values[i]) {
+                auto_calc_flushing_volumes(i);
+            } else {
+                bool flag = is_support_filament(i);
+                if (flag != is_support_before[i])
+                    auto_calc_flushing_volumes(i);
+            }
+        }
+    }
+
+    Layout();
+    return true;
+}
+
 void Sidebar::sync_ams_list()
 {
+    if (sync_spoolman_loaded_lanes())
+        return;
+
     // Force load ams list
     auto obj = wxGetApp().getDeviceManager()->get_selected_machine();
     if (obj)
@@ -2021,6 +2249,19 @@ void Sidebar::update_ui_from_settings()
 #if 0
     p->object_list->apply_volumes_order();
 #endif
+
+    const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
+    if (p->m_bpButton_spoolman_import) {
+        p->m_bpButton_spoolman_import->Show(spoolman_enabled);
+        p->m_bpButton_spoolman_import->Enable(spoolman_enabled);
+    }
+    if (p->m_bpButton_spoolman_filament) {
+        p->m_bpButton_spoolman_filament->Show(spoolman_enabled);
+        p->m_bpButton_spoolman_filament->Enable(spoolman_enabled);
+    }
+    if (auto* sizer = p->m_panel_filament_title->GetSizer())
+        sizer->Layout();
+
 }
 
 bool Sidebar::show_object_list(bool show) const
@@ -2278,6 +2519,7 @@ struct Plater::priv
     int m_cur_slice_plate;
     //BBS: m_slice_all in .gcode.3mf file case, set true when slice all
     bool m_slice_all_only_has_gcode{ false };
+    bool m_export_all{ false };
 
     bool m_need_update{false};
     //BBS: add popup object table logic
@@ -2336,6 +2578,10 @@ struct Plater::priv
     priv(Plater *q, MainFrame *main_frame);
     ~priv();
 
+    int get_current_slicing_plate_index() const
+    {
+        return (m_is_slicing && m_slice_all) ? m_cur_slice_plate : partplate_list.get_curr_plate_index();
+    }
 
     bool need_update() const { return m_need_update; }
     void set_need_update(bool need_update) { m_need_update = need_update; }
@@ -2573,15 +2819,19 @@ struct Plater::priv
     void on_export_finished(wxCommandEvent&);
     void on_slicing_began();
 
-    void clear_warnings();
+    void clear_warnings(const bool& clear_all_plates = false);
     void add_warning(const Slic3r::PrintStateBase::Warning &warning, size_t oid);
     // Update notification manager with the current state of warnings produced by the background process (slicing).
     void actualize_slicing_warnings(const PrintBase &print);
-    void actualize_object_warnings(const PrintBase& print);
+    void actualize_object_warnings();
     // Displays dialog window with list of warnings.
     // Returns true if user clicks OK.
     // Returns true if current_warnings vector is empty without showning the dialog
     bool warnings_dialog();
+
+    // If Spoolman is active, the server is valid, and at least one Spoolman spool is used,
+    // a dialog will be show asking if the user would like to consume the estimated filament usage
+    void spoolman_consumption_dialog(const bool& all_plates);
 
     void on_action_add(SimpleEvent&);
     void on_action_add_plate(SimpleEvent&);
@@ -2607,6 +2857,7 @@ struct Plater::priv
     //BBS: add part plate related logic
     void on_plate_right_click(RBtnPlateEvent&);
     void on_plate_selected(SimpleEvent&);
+    void on_all_plates_stats_selected(SimpleEvent& evt);
     void on_action_request_model_id(wxCommandEvent& evt);
     void on_action_download_project(wxCommandEvent& evt);
     void on_slice_button_status(bool enable);
@@ -2747,7 +2998,7 @@ private:
     std::string 				m_last_sla_printer_profile_name;
 
     // vector of all warnings generated by last slicing
-    std::vector<std::pair<Slic3r::PrintStateBase::Warning, size_t>> current_warnings;
+    std::map<unsigned int, std::vector<std::pair<PrintStateBase::Warning, size_t>>> current_warnings;
     bool show_warning_dialog { false };
 
     //record print preset
@@ -3144,6 +3395,7 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
         q->Bind(EVT_GLTOOLBAR_SEND_TO_PRINTER_ALL, &priv::on_action_export_to_sdcard_all, this);
         q->Bind(EVT_GLTOOLBAR_PRINT_MULTI_MACHINE, &priv::on_action_send_to_multi_machine, this);
         q->Bind(EVT_GLCANVAS_PLATE_SELECT, &priv::on_plate_selected, this);
+        q->Bind(EVT_GLTOOLBAR_SELECT_ALL_PLATES_STATS, &priv::on_all_plates_stats_selected, this);
         q->Bind(EVT_DOWNLOAD_PROJECT, &priv::on_action_download_project, this);
         q->Bind(EVT_IMPORT_MODEL_ID, &priv::on_action_request_model_id, this);
         q->Bind(EVT_PRINT_FINISHED, [q](wxCommandEvent& evt) { q->print_job_finished(evt); });
@@ -3482,7 +3734,7 @@ void Plater::priv::collapse_sidebar(bool collapse)
     std::string new_tooltip = collapse
                               ? _u8L("Expand sidebar")
                               : _u8L("Collapse sidebar");
-    new_tooltip += " [Shift+Tab]";
+    new_tooltip += " [" + _u8L("Shift+") + _u8L("Tab") + "]";
     int id = collapse_toolbar.get_item_id("collapse_sidebar");
     collapse_toolbar.set_tooltip(id, new_tooltip);
 
@@ -3851,8 +4103,32 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                     //         // Is there any modifier or advanced config data?
                     //         for (ModelVolume *model_volume : model_object->volumes) model_volume->config.reset();
                     //     }
-                    // } 
-                    else if (load_config && (file_version > app_version)) {
+                    // }
+                    // Orca: check if the project is created with OrcaSlicer 2.3.1-alpha and use the sparse infill rotation template for non-safe infill patterns
+                    else if ((file_version < app_version) && file_version == Semver("2.3.1-alpha")) {
+                        if (!config_loaded.opt_string("sparse_infill_rotate_template").empty()) {
+                            const auto _sparse_infill_pattern =
+                                config_loaded.option<ConfigOptionEnum<InfillPattern>>("sparse_infill_pattern")->value;
+                            bool is_safe_to_rotate = _sparse_infill_pattern == ipRectilinear || _sparse_infill_pattern == ipLine ||
+                                                     _sparse_infill_pattern == ipZigZag || _sparse_infill_pattern == ipCrossZag ||
+                                                     _sparse_infill_pattern == ipLockedZag;
+                            if (!is_safe_to_rotate) {
+                                wxString msg_text = _(
+                                    L("This project was created with an OrcaSlicer 2.3.1-alpha and uses "
+                                      "infill rotation template settings that may not work properly with your current infill pattern. "
+                                      "This could result in weak support or print quality issues."));
+                                msg_text += "\n\n" +
+                                            _(L("Would you like OrcaSlicer to automatically fix this by clearing the rotation template settings?"));
+                                MessageDialog dialog(wxGetApp().plater(), msg_text, "", wxICON_WARNING | wxYES | wxNO);
+                                dialog.SetButtonLabel(wxID_YES, _L("Yes"));
+                                dialog.SetButtonLabel(wxID_NO, _L("No"));
+                                if (dialog.ShowModal() == wxID_YES) {
+                                    config_loaded.opt_string("sparse_infill_rotate_template") = "";
+                                }
+                            }
+                        }
+
+                    } else if (load_config && (file_version > app_version)) {
                         if (config_substitutions.unrecogized_keys.size() > 0) {
                             wxString text  = wxString::Format(_L("The 3mf's version %s is newer than %s's version %s, found following unrecognized keys:"),
                                                              file_version.to_string(), std::string(SLIC3R_APP_FULL_NAME), app_version.to_string());
@@ -3883,8 +4159,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                                 show_info(q, text, _L("Newer 3mf version"));
                             }
                         }
-                    } 
-                    else if (!load_config) {
+                    } else if (!load_config) {
                         // reset config except color
                         for (ModelObject *model_object : model.objects) {
                             bool has_extruder = model_object->config.has("extruder");
@@ -5027,7 +5302,7 @@ void Plater::priv::reset(bool apply_presets_change)
 {
     Plater::TakeSnapshot snapshot(q, "Reset Project", UndoRedo::SnapshotType::ProjectSeparator);
 
-    clear_warnings();
+    clear_warnings(true);
 
     set_project_filename("");
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " call set_project_filename: empty";
@@ -5345,7 +5620,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
 
         if (err.string.empty()) {
             this->partplate_list.get_curr_plate()->update_apply_result_invalid(false);
-            notification_manager->set_all_slicing_errors_gray(true);
+            notification_manager->set_all_slicing_errors_gray(true, partplate_list.get_curr_plate_index());
             notification_manager->close_notification_of_type(NotificationType::ValidateError);
             if (invalidated != Print::APPLY_STATUS_UNCHANGED && background_processing_enabled())
                 return_state |= UPDATE_BACKGROUND_PROCESS_RESTART;
@@ -5388,7 +5663,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
         if (background_process.empty())
             process_validation_warning({});
         actualize_slicing_warnings(*this->background_process.current_print());
-        actualize_object_warnings(*this->background_process.current_print());
+        actualize_object_warnings();
         show_warning_dialog = false;
         process_completed_with_error = -1;
     }
@@ -6682,6 +6957,9 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
 
             view3D->deselect_all();
         }
+
+        Spoolman::update_visible_spool_statistics();
+
 #if 0   // do not toggle auto calc when change printer
         // update flush matrix
         size_t filament_size = wxGetApp().plater()->get_extruder_colors_from_plater_config().size();
@@ -6782,7 +7060,9 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
         for (auto const& warning : state.warnings) {
             if (warning.current) {
                 NotificationManager::NotificationLevel notif_level = NotificationManager::NotificationLevel::WarningNotificationLevel;
-                if (evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingReplaceInitEmptyLayers || evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingEmptyGcodeLayers) {
+                if (evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingReplaceInitEmptyLayers ||
+                    evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingEmptyGcodeLayers ||
+                    evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingNotEnoughFilament) {
                     notif_level = NotificationManager::NotificationLevel::SeriousWarningNotificationLevel;
                 }
                 notification_manager->push_slicing_warning_notification(warning.message, false, model_object, object_id, warning_step, warning.message_id, notif_level);
@@ -6818,14 +7098,19 @@ void Plater::priv::on_slicing_completed(wxCommandEvent & evt)
 
 void Plater::priv::on_export_began(wxCommandEvent& evt)
 {
-    if (show_warning_dialog)
-        warnings_dialog();
+    // Orca: warning dialog calls moved
+    // if (show_warning_dialog)
+    //     warnings_dialog();
 }
 
 void Plater::priv::on_export_finished(wxCommandEvent& evt)
 {
+    if (!m_export_all || (m_cur_slice_plate == (partplate_list.get_plate_count() - 1)))
+        spoolman_consumption_dialog(m_export_all);
 #if 0
     //BBS: also export 3mf to the same directory for debugging
+    if (evt.GetString().empty())
+        return;
     std::string gcode_path_str(evt.GetString().ToUTF8().data());
     fs::path gcode_path(gcode_path_str);
 
@@ -6848,7 +7133,8 @@ void Plater::priv::on_slicing_began()
 }
 void Plater::priv::add_warning(const Slic3r::PrintStateBase::Warning& warning, size_t oid)
 {
-    for (auto& it : current_warnings) {
+    auto& cur_plate_warnings = current_warnings[get_current_slicing_plate_index()];
+    for (auto& it : cur_plate_warnings) {
         if (warning.message_id == it.first.message_id) {
             if (warning.message_id != 0 || (warning.message_id == 0 && warning.message == it.first.message))
             {
@@ -6858,7 +7144,7 @@ void Plater::priv::add_warning(const Slic3r::PrintStateBase::Warning& warning, s
             }
         }
     }
-    current_warnings.emplace_back(std::pair<Slic3r::PrintStateBase::Warning, size_t>(warning, oid));
+    cur_plate_warnings.emplace_back(warning, oid);
 }
 void Plater::priv::actualize_slicing_warnings(const PrintBase &print)
 {
@@ -6869,42 +7155,122 @@ void Plater::priv::actualize_slicing_warnings(const PrintBase &print)
     }
     ids.emplace_back(print.id());
     std::sort(ids.begin(), ids.end());
-    notification_manager->remove_slicing_warnings_of_released_objects(ids);
-    notification_manager->set_all_slicing_warnings_gray(true);
+    notification_manager->remove_slicing_warnings_of_released_objects(ids, print.get_plate_index());
+    notification_manager->set_all_slicing_warnings_gray(true, print.get_plate_index());
 }
-void Plater::priv::actualize_object_warnings(const PrintBase& print)
+void Plater::priv::actualize_object_warnings()
 {
     std::vector<ObjectID> ids;
-    for (const ModelObject* object : print.model().objects )
+    for (const ModelObject* object : model.objects )
     {
         ids.push_back(object->id());
     }
     std::sort(ids.begin(), ids.end());
     notification_manager->remove_simplify_suggestion_of_released_objects(ids);
 }
-void Plater::priv::clear_warnings()
+void Plater::priv::clear_warnings(const bool& clear_all_plates)
 {
-    notification_manager->close_slicing_errors_and_warnings();
-    this->current_warnings.clear();
+    if (clear_all_plates) {
+        notification_manager->close_slicing_errors_and_warnings();
+        current_warnings.clear();
+    } else {
+        notification_manager->close_slicing_errors_and_warnings(get_current_slicing_plate_index());
+        current_warnings.erase(get_current_slicing_plate_index());
+    }
 }
 bool Plater::priv::warnings_dialog()
 {
-    if (current_warnings.empty())
+    const auto& cur_plate_idx = this->partplate_list.get_curr_plate_index();
+    if (current_warnings.empty() ||
+        (!m_export_all && (current_warnings.count(cur_plate_idx) == 0 || current_warnings[cur_plate_idx].empty())))
         return true;
-    std::string text = _u8L("There are warnings after slicing models:") + "\n";
-    for (auto const& it : current_warnings) {
-        size_t next_n = it.first.message.find_first_of('\n', 0);
-        text += "\n";
-        if (next_n != std::string::npos)
-            text += it.first.message.substr(0, next_n);
-        else
-            text += it.first.message;
-    }
-    //text += "\n\nDo you still wish to export?";
-    MessageDialog msg_window(this->q, from_u8(text), _L("warnings"), wxOK);
-    const auto    res = msg_window.ShowModal();
-    return res == wxID_OK;
+    std::string text = _u8L("There are warnings after slicing models:");
 
+    auto get_text_from_warnings = [&](const vector<pair<PrintStateBase::Warning, size_t>>& warnings, const unsigned int& plate_idx = -1) {
+        if (m_export_all)
+            text += "\n\n" + (boost::format(_u8L("Plate") + " %1%:") % (plate_idx+1)).str();
+        else
+            text += "\n";
+        for (const auto& [warning, object_id] : warnings) {
+            size_t next_n = warning.message.find_first_of('\n', 0);
+            text += "\n";
+            if (next_n != std::string::npos)
+                text += warning.message.substr(0, next_n);
+            else
+                text += warning.message;
+        }
+    };
+
+    if (m_export_all) {
+        for (auto& [plate_idx, warnings] : current_warnings) {
+            if (warnings.empty()) continue;
+            get_text_from_warnings(warnings, plate_idx);
+        }
+    } else {
+        get_text_from_warnings(current_warnings[cur_plate_idx]);
+    }
+    text += "\n\nDo you still wish to export?";
+    MessageDialog msg_window(this->q, from_u8(text), _L("Slicing Warnings"), wxYES_NO);
+    const auto    res = msg_window.ShowModal();
+    return res == wxID_YES;
+}
+
+void Plater::priv::spoolman_consumption_dialog(const bool& all_plates)
+{
+    static constexpr auto show_dlg_key = "show_spoolman_consumption_dialog";
+    if (!wxGetApp().app_config->get_bool(show_dlg_key))
+        return;
+    if (!Spoolman::is_server_valid())
+        return;
+
+    auto spoolman = Spoolman::get_instance();
+    const auto& consumption_type = wxGetApp().app_config->get("spoolman", "consumption_type");
+    std::string unit = consumption_type == "weight" ? "g" : consumption_type == "length" ? "mm" : "";
+
+    if (unit.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "The specified consumption type is not valid";
+        return;
+    }
+
+    std::map<unsigned, double> estimates;
+    std::map<unsigned, wxString> messages;
+
+    auto apply_estimates_from_plate = [&] (PartPlate* plate) {
+        for (const auto& est : plate->fff_print()->get_spoolman_filament_consumption_estimates()) {
+            auto& id = est.spoolman_spool_id;
+            if (consumption_type == "weight") {
+                estimates[id] += est.est_used_weight;
+            } else if (consumption_type == "length") {
+                estimates[id] += est.est_used_length;
+            } else return;
+            messages[id] = wxString::FromUTF8((boost::format("%1%: %2% %3%") % est.filament_name % double_to_string(estimates[id], 2) % unit).str());
+        }
+    };
+
+    if (all_plates)
+        for (const auto& plate : partplate_list.get_plate_list())
+            apply_estimates_from_plate(plate);
+    else
+        apply_estimates_from_plate(partplate_list.get_curr_plate());
+
+    if (estimates.empty()) return;
+
+    auto msg = _L("Would you like to consume the used filaments registered in Spoolman?") + "\n\n";
+    for (const auto& [id, message] : messages)
+        msg += message + "\n";
+
+    auto dlg = MessageDialog(nullptr, msg, _L("Spoolman Filament Consumption"), wxYES_NO);
+    dlg.show_dsa_button();
+    if (dlg.ShowModal() == wxID_YES) {
+        if (spoolman->use_spoolman_spools(estimates, consumption_type)) {
+            notification_manager->push_spoolman_consumption_finished_notification();
+        } else {
+            BOOST_LOG_TRIVIAL(error) << "Failed to consume filament from Spoolman";
+            show_error(nullptr, _L("Failed to consume filament from Spoolman"));
+        }
+    }
+    if (dlg.get_checkbox_state())
+        wxGetApp().app_config->set_bool(show_dlg_key, false);
 }
 
 //BBS: add project slice logic
@@ -7080,8 +7446,12 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
 
     if (is_finished)
     {
+        if (m_slice_all)
+            preview->get_canvas3d()->_update_select_plate_toolbar_stats_item(true);
+
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(":finished, reload print soon");
         m_is_slicing = false;
+        m_export_all = false;
         this->preview->reload_print(false);
         /* BBS if in publishing progress */
         if (m_is_publishing) {
@@ -7107,6 +7477,7 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
         if (ret) {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(":slicing all, plate %1% can not be sliced, will stop")%m_cur_slice_plate;
             m_is_slicing = false;
+            m_export_all = false;
         }
         //not the last plate
         update_fff_scene_only_shells();
@@ -7206,7 +7577,8 @@ void Plater::priv::on_action_slice_all(SimpleEvent&)
         if (!m_is_publishing)
             q->select_view_3D("Preview");
         //BBS: wish to select all plates stats item
-        preview->get_canvas3d()->_update_select_plate_toolbar_stats_item(true);
+        // Orca: This call has been moved to the process complete function
+        // preview->get_canvas3d()->_update_select_plate_toolbar_stats_item(true);
     }
 }
 
@@ -7319,6 +7691,10 @@ int Plater::priv::update_print_required_data(Slic3r::DynamicPrintConfig config, 
 
 void Plater::priv::on_action_send_to_printer(bool isall)
 {
+    // Orca: Prompt the user with the current slicing warnings (if any) and continue if they wish to
+    if (!warnings_dialog())
+        return;
+
 	if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
     if (isall) {
         m_send_to_sdcard_dlg->prepare(PLATE_ALL_IDX);
@@ -7387,6 +7763,7 @@ void Plater::priv::on_action_export_all_sliced_file(SimpleEvent &)
 {
     if (q != nullptr) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received export all sliced file event\n";
+        m_export_all = true;
         q->export_gcode_3mf(true);
     }
 }
@@ -7403,6 +7780,7 @@ void Plater::priv::on_action_export_to_sdcard_all(SimpleEvent&)
 {
     if (q != nullptr) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received export sliced file event\n";
+        m_export_all = true;
         q->send_to_printer(true);
     }
 }
@@ -7412,6 +7790,12 @@ void Plater::priv::on_plate_selected(SimpleEvent&)
 {
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received plate selected event\n" ;
     sidebar->obj_list()->on_plate_selected(partplate_list.get_curr_plate_index());
+}
+
+void Plater::priv::on_all_plates_stats_selected(SimpleEvent& evt)
+{
+    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ": received all plates stats selected event\n";
+    notification_manager->hide_slicing_notifications_from_other_plates(-1);
 }
 
 void Plater::priv::on_action_request_model_id(wxCommandEvent& evt)
@@ -9505,7 +9889,8 @@ void Plater::calib_pa(const Calib_Params& params)
             break;
         default: break;
     }
-
+    auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     p->background_process.fff_print()->set_calib_params(params);
 }
 
@@ -9515,14 +9900,15 @@ void Plater::_calib_pa_pattern(const Calib_Params& params)
     std::vector<double> accels{params.accelerations};
     std::vector<size_t> object_idxs{};
     /* Set common parameters */
-    DynamicPrintConfig& printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     DynamicPrintConfig& print_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
-    double nozzle_diameter = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->get_at(0);
+    double nozzle_diameter = printer_config->option<ConfigOptionFloats>("nozzle_diameter")->get_at(0);
     filament_config->set_key_value("filament_retract_when_changing_layer", new ConfigOptionBoolsNullable{false});
     filament_config->set_key_value("filament_wipe", new ConfigOptionBoolsNullable{false});
-    printer_config.set_key_value("wipe", new ConfigOptionBools{false});
-    printer_config.set_key_value("retract_when_changing_layer", new ConfigOptionBools{false});
+    printer_config->set_key_value("wipe", new ConfigOptionBools{false});
+    printer_config->set_key_value("retract_when_changing_layer", new ConfigOptionBools{false});
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
 
     //Orca: find acceleration to use in the test
     auto accel = print_config.option<ConfigOptionFloat>("outer_wall_acceleration")->value; // get the outer wall acceleration
@@ -9900,6 +10286,7 @@ void adjust_settings_for_flowrate_calib(ModelObjectPtrs& objects, bool linear, i
         _obj->config.set_key_value("top_solid_infill_flow_ratio", new ConfigOptionFloat(1.0f));
         _obj->config.set_key_value("infill_direction", new ConfigOptionFloat(45));
         _obj->config.set_key_value("solid_infill_direction", new ConfigOptionFloat(135));
+        _obj->config.set_key_value("align_infill_direction_to_model", new ConfigOptionBool(true));
         _obj->config.set_key_value("ironing_type", new ConfigOptionEnum<IroningType>(IroningType::NoIroning));
         _obj->config.set_key_value("internal_solid_infill_speed", new ConfigOptionFloat(internal_solid_speed));
         _obj->config.set_key_value("top_surface_speed", new ConfigOptionFloat(top_surface_speed));
@@ -9980,6 +10367,8 @@ void Plater::calib_flowrate(bool is_linear, int pass) {
 
     adjust_settings_for_flowrate_calib(model().objects, is_linear, pass);
     wxGetApp().get_tab(Preset::TYPE_PRINTER)->reload_config();
+    auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
 
     // Refresh object after scaling
     const std::vector<size_t> object_idx(boost::counting_iterator<size_t>(0), boost::counting_iterator<size_t>(model().objects.size()));
@@ -9995,8 +10384,10 @@ void Plater::calib_temp(const Calib_Params& params) {
         return;
     
     add_model(false, Slic3r::resources_dir() + "/calib/temperature_tower/temperature_tower.stl");
+    auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto start_temp = lround(params.start);
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("nozzle_temperature_initial_layer", new ConfigOptionInts(1,(int)start_temp));
     filament_config->set_key_value("nozzle_temperature", new ConfigOptionInts(1,(int)start_temp));
     model().objects[0]->config.set_key_value("brim_type", new ConfigOptionEnum<BrimType>(btOuterOnly));
@@ -10069,7 +10460,7 @@ void Plater::calib_max_vol_speed(const Calib_Params& params)
 
     filament_config->set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats { 200 });
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats{0.0});
-    
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     obj_cfg.set_key_value("enable_overhang_speed", new ConfigOptionBool { false });
     obj_cfg.set_key_value("wall_loops", new ConfigOptionInt(1));
     obj_cfg.set_key_value("alternate_extra_wall", new ConfigOptionBool(false));
@@ -10133,6 +10524,7 @@ void Plater::calib_retraction(const Calib_Params& params)
     if (max_lh->values[0] < layer_height)
         max_lh->values[0] = { layer_height };
 
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     printer_config->set_key_value("use_firmware_retraction", new ConfigOptionBool(false));
     obj->config.set_key_value("wall_loops", new ConfigOptionInt(2));
     obj->config.set_key_value("top_shell_layers", new ConfigOptionInt(0));
@@ -10165,6 +10557,8 @@ void Plater::calib_VFA(const Calib_Params& params)
     add_model(false, Slic3r::resources_dir() + "/calib/vfa/VFA.stl");
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
+    auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats { 0.0 });
     print_config->set_key_value("enable_overhang_speed", new ConfigOptionBool { false });
     print_config->set_key_value("timelapse_type", new ConfigOptionEnum<TimelapseType>(tlTraditional));
@@ -10209,11 +10603,13 @@ void Plater::calib_input_shaping_freq(const Calib_Params& params)
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     printer_config->set_key_value("machine_max_junction_deviation", new ConfigOptionFloats {0.3});
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_min_speed", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_for_layer_cooling", new ConfigOptionBools{false});
-    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools {false });
+    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools {true});
     filament_config->set_key_value("pressure_advance", new ConfigOptionFloats { 0.0 });
+    filament_config->set_key_value("adaptive_pressure_advance", new ConfigOptionBools{false});
     print_config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
     print_config->set_key_value("enable_overhang_speed", new ConfigOptionBool { false });
     print_config->set_key_value("timelapse_type", new ConfigOptionEnum<TimelapseType>(tlTraditional));
@@ -10255,11 +10651,13 @@ void Plater::calib_input_shaping_damp(const Calib_Params& params)
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     printer_config->set_key_value("machine_max_junction_deviation", new ConfigOptionFloats{0.3});
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_min_speed", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_for_layer_cooling", new ConfigOptionBools{false});
-    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools{false});
-    filament_config->set_key_value("pressure_advance", new ConfigOptionFloats{0.0});
+    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools {true});
+    filament_config->set_key_value("pressure_advance", new ConfigOptionFloats { 0.0 });
+    filament_config->set_key_value("adaptive_pressure_advance", new ConfigOptionBools{false});
     print_config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
     print_config->set_key_value("enable_overhang_speed", new ConfigOptionBool{false});
     print_config->set_key_value("timelapse_type", new ConfigOptionEnum<TimelapseType>(tlTraditional));
@@ -10290,7 +10688,7 @@ void Plater::calib_input_shaping_damp(const Calib_Params& params)
 
 void Plater::calib_junction_deviation(const Calib_Params& params)
 {
-    const auto calib_junction_deviation = wxString::Format(L"Input shaping Damping test");
+    const auto calib_junction_deviation = wxString::Format(L"Junction Deviation test");
     new_project(false, false, calib_junction_deviation);
     wxGetApp().mainframe->select_tab(size_t(MainFrame::tp3DEditor));
     if (params.mode != CalibMode::Calib_Junction_Deviation)
@@ -10301,12 +10699,14 @@ void Plater::calib_junction_deviation(const Calib_Params& params)
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     printer_config->set_key_value("machine_max_junction_deviation", new ConfigOptionFloats{1.0});
+    printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_min_speed", new ConfigOptionFloats { 0.0 });
     filament_config->set_key_value("slow_down_for_layer_cooling", new ConfigOptionBools{false});
     filament_config->set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats{200});
-    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools{false});
-    filament_config->set_key_value("pressure_advance", new ConfigOptionFloats{0.0});
+    filament_config->set_key_value("enable_pressure_advance", new ConfigOptionBools {true});
+    filament_config->set_key_value("pressure_advance", new ConfigOptionFloats { 0.0 });
+    filament_config->set_key_value("adaptive_pressure_advance", new ConfigOptionBools{false});
     print_config->set_key_value("layer_height", new ConfigOptionFloat(0.2));
     print_config->set_key_value("enable_overhang_speed", new ConfigOptionBool{false});
     print_config->set_key_value("timelapse_type", new ConfigOptionEnum<TimelapseType>(tlTraditional));
@@ -11217,6 +11617,8 @@ void Plater::add_file()
                 p->set_project_name(from_u8(full_path.stem().string()));
             }
             wxGetApp().mainframe->update_title();
+            if (wxGetApp().app_config->get("recent_models") == "true")
+                wxGetApp().mainframe->add_to_recent_projects(paths[0].wstring());
         }
         break;
     }
@@ -11238,6 +11640,9 @@ void Plater::add_file()
                 p->set_project_name(from_u8(full_path.stem().string()));
             }
             wxGetApp().mainframe->update_title();
+            if (wxGetApp().app_config->get("recent_models") == "true")
+                for (auto &path : paths)
+                    wxGetApp().mainframe->add_to_recent_projects(path.wstring());
         }
         break;
     }
@@ -11255,7 +11660,12 @@ void Plater::add_file()
 
         open_3mf_file(first_file[0]);
         load_files(tmf_file, LoadStrategy::LoadModel);
-        if (!load_files(other_file, LoadStrategy::LoadModel, false).empty()) { wxGetApp().mainframe->update_title();}
+        if (!load_files(other_file, LoadStrategy::LoadModel, false).empty()) {
+            wxGetApp().mainframe->update_title();
+            if (wxGetApp().app_config->get("recent_models") == "true")
+                for (auto &file : other_file)
+                    wxGetApp().mainframe->add_to_recent_projects(file.wstring());
+        }
         break;
     default:break;
     }
@@ -11619,6 +12029,10 @@ void Plater::export_gcode(bool prefer_removable)
     if (p->process_completed_with_error == p->partplate_list.get_curr_plate_index())
         return;
 
+    // Orca: Prompt the user with the current slicing warnings (if any) and continue if they wish to
+    if (!p->warnings_dialog())
+        return;
+
     // If possible, remove accents from accented latin characters.
     // This function is useful for generating file names to be processed by legacy firmwares.
     fs::path default_output_file;
@@ -11719,6 +12133,10 @@ void Plater::export_gcode_3mf(bool export_all)
         return;
 
     if (p->process_completed_with_error == p->partplate_list.get_curr_plate_index())
+        return;
+
+    // Orca: Prompt the user with the current slicing warnings (if any) and continue if they wish to
+    if (!p->warnings_dialog())
         return;
 
     //calc default_output_file, get default output file from background process
@@ -12756,6 +13174,10 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn, bool us
     if (! physical_printer_config || p->model.objects.empty())
         return;
 
+    // Orca: Prompt the user with the current slicing warnings (if any) and continue if they wish to
+    if (!p->warnings_dialog())
+        return;
+
     PrintHostJob upload_job(physical_printer_config);
     if (upload_job.empty())
         return;
@@ -13789,6 +14211,7 @@ int Plater::select_plate(int plate_index, bool need_slice)
 
     if ((!ret) && (p->background_process.can_switch_print()))
     {
+        get_notification_manager()->hide_slicing_notifications_from_other_plates(plate_index);
         //select successfully
         p->partplate_list.update_slice_context_to_current_plate(p->background_process);
         p->preview->update_gcode_result(p->partplate_list.get_current_slice_result());
@@ -13959,7 +14382,7 @@ void Plater::validate_current_plate(bool& model_fits, bool& validate_error)
 
         if (err.string.empty()) {
             p->partplate_list.get_curr_plate()->update_apply_result_invalid(false);
-            p->notification_manager->set_all_slicing_errors_gray(true);
+            p->notification_manager->set_all_slicing_errors_gray(true, p->partplate_list.get_curr_plate_index());
             p->notification_manager->close_notification_of_type(NotificationType::ValidateError);
 
             // Pass a warning from validation and either show a notification,
@@ -14470,6 +14893,11 @@ void Plater::post_process_string_object_exception(StringObjectException &err)
     }
 
     return;
+}
+
+int Plater::get_current_slicing_plate_index() const
+{
+    return p->get_current_slicing_plate_index();
 }
 
 #if ENABLE_ENVIRONMENT_MAP

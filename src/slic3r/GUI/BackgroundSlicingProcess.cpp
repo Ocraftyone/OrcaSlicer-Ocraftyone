@@ -250,9 +250,11 @@ void BackgroundSlicingProcess::process_fff()
 				finalize_gcode();
 			else
 				export_gcode();
+	        wxQueueEvent(wxGetApp().mainframe->m_plater, new wxCommandEvent(m_event_export_finished_id));
 	    } else if (! m_upload_job.empty()) {
 			wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, new wxCommandEvent(m_event_export_began_id));
 			prepare_upload();
+	        wxQueueEvent(wxGetApp().mainframe->m_plater, new wxCommandEvent(m_event_export_finished_id));
 	    } else {
 			m_print->set_status(100, _utf8(L("Slicing complete")));
 	    }
@@ -555,11 +557,11 @@ bool BackgroundSlicingProcess::stop()
 		m_print->cancel();
 		// Wait until the background processing stops by being canceled.
 		m_condition.wait(lck, [this](){ return m_state == STATE_CANCELED; });
-		// In the "Cancelled" state. Reset the state to "Idle".
+		// In the "Canceled" state. Reset the state to "Idle".
 		m_state = STATE_IDLE;
 		m_print->set_cancel_callback([](){});
 	} else if (m_state == STATE_FINISHED || m_state == STATE_CANCELED) {
-		// In the "Finished" or "Cancelled" state. Reset the state to "Idle".
+		// In the "Finished" or "Canceled" state. Reset the state to "Idle".
 		m_state = STATE_IDLE;
 		m_print->set_cancel_callback([](){});
 	}
@@ -605,7 +607,7 @@ void BackgroundSlicingProcess::stop_internal()
 		// Lock it back to be in a consistent state.
 		m_print->state_mutex().lock();
 	}
-	// In the "Cancelled" state. Reset the state to "Idle".
+	// In the "Canceled" state. Reset the state to "Idle".
 	m_state = STATE_IDLE;
 	m_print->set_cancel_callback([](){});
 	BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ", exit"<<std::endl;
@@ -892,10 +894,10 @@ void BackgroundSlicingProcess::export_gcode()
 	}
 
 	// BBS
-	auto evt = new wxCommandEvent(m_event_export_finished_id, GUI::wxGetApp().mainframe->m_plater->GetId());
-	wxString output_gcode_str = wxString::FromUTF8(export_path.c_str(), export_path.length());
-	evt->SetString(output_gcode_str);
-	wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, evt);
+	// auto evt = new wxCommandEvent(m_event_export_finished_id, GUI::wxGetApp().mainframe->m_plater->GetId());
+	// wxString output_gcode_str = wxString::FromUTF8(export_path.c_str(), export_path.length());
+	// evt->SetString(output_gcode_str);
+	// wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, evt);
 
 	// BBS: to be checked. Whether use export_path or output_path.
 	gcode_add_line_number(export_path, m_fff_print->full_print_config());

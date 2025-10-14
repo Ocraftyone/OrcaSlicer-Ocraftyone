@@ -168,7 +168,7 @@ static std::set<int> cannot_input_key = {9, 10, 13, 33, 35, 36, 37, 38, 40, 41, 
 
 static std::set<char> special_key = {'\n', '\t', '\r', '\v', '@', ';'};
 
-static std::string remove_special_key(const std::string &str)
+std::string remove_special_key(const std::string &str)
 {
     std::string res_str;
     for (char c : str) {
@@ -463,7 +463,7 @@ static std::string calculate_md5(const std::string &input)
     return md5;
 }
 
-static std::string get_filament_id(std::string vendor_typr_serial)
+std::string get_filament_id(std::string vendor_typr_serial)
 {
     std::unordered_map<std::string, std::set<std::string>> filament_id_to_filament_name;
 
@@ -681,7 +681,7 @@ CreateFilamentPresetDialog::CreateFilamentPresetDialog(wxWindow *parent)
     m_scrolled_sizer->Add(create_item(FilamentOptionType::PRESET_FOR_PRINTER), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(5));
     m_scrolled_sizer->Add(0, 0, 0, wxTOP, FromDIP(5));
     m_scrolled_preset_panel->SetSizerAndFit(m_scrolled_sizer);
-    m_main_sizer->Add(m_scrolled_preset_panel, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
+    m_main_sizer->Add(m_scrolled_preset_panel, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(10));
     m_main_sizer->Add(create_dialog_buttons(), 0, wxEXPAND);
 
     get_all_visible_printer_name();
@@ -3441,7 +3441,7 @@ std::string ExportConfigsDialog::initial_file_name(const wxString &path, const s
             }
             catch(...) {
                 MessageDialog dlg(this,
-                                  wxString::Format(_L("The file: %s \nmay have been opened by another program. \nPlease close it and try again."),
+                                  wxString::Format(_L("The file: %s\nmay have been opened by another program.\nPlease close it and try again."),
                                                       encode_path(printer_export_path.string().c_str())),
                                   wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxYES | wxYES_DEFAULT | wxCENTRE);
                 dlg.ShowModal();
@@ -4104,7 +4104,7 @@ void ExportConfigsDialog::data_init()
         
         std::string preset_name        = printer_preset.name;
         if (!printer_preset.is_visible || printer_preset.is_default || printer_preset.is_project_embedded) continue;
-        if (preset_bundle.printers.select_preset_by_name(preset_name, false)) {
+        if (preset_bundle.printers.select_preset_by_name(preset_name, true)) {
             preset_bundle.update_compatible(PresetSelectCompatibleType::Always);
 
             const std::deque<Preset> &filament_presets = preset_bundle.filaments.get_presets();

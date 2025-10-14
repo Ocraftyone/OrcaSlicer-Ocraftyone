@@ -362,6 +362,10 @@ void AppConfig::set_defaults()
         set("max_recent_count", "18");
     }
 
+    if (get("recent_models").empty()) {
+        set("recent_models", "0");
+    }
+
     // if (get("staff_pick_switch").empty()) {
     //     set_bool("staff_pick_switch", false);
     // }
@@ -427,6 +431,18 @@ void AppConfig::set_defaults()
     if (get("is_split_compound").empty()) {
         set_bool("is_split_compound", false);
     }
+
+    if (get("show_spoolman_consumption_dialog").empty())
+        set_bool("show_spoolman_consumption_dialog", true);
+
+    if (get("spoolman", "enabled").empty())
+        set("spoolman", "enabled", false);
+
+    if (get("spoolman", "host").empty())
+        set_str("spoolman", "host", "");
+
+    if (get("spoolman", "consumption_type").empty())
+        set_str("spoolman", "consumption_type", "weight");
 
     // Remove legacy window positions/sizes
     erase("app", "main_frame_maximized");
@@ -837,6 +853,10 @@ void AppConfig::save()
 #endif
 
     c.close();
+    if (c.fail()) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to write new configuration to " << path_pid << "; aborting attempt to overwrite original configuration";
+      return;
+    }
 
 #ifdef WIN32
     // Make a backup of the configuration file before copying it to the final destination.
@@ -1042,6 +1062,10 @@ void AppConfig::save()
     c << appconfig_md5_hash_line(config_str);
 #endif
     c.close();
+    if (c.fail()) {
+      BOOST_LOG_TRIVIAL(error) << "Failed to write new configuration to " << path_pid << "; aborting attempt to overwrite original configuration";
+      return;
+    }
 
 #ifdef WIN32
     // Make a backup of the configuration file before copying it to the final destination.

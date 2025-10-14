@@ -3,14 +3,16 @@
     "name": "Tiertime Generic TPU",
     "inherits": "fdm_filament_tpu",
     "from": "system",
-    "filament_id": "GFU99",
     "setting_id": "GFSR99",
+    "filament_id": "GFU99",
     "instantiation": "true",
     "filament_max_volumetric_speed": [
         "3.2"
     ],
     "compatible_printers": [
         "Tiertime UP400 Pro 0.4 nozzle",
+        "Tiertime UP400 Pro 0.6 nozzle",
+        "Tiertime UP400 Pro 0.8 nozzle",
         "Tiertime UP310 Pro 0.4 nozzle"
     ],
     "filament_start_gcode": [

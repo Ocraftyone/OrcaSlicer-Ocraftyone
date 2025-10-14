@@ -1578,6 +1578,18 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
         result->filename = path;
     }
 
+    // Check the consumption of filament against the remaining filament as reported by Spoolman
+    for (const auto& est : print->get_spoolman_filament_consumption_estimates()) {
+        double remaining_length   = print->config().filament_remaining_length.get_at(est.print_config_idx);
+        double remaining_weight   = print->config().filament_remaining_weight.get_at(est.print_config_idx);
+
+        if (est.est_used_length > remaining_length || est.est_used_weight > remaining_weight) {
+            std::string msg = boost::str(boost::format(_("Filament %1% does not have enough material for the print. Used: %2$.2f m, %3$.2f g, Remaining: %4$.2f m, %5$.2f g")) %
+                                         est.filament_name % (est.est_used_length * 0.001) % est.est_used_weight % (remaining_length * 0.001) % remaining_weight);
+            print->active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL, msg, PrintStateBase::SlicingNotificationType::SlicingNotEnoughFilament);
+        }
+    }
+
     //BBS: add some log for error output
     BOOST_LOG_TRIVIAL(debug) << boost::format("Finished processing gcode to %1% ") % path_tmp;
 
@@ -3721,6 +3733,7 @@ LayerResult GCode::process_layer(
     if(is_BBL_Printer()){
         if (printer_structure == PrinterStructure::psI3 && !need_insert_timelapse_gcode_for_traditional && !m_spiral_vase && print.config().print_sequence == PrintSequence::ByLayer) {
             std::string timepals_gcode = insert_timelapse_gcode();
+            if(!timepals_gcode.empty()){
             gcode += timepals_gcode;
             m_writer.set_current_position_clear(false);
             //BBS: check whether custom gcode changes the z position. Update if changed
@@ -3729,6 +3742,7 @@ LayerResult GCode::process_layer(
                 Vec3d pos = m_writer.get_position();
                 pos(2) = temp_z_after_timepals_gcode;
                 m_writer.set_position(pos);
+            }
             }
         }
     } else {
@@ -4134,6 +4148,7 @@ LayerResult GCode::process_layer(
                     m_writer.add_object_change_labels(gcode);
 
                     std::string timepals_gcode = insert_timelapse_gcode();
+                    if(!timepals_gcode.empty()){
                     gcode += timepals_gcode;
                     m_writer.set_current_position_clear(false);
                     //BBS: check whether custom gcode changes the z position. Update if changed
@@ -4142,6 +4157,7 @@ LayerResult GCode::process_layer(
                         Vec3d pos = m_writer.get_position();
                         pos(2) = temp_z_after_timepals_gcode;
                         m_writer.set_position(pos);
+                    }
                     }
                     has_insert_timelapse_gcode = true;
                 }
@@ -4379,6 +4395,7 @@ LayerResult GCode::process_layer(
                             gcode += this->retract(false, false, LiftType::NormalLift);
 
                             std::string timepals_gcode = insert_timelapse_gcode();
+                            if(!timepals_gcode.empty()){
                             gcode += timepals_gcode;
                             m_writer.set_current_position_clear(false);
                             //BBS: check whether custom gcode changes the z position. Update if changed
@@ -4388,7 +4405,7 @@ LayerResult GCode::process_layer(
                                 pos(2) = temp_z_after_timepals_gcode;
                                 m_writer.set_position(pos);
                             }
-
+                            }
                             has_insert_timelapse_gcode = true;
                         }
                         // Then print infill
@@ -4464,6 +4481,7 @@ LayerResult GCode::process_layer(
         m_writer.add_object_change_labels(gcode);
 
         std::string timepals_gcode = insert_timelapse_gcode();
+        if(!timepals_gcode.empty()){
         gcode += timepals_gcode;
         m_writer.set_current_position_clear(false);
         //BBS: check whether custom gcode changes the z position. Update if changed
@@ -4472,6 +4490,7 @@ LayerResult GCode::process_layer(
             Vec3d pos = m_writer.get_position();
             pos(2) = temp_z_after_timepals_gcode;
             m_writer.set_position(pos);
+        }
         }
     }
 
@@ -6078,11 +6097,11 @@ std::string GCode::travel_to(const Point& point, ExtrusionRole role, std::string
 
     // if a retraction would be needed, try to use reduce_crossing_wall to plan a
     // multi-hop travel path inside the configuration space
-    if (needs_retraction
-        && m_config.reduce_crossing_wall
-        && ! m_avoid_crossing_perimeters.disabled_once()
-        //BBS: don't generate detour travel paths when current position is unclear
-        && m_writer.is_current_position_clear()) {
+    if (m_config.reduce_crossing_wall
+        && !m_avoid_crossing_perimeters.disabled_once()
+        && m_writer.is_current_position_clear())
+        //BBS: don't generate detour travel paths when current position is unclea
+    {
         travel = m_avoid_crossing_perimeters.travel_to(*this, point, &could_be_wipe_disabled);
         // check again whether the new travel path still needs a retraction
         needs_retraction = this->needs_retraction(travel, role, lift_type);
@@ -6113,9 +6132,18 @@ std::string GCode::travel_to(const Point& point, ExtrusionRole role, std::string
             if (used_external_mp_once)
                 m_avoid_crossing_perimeters.reset_once_modifiers();
         }
-    } else
+    } else {
         // Reset the wipe path when traveling, so one would not wipe along an old path.
         m_wipe.reset_path();
+        // if (m_config.reduce_crossing_wall) {
+        //     // If in the previous call of m_avoid_crossing_perimeters.travel_to was use_external_mp_once set to true restore this value for next call.
+        //     if (used_external_mp_once) m_avoid_crossing_perimeters.use_external_mp_once();
+        //     travel = m_avoid_crossing_perimeters.travel_to(*this, point);
+        //     // If state of use_external_mp_once was changed reset it to right value.
+        //     if (used_external_mp_once) m_avoid_crossing_perimeters.reset_once_modifiers();
+        // }
+    }
+        
 
     // if needed, write the gcode_label_objects_end then gcode_label_objects_start
     m_writer.add_object_change_labels(gcode);
