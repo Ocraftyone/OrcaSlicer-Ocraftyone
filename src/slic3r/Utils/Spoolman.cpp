@@ -331,47 +331,6 @@ bool Spoolman::update_moonraker_lane_cache()
     if (lane_names.empty())
         return true;
 
-    auto parse_lane_integer = [](const std::string& value) -> std::optional<unsigned int> {
-        std::string trimmed = boost::algorithm::trim_copy(value);
-        if (trimmed.empty())
-            return std::nullopt;
-
-        try {
-            size_t parsed_chars = 0;
-            auto   parsed       = std::stoul(trimmed, &parsed_chars);
-            if (parsed_chars == trimmed.size())
-                return static_cast<unsigned int>(parsed);
-        } catch (...) {
-        }
-
-        std::string digits;
-        std::copy_if(trimmed.begin(), trimmed.end(), std::back_inserter(digits), [](char ch) {
-            return std::isdigit(static_cast<unsigned char>(ch));
-        });
-        if (!digits.empty()) {
-            try {
-                return static_cast<unsigned int>(std::stoul(digits));
-            } catch (...) {
-            }
-        }
-
-        return std::nullopt;
-    };
-
-    if (lane_names.size() > 1) {
-        std::stable_sort(lane_names.begin(), lane_names.end(), [&](const std::string& lhs, const std::string& rhs) {
-            auto lhs_index = parse_lane_integer(lhs);
-            auto rhs_index = parse_lane_integer(rhs);
-            if (lhs_index && rhs_index)
-                return *lhs_index < *rhs_index;
-            if (lhs_index)
-                return true;
-            if (rhs_index)
-                return false;
-            return lhs < rhs;
-        });
-    }
-
     std::map<std::string, std::vector<std::string>> lane_object_requests;
     const std::vector<std::string>                  lane_fields{
         "name",
@@ -411,6 +370,33 @@ bool Spoolman::update_moonraker_lane_cache()
         used_lane_slots.insert(allocated);
         ++next_lane_slot;
         return allocated;
+    };
+
+    auto parse_lane_integer = [](const std::string& value) -> std::optional<unsigned int> {
+        std::string trimmed = boost::algorithm::trim_copy(value);
+        if (trimmed.empty())
+            return std::nullopt;
+
+        try {
+            size_t parsed_chars = 0;
+            auto   parsed       = std::stoul(trimmed, &parsed_chars);
+            if (parsed_chars == trimmed.size())
+                return static_cast<unsigned int>(parsed);
+        } catch (...) {
+        }
+
+        std::string digits;
+        std::copy_if(trimmed.begin(), trimmed.end(), std::back_inserter(digits), [](char ch) {
+            return std::isdigit(static_cast<unsigned char>(ch));
+        });
+        if (!digits.empty()) {
+            try {
+                return static_cast<unsigned int>(std::stoul(digits));
+            } catch (...) {
+            }
+        }
+
+        return std::nullopt;
     };
 
     auto parse_unsigned_string = [&](const std::string& value) -> std::optional<unsigned int> {
