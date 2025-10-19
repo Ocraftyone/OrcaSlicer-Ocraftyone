@@ -5,6 +5,7 @@
 #include "Plater.hpp"
 #include "MsgDialog.hpp"
 #include "I18N.hpp"
+#include "Tab.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <wx/language.h>
 #include <wx/notebook.h>
@@ -15,6 +16,7 @@
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/RadioBox.hpp"
 #include "Widgets/TextInput.hpp"
+#include "Spoolman.hpp"
 #include <wx/listimpl.cpp>
 #include <wx/display.h>
 #include <map>
@@ -1308,6 +1310,109 @@ wxWindow* PreferencesDialog::create_general_page()
     sizer_page->Add(item_stealth_mode, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_enable_plugin, 0, wxTOP, FromDIP(3));
     sizer_page->Add(item_legacy_network_plugin, 0, wxTOP, FromDIP(3));
+
+    auto title_spoolman = create_item_title(_L("Spoolman"), page, _L("Configure integration with a Spoolman server."));
+    auto spoolman_enable_row = new wxBoxSizer(wxHORIZONTAL);
+    spoolman_enable_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 23);
+
+    auto spoolman_enabled_checkbox = new ::CheckBox(page);
+    const bool spoolman_enabled = app_config->get_bool("spoolman", "enabled");
+    spoolman_enabled_checkbox->SetValue(spoolman_enabled);
+    spoolman_enable_row->Add(spoolman_enabled_checkbox, 0, wxALIGN_CENTER, 0);
+    spoolman_enable_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 8);
+
+    auto spoolman_enable_label = new wxStaticText(page, wxID_ANY, _L("Enable Spoolman integration"));
+    spoolman_enable_label->SetForegroundColour(DESIGN_GRAY900_COLOR);
+    spoolman_enable_label->SetFont(::Label::Body_13);
+    spoolman_enable_row->Add(spoolman_enable_label, 0, wxALIGN_CENTER | wxALL, 3);
+
+    const auto spoolman_host_hint = wxString::Format(_L("Enter the host or IP address for Spoolman. Include :port to override the default of %s."), wxString::FromUTF8(Spoolman::DEFAULT_PORT));
+    auto spoolman_host_row = new wxBoxSizer(wxHORIZONTAL);
+    spoolman_host_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 23);
+    auto spoolman_host_label = new wxStaticText(page, wxID_ANY, _L("Server address"));
+    spoolman_host_label->SetForegroundColour(DESIGN_GRAY900_COLOR);
+    spoolman_host_label->SetFont(::Label::Body_13);
+    spoolman_host_label->SetToolTip(spoolman_host_hint);
+    spoolman_host_label->Wrap(-1);
+    spoolman_host_row->Add(spoolman_host_label, 0, wxALIGN_CENTER_VERTICAL | wxALL, 3);
+    spoolman_host_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 8);
+
+    auto spoolman_host_input = new ::TextInput(page, wxEmptyString, wxEmptyString, wxEmptyString, wxDefaultPosition, DESIGN_INPUT_SIZE, wxTE_PROCESS_ENTER);
+    StateColor spoolman_host_colors(std::pair<wxColour, int>(wxColour("#F0F0F1"), StateColor::Disabled), std::pair<wxColour, int>(*wxWHITE, StateColor::Enabled));
+    spoolman_host_input->SetBackgroundColor(spoolman_host_colors);
+    spoolman_host_input->GetTextCtrl()->SetValue(wxString::FromUTF8(app_config->get("spoolman", "host")));
+    spoolman_host_input->GetTextCtrl()->SetHint(_L("e.g. 192.168.1.50"));
+    spoolman_host_input->GetTextCtrl()->SetToolTip(spoolman_host_hint);
+    spoolman_host_row->Add(spoolman_host_input, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    auto spoolman_consumption_row = new wxBoxSizer(wxHORIZONTAL);
+    spoolman_consumption_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 23);
+    auto spoolman_consumption_label = new wxStaticText(page, wxID_ANY, _L("Consumption tracking"));
+    spoolman_consumption_label->SetForegroundColour(DESIGN_GRAY900_COLOR);
+    spoolman_consumption_label->SetFont(::Label::Body_13);
+    spoolman_consumption_label->SetToolTip(_L("Choose how usage is reported back to Spoolman."));
+    spoolman_consumption_label->Wrap(-1);
+    spoolman_consumption_row->Add(spoolman_consumption_label, 0, wxALIGN_CENTER_VERTICAL | wxALL, 3);
+    spoolman_consumption_row->Add(0, 0, 0, wxEXPAND | wxLEFT, 8);
+
+    auto spoolman_consumption_combo = new ::ComboBox(page, wxID_ANY, wxEmptyString, wxDefaultPosition, DESIGN_LARGE_COMBOBOX_SIZE, 0, nullptr, wxCB_READONLY);
+    spoolman_consumption_combo->SetFont(::Label::Body_13);
+    spoolman_consumption_combo->GetDropDown().SetFont(::Label::Body_13);
+    spoolman_consumption_combo->Append(_L("Weight (grams)"));
+    spoolman_consumption_combo->Append(_L("Length (millimeters)"));
+    const std::string consumption_pref = app_config->get("spoolman", "consumption_type");
+    int consumption_index = consumption_pref == "length" ? 1 : 0;
+    spoolman_consumption_combo->SetSelection(consumption_index);
+    spoolman_consumption_row->Add(spoolman_consumption_combo, 0, wxALIGN_CENTER_VERTICAL, 0);
+
+    auto sync_spoolman_controls = [=]() {
+        const bool enabled = spoolman_enabled_checkbox->GetValue();
+        spoolman_host_input->Enable(enabled);
+        spoolman_host_label->Enable(enabled);
+        spoolman_consumption_combo->Enable(enabled);
+        spoolman_consumption_label->Enable(enabled);
+    };
+    sync_spoolman_controls();
+
+    spoolman_enabled_checkbox->Bind(wxEVT_TOGGLEBUTTON, [=](wxCommandEvent& e) {
+        const bool enabled_now = spoolman_enabled_checkbox->GetValue();
+        app_config->set("spoolman", "enabled", enabled_now);
+        app_config->save();
+        sync_spoolman_controls();
+        Spoolman::update_visible_spool_statistics(true);
+        wxGetApp().CallAfter([] {
+            if (auto tab = wxGetApp().get_tab(Preset::TYPE_FILAMENT); tab)
+                tab->update_visibility();
+        });
+        e.Skip();
+    });
+
+    auto store_spoolman_host = [=](const wxString& value) {
+        app_config->set("spoolman", "host", std::string(value.ToUTF8()));
+        app_config->save();
+        if (spoolman_enabled_checkbox->GetValue())
+            Spoolman::update_visible_spool_statistics(true);
+    };
+    spoolman_host_input->GetTextCtrl()->Bind(wxEVT_TEXT_ENTER, [=](wxCommandEvent& e) {
+        store_spoolman_host(spoolman_host_input->GetTextCtrl()->GetValue());
+        e.Skip();
+    });
+    spoolman_host_input->GetTextCtrl()->Bind(wxEVT_KILL_FOCUS, [=](wxFocusEvent& e) {
+        store_spoolman_host(spoolman_host_input->GetTextCtrl()->GetValue());
+        e.Skip();
+    });
+
+    spoolman_consumption_combo->Bind(wxEVT_COMBOBOX, [=](wxCommandEvent& e) {
+        const std::string value = e.GetSelection() == 1 ? "length" : "weight";
+        app_config->set("spoolman", "consumption_type", value);
+        app_config->save();
+        e.Skip();
+    });
+
+    sizer_page->Add(title_spoolman, 0, wxTOP | wxEXPAND, FromDIP(20));
+    sizer_page->Add(spoolman_enable_row, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(spoolman_host_row, 0, wxTOP, FromDIP(3));
+    sizer_page->Add(spoolman_consumption_row, 0, wxTOP, FromDIP(3));
 #ifdef _WIN32
     sizer_page->Add(title_associate_file, 0, wxTOP| wxEXPAND, FromDIP(20));
     sizer_page->Add(item_associate_3mf, 0, wxTOP, FromDIP(3));

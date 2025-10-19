@@ -51,6 +51,10 @@ How to building with Visual Studio 2022 on Windows 64-bit.
   ```shell
   winget install --id=GitHub.GitLFS -e
   ```
+- [NSIS](https://nsis.sourceforge.io/) (required to create the Windows installer with `cpack -G NSIS`)
+  ```shell
+  winget install --id=NSIS.NSIS -e
+  ```
 
 > [!TIP]
 > GitHub Desktop (optional): A GUI for Git and Git LFS, which already includes both tools.

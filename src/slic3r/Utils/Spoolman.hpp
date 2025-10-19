@@ -3,6 +3,10 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <map>
+
+#include <memory>
+
+#include <optional>
 #include <libslic3r/Config.hpp>
 
 namespace pt = boost::property_tree;
@@ -17,6 +21,8 @@ class SpoolmanSpool;
 typedef std::shared_ptr<SpoolmanVendor>   SpoolmanVendorShrPtr;
 typedef std::shared_ptr<SpoolmanFilament> SpoolmanFilamentShrPtr;
 typedef std::shared_ptr<SpoolmanSpool>    SpoolmanSpoolShrPtr;
+
+using SpoolmanLaneMap = std::map<unsigned int, SpoolmanSpoolShrPtr>;
 
 struct SpoolmanResult
 {
@@ -61,6 +67,15 @@ class Spoolman
     std::map<unsigned int, SpoolmanFilamentShrPtr> m_filaments{};
     std::map<unsigned int, SpoolmanSpoolShrPtr>    m_spools{};
 
+    struct LaneInfo
+    {
+        unsigned int lane_index{0};
+        std::string  lane_label;
+    };
+
+    std::map<unsigned int, LaneInfo> m_moonraker_lane_cache{};
+    std::map<unsigned int, LaneInfo> m_moonraker_empty_lane_cache{};
+
     Spoolman()
     {
         m_instance    = this;
@@ -74,6 +89,10 @@ class Spoolman
     /// puts the provided data to the specified API endpoint
     /// \returns the json response
     static pt::ptree put_spoolman_json(const std::string& api_endpoint, const pt::ptree& data);
+
+    static bool                              moonraker_query(const std::string& request_body, pt::ptree& response);
+    static std::vector<std::string>          get_moonraker_candidate_urls();
+    bool                                     update_moonraker_lane_cache();
 
     /// get all the spools from the api and store them
     /// \returns if succeeded
@@ -131,11 +150,17 @@ public:
         return m_spools[spool_id];
     }
 
+    SpoolmanLaneMap                get_spools_by_loaded_lane(bool update = false);
+    std::optional<std::string>     get_lane_label(unsigned int lane_slot) const;
+    const Preset*   find_preset_for_spool(int spool_id) const;
+
     void clear()
     {
         m_spools.clear();
         m_filaments.clear();
         m_vendors.clear();
+        m_moonraker_lane_cache.clear();
+        m_moonraker_empty_lane_cache.clear();
         m_initialized = false;
     }
 
@@ -220,6 +245,9 @@ public:
     float remaining_length;
     float used_length;
     bool  archived;
+
+    std::optional<unsigned int> loaded_lane_index;
+    std::string                 loaded_lane_label;
 
     SpoolmanFilamentShrPtr m_filament_ptr;
 

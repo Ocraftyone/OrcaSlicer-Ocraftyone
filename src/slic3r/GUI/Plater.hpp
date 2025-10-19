@@ -207,6 +207,8 @@ private:
     ComboBox* m_bed_type_list = nullptr;
     ScalableButton* connection_btn = nullptr;
     ScalableButton* ams_btn = nullptr;
+
+    bool sync_spoolman_loaded_lanes(bool show_feedback = false);
 };
 
 class Plater: public wxPanel
