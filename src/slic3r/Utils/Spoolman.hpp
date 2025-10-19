@@ -74,6 +74,7 @@ class Spoolman
     };
 
     std::map<unsigned int, LaneInfo> m_moonraker_lane_cache{};
+    std::map<unsigned int, LaneInfo> m_moonraker_empty_lane_cache{};
 
     Spoolman()
     {
@@ -149,7 +150,8 @@ public:
         return m_spools[spool_id];
     }
 
-    SpoolmanLaneMap get_spools_by_loaded_lane(bool update = false);
+    SpoolmanLaneMap                get_spools_by_loaded_lane(bool update = false);
+    std::optional<std::string>     get_lane_label(unsigned int lane_slot) const;
     const Preset*   find_preset_for_spool(int spool_id) const;
 
     void clear()
@@ -158,6 +160,7 @@ public:
         m_filaments.clear();
         m_vendors.clear();
         m_moonraker_lane_cache.clear();
+        m_moonraker_empty_lane_cache.clear();
         m_initialized = false;
     }
 
