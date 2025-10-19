@@ -1954,26 +1954,24 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             continue;
 
         const DynamicPrintConfig &lane_cfg = entry.second;
-        std::string filament_id = lane_cfg.opt_string("filament_id", 0u);
-        bool filament_exists = !filament_id.empty();
+        std::string              filament_id = lane_cfg.opt_string("filament_id", 0u);
+        bool                     filament_exists = !filament_id.empty();
         if (lane_cfg.has("filament_exist"))
             filament_exists = filament_exists && lane_cfg.opt_bool("filament_exist");
 
         if (!filament_exists) {
             restore_previous(lane_index);
             continue;
-        const auto tray_name = entry.second.opt_string("tray_name", 0u);
-        if (tray_name == "Ext")
-            continue;
-        max_lane = std::max(max_lane, lane_key);
-    }
+        }
 
         const std::string filament_color = lane_cfg.opt_string("filament_colour", 0u);
         if (!filament_color.empty())
             filament_colors[lane_index] = filament_color;
 
-        if (const auto *multi_color_opt = lane_cfg.opt<ConfigOptionStrings>("filament_multi_colors"))
-            lane_multi_colors[lane_index] = multi_color_opt->values;
+        const auto *multi_color_opt = lane_cfg.opt<ConfigOptionStrings>("filament_multi_colors");
+        const std::vector<std::string> filament_multi_color = multi_color_opt ? multi_color_opt->values : std::vector<std::string>();
+        if (multi_color_opt != nullptr)
+            lane_multi_colors[lane_index] = filament_multi_color;
 
         const int spoolman_spool_id = lane_cfg.opt_int("spoolman_spool_id", 0u);
         if (lane_index < lane_spool_ids.size())
@@ -2025,9 +2023,9 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
                 if (lane_index < previous_presets.size() && !previous_presets[lane_index].empty()) {
                     ++unknowns;
                     if (!filament_color.empty())
-                        filament_colors[slot] = filament_color;
+                        filament_colors[lane_index] = filament_color;
                     if (multi_color_opt != nullptr)
-                        filament_multi_colors[slot] = filament_multi_color;
+                        lane_multi_colors[lane_index] = filament_multi_color;
                     continue;
                 }
                 iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
