@@ -1853,10 +1853,26 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
     bool                              updated_lane = false;
 
     for (const auto& [lane, spool] : lane_map) {
-        if (!spool)
-            continue;
-
         const unsigned int lane_index = lane > 0 ? lane - 1 : 0;
+
+        if (!spool) {
+            DynamicPrintConfig config;
+            std::string       tray_name;
+            if (auto label = spoolman->get_lane_label(lane_index))
+                tray_name = *label;
+            if (tray_name.empty())
+                tray_name = "Lane " + std::to_string(lane_index + 1);
+
+            config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
+            config.set_key_value("filament_exist", new ConfigOptionBools({false}));
+            config.set_key_value("filament_changed", new ConfigOptionBool{false});
+            config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
+            config.set_key_value("spoolman_spool_id", new ConfigOptionInts({0}));
+
+            lane_configs[static_cast<int>(lane_index)] = std::move(config);
+            updated_lane                               = true;
+            continue;
+        }
 
         const Preset* preset = spoolman->find_preset_for_spool(spool->id);
         if (!preset) {

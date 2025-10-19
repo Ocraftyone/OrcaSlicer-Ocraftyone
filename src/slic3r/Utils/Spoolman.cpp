@@ -288,6 +288,7 @@ bool Spoolman::moonraker_query(const std::string& request_body, pt::ptree& respo
 bool Spoolman::update_moonraker_lane_cache()
 {
     m_moonraker_lane_cache.clear();
+    m_moonraker_empty_lane_cache.clear();
 
     const auto lane_query = build_query_body({{"AFC", {"lanes"}}});
 
@@ -547,20 +548,6 @@ bool Spoolman::update_moonraker_lane_cache()
 
         const std::array<const pt::ptree*, 2> nodes{{stepper_node, lane_node}};
 
-        std::optional<unsigned int> spool_id;
-        for (const auto* node : nodes) {
-            if (!node)
-                continue;
-            if ((spool_id = extract_spool_id(*node)))
-                break;
-        }
-
-        if (!spool_id) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
-                                       << ": Failed to resolve spool id for lane '" << lane_name << "'";
-            continue;
-        }
-
         auto lane_index_opt = extract_lane_index(lane_name, nodes);
         unsigned int lane_slot;
         unsigned int lane_label_index;
@@ -585,6 +572,22 @@ bool Spoolman::update_moonraker_lane_cache()
         LaneInfo info;
         info.lane_index = lane_slot;
         info.lane_label = std::move(lane_label);
+
+        std::optional<unsigned int> spool_id;
+        for (const auto* node : nodes) {
+            if (!node)
+                continue;
+            if ((spool_id = extract_spool_id(*node)))
+                break;
+        }
+
+        if (!spool_id || *spool_id == 0) {
+            if (!spool_id)
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
+                                           << ": Failed to resolve spool id for lane '" << lane_name << "'";
+            m_moonraker_empty_lane_cache.emplace(lane_slot, std::move(info));
+            continue;
+        }
 
         auto [cache_it, inserted] = m_moonraker_lane_cache.emplace(*spool_id, std::move(info));
         if (!inserted) {
@@ -697,8 +700,10 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
 
     for (const auto& [spool_id, lane_info] : m_moonraker_lane_cache) {
         auto it = spools.find(spool_id);
-        if (it == spools.end())
+        if (it == spools.end()) {
+            lanes.emplace(lane_info.lane_index, nullptr);
             continue;
+        }
 
         auto spool = it->second;
         if (!spool)
@@ -716,7 +721,23 @@ SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
         }
     }
 
+    for (const auto& [lane_slot, lane_info] : m_moonraker_empty_lane_cache)
+        lanes.emplace(lane_info.lane_index, nullptr);
+
     return lanes;
+}
+
+std::optional<std::string> Spoolman::get_lane_label(unsigned int lane_slot) const
+{
+    if (auto it = m_moonraker_empty_lane_cache.find(lane_slot); it != m_moonraker_empty_lane_cache.end())
+        return it->second.lane_label;
+
+    for (const auto& [spool_id, lane_info] : m_moonraker_lane_cache) {
+        if (lane_info.lane_index == lane_slot)
+            return lane_info.lane_label;
+    }
+
+    return std::nullopt;
 }
 
 const Preset* Spoolman::find_preset_for_spool(int spool_id) const
