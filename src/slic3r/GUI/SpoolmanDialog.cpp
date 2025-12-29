@@ -96,6 +96,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
 
     // Main panel
     m_main_panel = new wxPanel(this);
+    m_main_panel->SetBackgroundColour(*wxWHITE);
     auto main_panel_sizer = new wxBoxSizer(wxVERTICAL);
     m_main_panel->SetSizer(main_panel_sizer);
 
@@ -135,6 +136,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
 
     // Loading Panel
     m_loading_panel = new wxPanel(this);
+    m_loading_panel->SetBackgroundColour(*wxWHITE);
     auto loading_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
     m_loading_panel->SetSizer(loading_panel_sizer);
     m_loading_panel->SetMinSize({main_panel_sizer->CalcMin().GetWidth(), wxDefaultCoord});
@@ -144,7 +146,6 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     loading_panel_sizer->Add(m_loading_spinner, 0, wxALIGN_CENTER | wxRIGHT, EM);
 
     auto loading_label = new Label(m_loading_panel, Label::Body_16, _L("Loading..."));
-    loading_label->SetForegroundColour(*wxWHITE);
     loading_panel_sizer->Add(loading_label, 0, wxALIGN_CENTER);
 
     loading_panel_sizer->AddStretchSpacer(1);
