@@ -10,11 +10,13 @@
 #include "Widgets/LabeledStaticBox.hpp"
 #include "wx/sizer.h"
 #include "format.hpp"
+#include "Widgets/ComboBox.hpp"
 #define EM wxGetApp().em_unit()
 
 namespace Slic3r::GUI {
 
 wxDEFINE_EVENT(EVT_FINISH_LOADING, wxCommandEvent);
+wxDEFINE_EVENT(EVT_SPOOL_WIDGET_SELECTION, wxCommandEvent);
 static BitmapCache cache;
 
 SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPanel(parent, wxID_ANY), m_preset(preset)
@@ -33,17 +35,42 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
     m_preset_name_label->SetFont(Label::Body_12);
     main_sizer->Add(m_preset_name_label, 0, wxALIGN_CENTER_HORIZONTAL | wxDOWN | wxLEFT | wxRIGHT, EM);
 
-    m_remaining_weight_label = new Label(this);
+    wxWindow* control;
     if (preset->spoolman_enabled()) {
-        auto spool = Spoolman::get_instance()->get_spoolman_spool_by_id(preset->config.opt_int("spoolman_spool_id", 0));
-        m_remaining_weight_label->SetLabelText(
-            format("%1% g / %2% g", double_to_string(spool->remaining_weight, 2), double_to_string(spool->filament->weight, 2)));
+        m_combobox           = new ComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
+        control               = m_combobox;
+        m_combobox->GetDropDown().SetUseContentWidth(true);
+        m_combobox->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& e) {
+            auto current_sel = e.GetInt();
+            auto evt = new wxCommandEvent(EVT_SPOOL_WIDGET_SELECTION);
+            evt->SetString(m_preset->name);
+            evt->SetInt(current_sel);
+            evt->SetClientData(m_combobox->GetClientData(current_sel));
+            evt->SetEventObject(this);
+            wxQueueEvent(m_parent, evt);
+        });
+
+        const auto spoolman   = Spoolman::get_instance();
+        const auto curr_spool = spoolman->get_spoolman_spool_by_id(preset->config.opt_int("spoolman_spool_id", 0));
+        for (const auto& [spool_id, spool] : spoolman->get_spoolman_spools()) {
+            if (spool->filament == curr_spool->filament) {
+                m_combobox->Append(format("#%1% - %2% g / %3% g", spool_id, double_to_string(spool->remaining_weight, 2),
+                                          double_to_string(spool->filament->weight, 2)),
+                                   wxNullBitmap, &spool->id);
+                if (curr_spool == spool)
+                    m_combobox->SetSelection(m_combobox->GetCount() - 1);
+            }
+        }
+
+        m_combobox->SetMinSize({m_combobox->GetDropDown().GetSize().GetX(), -1});
     } else {
-        m_remaining_weight_label->SetLabelText(_L("Not Spoolman enabled"));
-        m_remaining_weight_label->SetForegroundColour(*wxRED);
+        auto label = new Label(this);
+        control = label;
+        label->SetLabelText(_L("Not Spoolman enabled"));
+        label->SetForegroundColour(*wxRED);
+        control->SetFont(Label::Body_12);
     }
-    m_remaining_weight_label->SetFont(Label::Body_12);
-    main_sizer->Add(m_remaining_weight_label, 0, wxALIGN_CENTER_HORIZONTAL | wxDOWN | wxLEFT | wxRIGHT, EM);
+    main_sizer->Add(control, 0, wxALIGN_CENTER_HORIZONTAL | wxDOWN | wxLEFT | wxRIGHT, EM);
 
     wxGetApp().UpdateDarkUIWin(this);
     this->SetSizer(main_sizer);
@@ -55,6 +82,8 @@ void SpoolInfoWidget::rescale()
                                  {{"#009688", m_preset->config.opt_string("default_filament_colour", 0)}});
     m_spool_bitmap->SetBitmap(*bitmap);
     m_spool_bitmap->SetMinSize({EM * 10, EM * 10});
+    if (m_combobox)
+        m_combobox->Rescale();
 }
 
 SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
@@ -127,6 +156,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     this->SetMinSize(wxDefaultSize);
 
     this->Bind(EVT_FINISH_LOADING, &SpoolmanDialog::OnFinishLoading, this);
+    this->Bind(EVT_SPOOL_WIDGET_SELECTION, &SpoolmanDialog::OnSpoolWidgetSelection, this);
 
     wxGetApp().UpdateDlgDarkUI(this);
     this->ShowModal();
@@ -185,11 +215,25 @@ void SpoolmanDialog::show_loading(bool show)
 void SpoolmanDialog::save_spoolman_settings()
 {
     // clear the Spoolman cache and reload if any of the Spoolman settings change
-    if (!m_dirty_settings)
+    if (!m_dirty_settings && m_spool_id_updates.empty())
         return;
 
+    if (!m_spool_id_updates.empty()) {
+        auto& filaments = wxGetApp().preset_bundle->filaments;
+        for (auto& [preset_name, spool_id] : m_spool_id_updates) {
+            if (const auto filament = filaments.find_preset(preset_name, false, true)) {
+                filament->config.opt_int("spoolman_spool_id", 0) = spool_id;
+                if (auto& edited = filaments.get_edited_preset(); edited.name == preset_name) {
+                    edited.config.opt_int("spoolman_spool_id", 0) = spool_id;
+                }
+            }
+        }
+        m_spool_id_updates.clear();
+    }
+
     // Save config values to the app config
-    m_config->save_to_appconfig(wxGetApp().app_config);
+    if (m_dirty_settings)
+        m_config->save_to_appconfig(wxGetApp().app_config);
 
     if (m_dirty_host)
         Spoolman::on_server_changed();
@@ -227,9 +271,19 @@ void SpoolmanDialog::on_dpi_changed(const wxRect& suggested_rect)
     GetSizer()->SetMinSize(wxDefaultCoord, 45 * EM);
     m_optgroup->msw_rescale();
     for (auto item : m_info_widgets_grid_sizer->GetChildren())
-        if (auto info_widget = dynamic_cast<SpoolInfoWidget*>(item))
+        if (auto info_widget = dynamic_cast<SpoolInfoWidget*>(item->GetWindow()))
             info_widget->rescale();
     Fit();
     Refresh();
+}
+
+void SpoolmanDialog::OnSpoolWidgetSelection(wxCommandEvent& e)
+{
+    const auto preset_name = e.GetString().ToStdString();
+    const auto new_spool_id = *static_cast<int*>(e.GetClientData());
+    for (const auto item : m_info_widgets_grid_sizer->GetChildren())
+        if (const auto info_widget = dynamic_cast<SpoolInfoWidget*>(item->GetWindow()); info_widget->get_preset_name() == preset_name)
+            info_widget->set_combobox_selection(e.GetInt());
+    m_spool_id_updates[preset_name] = new_spool_id;
 }
 } // namespace Slic3r::GUI

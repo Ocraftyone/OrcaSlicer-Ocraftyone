@@ -2,6 +2,8 @@
 #define ORCASLICER_SPOOLMANDIALOG_HPP
 #include "GUI_Utils.hpp"
 #include "OptionsGroup.hpp"
+#include "Spoolman.hpp"
+#include "Widgets/ComboBox.hpp"
 #include "Widgets/DialogButtons.hpp"
 #include "Widgets/Label.hpp"
 #include "Widgets/LoadingSpinner.hpp"
@@ -16,10 +18,14 @@ public:
 
     void rescale();
 
+    [[nodiscard]] const std::string& get_preset_name() const { return m_preset->name; }
+
+    void set_combobox_selection(int idx) { if (m_combobox) m_combobox->SetSelection(idx); }
+
 private:
     wxStaticBitmap* m_spool_bitmap;
     Label*          m_preset_name_label;
-    Label*          m_remaining_weight_label;
+    ComboBox*       m_combobox;
     const Preset*   m_preset;
 };
 
@@ -38,6 +44,7 @@ public:
 
 protected:
     void on_dpi_changed(const wxRect& suggested_rect) override;
+    void OnSpoolWidgetSelection(wxCommandEvent& e);
 
     bool                   m_dirty_settings{false};
     bool                   m_dirty_host{false};
@@ -51,6 +58,8 @@ protected:
     Label*                 m_spoolman_error_label;
     LoadingSpinner*        m_loading_spinner;
     DialogButtons*         m_buttons;
+
+    std::map<std::string, int> m_spool_id_updates;
 };
 }} // namespace Slic3r::GUI
 
