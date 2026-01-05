@@ -100,6 +100,8 @@ class Spoolman
     /// \returns the json response
     static pt::ptree patch_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(PATCH, api_endpoint, data); }
 
+    bool pull_spoolman_spool(unsigned int spool_id);
+
     /// get all the spools from the api and store them
     /// \returns if succeeded
     bool pull_spoolman_spools();
@@ -164,6 +166,11 @@ public:
     {
         if (update || !m_initialized)
             m_initialized = pull_spoolman_spools();
+
+        // Attempt to pull the spool from the server
+        if (!contains(m_spools, spool_id))
+            pull_spoolman_spool(spool_id);
+
         return m_spools[spool_id];
     }
 

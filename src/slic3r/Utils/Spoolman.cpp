@@ -129,6 +129,15 @@ pt::ptree Spoolman::spoolman_api_call(const HTTPAction http_action, const std::s
     return tree;
 }
 
+bool Spoolman::pull_spoolman_spool(unsigned int spool_id)
+{
+    pt::ptree tree = get_spoolman_json("spool/" + std::to_string(spool_id));
+    if (tree.empty())
+        return false;
+    // Get or create spool then update it from json
+    m_spools[spool_id]->update_from_json(tree);
+    return true;
+}
 
 bool Spoolman::pull_spoolman_spools()
 {
@@ -678,7 +687,7 @@ void SpoolmanSpool::apply_to_preset(Preset* preset, bool only_update_statistics)
 
 void SpoolmanSpool::update_from_json(pt::ptree json_data)
 {
-    if (int filament_id = json_data.get<int>("filament.id"); filament && filament->id != filament_id) {
+    if (int filament_id = json_data.get<int>("filament.id"); !filament || filament->id != filament_id) {
         if (!m_spoolman->m_filaments.count(filament_id))
             m_spoolman->m_filaments.emplace(filament_id, make_shared<SpoolmanFilament>(SpoolmanFilament(json_data.get_child("filament"))));
         filament = m_spoolman->m_filaments.at(filament_id);
