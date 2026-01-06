@@ -194,11 +194,24 @@ bool Spoolman::use_spoolman_spools(const std::map<unsigned int, double>& data, c
         return false;
 
     std::vector<unsigned int> spool_ids;
+    std::vector<double> usages;
+    bool failed = false;
 
     for (auto& [spool_id, usage] : data) {
-        if (!use_spoolman_spool(spool_id, usage, usage_type))
-            return false;
+        if (!use_spoolman_spool(spool_id, usage, usage_type)) {
+            failed = true;
+            break;
+        }
         spool_ids.emplace_back(spool_id);
+        usages.emplace_back(usage);
+    }
+
+    if (failed) {
+        // Reverse the successful consumptions
+        for (int i = 0; i < spool_ids.size(); ++i) {
+            use_spoolman_spool(spool_ids[i], usages[i] * -1, usage_type);
+        }
+        return false;
     }
 
     update_specific_spool_statistics(spool_ids);
