@@ -162,16 +162,17 @@ public:
         return m_spools;
     }
 
-    SpoolmanSpoolShrPtr get_spoolman_spool_by_id(unsigned int spool_id, bool update = false)
+    std::optional<SpoolmanSpoolShrPtr> get_spoolman_spool_by_id(unsigned int spool_id, bool update = false)
     {
-        if (update || !m_initialized)
+        if (!m_initialized)
             m_initialized = pull_spoolman_spools();
 
         // Attempt to pull the spool from the server
-        if (!contains(m_spools, spool_id))
-            pull_spoolman_spool(spool_id);
+        if (update || !contains(m_spools, spool_id))
+            if (!pull_spoolman_spool(spool_id))
+                return std::nullopt;
 
-        return m_spools[spool_id];
+        return m_spools.at(spool_id);
     }
 
     void clear()

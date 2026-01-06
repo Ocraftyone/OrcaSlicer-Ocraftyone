@@ -179,7 +179,12 @@ bool Spoolman::use_spoolman_spool(const unsigned int& spool_id, const double& us
     if (tree.empty())
         return false;
 
-    get_spoolman_spool_by_id(spool_id)->update_from_json(tree);
+    auto spool_opt = get_spoolman_spool_by_id(spool_id);
+    // The get_spoolman_spool_by_id function attempts to pull the spool if it is not in the cache
+    // If this fails but the above succeeds, there is a problem
+    if (!spool_opt.has_value())
+        throw RuntimeError("Failed to get the spool from cache after successfully performing a use operation on it");
+    spool_opt.value()->update_from_json(tree);
     return true;
 }
 
@@ -379,11 +384,12 @@ SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_pres
             "Preset provided does not have a valid Spoolman spool ID"); // IDs below 1 are not used by spoolman and should be ignored
         return result;
     }
-    SpoolmanSpoolShrPtr spool = get_instance()->get_spoolman_spool_by_id(spool_id);
-    if (!spool) {
+    auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
+    if (!spool_opt.has_value()) {
         result.messages.emplace_back("The spool ID does not exist in the local spool cache");
         return result;
     }
+    SpoolmanSpoolShrPtr spool = spool_opt.value();
     if (update_from_server)
         spool->update_from_server(!only_update_statistics);
     spool->apply_to_preset(filament_preset, only_update_statistics);
@@ -403,11 +409,12 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
             "Preset provided does not have a valid Spoolman spool ID"); // IDs below 1 are not used by spoolman and should be ignored
         return result;
     }
-    SpoolmanSpoolShrPtr spool = get_instance()->get_spoolman_spool_by_id(spool_id);
-    if (!spool) {
+    auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
+    if (!spool_opt.has_value()) {
         result.messages.emplace_back("The spool ID does not exist in the local spool cache");
         return result;
     }
+    SpoolmanSpoolShrPtr spool = spool_opt.value();
     if (filament_preset->is_dirty) {
         result.messages.emplace_back("Please save the current changes to the preset");
         return result;
