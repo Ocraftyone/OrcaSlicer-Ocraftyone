@@ -2707,7 +2707,8 @@ bool GUI_App::on_init_inner()
         }
     //}
 
-    Spoolman::update_visible_spool_statistics();
+    if (Spoolman::is_server_valid())
+        Spoolman::get_instance(); // Spoolman is initialized upon getting the instance the first time
 
 #ifdef WIN32
 #if !wxVERSION_EQUAL_OR_GREATER_THAN(3,1,3)

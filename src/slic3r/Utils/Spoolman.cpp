@@ -166,6 +166,12 @@ bool Spoolman::pull_spoolman_spools()
     for (const auto& item : tree)
         m_spools.emplace(item.second.get<int>("id"), make_shared<SpoolmanSpool>(SpoolmanSpool(item.second)));
 
+    m_initialized = true;
+    if (m_first_initialization) {
+        on_server_changed();
+        m_first_initialization = false;
+    }
+
     return true;
 }
 
@@ -465,13 +471,11 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
 }
 
 
-void Spoolman::update_visible_spool_statistics(bool clear_cache)
+void Spoolman::update_visible_spool_statistics()
 {
     PresetBundle* preset_bundle = GUI::wxGetApp().preset_bundle;
     PresetCollection& filaments    = preset_bundle->filaments;
 
-    // Clear the cache so that it can be repopulated with the correct info
-    if (clear_cache) get_instance()->clear();
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
             if (item->is_user() && item->spoolman_enabled()) {
@@ -506,12 +510,30 @@ void Spoolman::update_specific_spool_statistics(const std::vector<unsigned int>&
 
 void Spoolman::on_server_changed()
 {
-    if (!is_server_valid())
+    if (!is_server_valid()) {
+        if (m_initialized)
+            clear();
         return;
+    }
+
+    if (m_initialized) {
+        // This function is called by pull_spoolman_spools on the first server connection
+        // The spools have just been loaded and don't need to be cleared
+        if (!m_first_initialization)
+            clear();
+    } else if (m_first_initialization) {
+        // If this is being called before the first initialization, have pull_spoolman_spools handle it
+        pull_spoolman_spools();
+        return;
+    }
+
+    // Add the extra field to filament to store preset data
     pt::ptree pt;
     pt.add("name", "OrcaSlicer Preset Data");
     pt.add("field_type", "text");
     post_spoolman_json("field/filament/orcaslicer_preset_data", pt);
+
+    update_visible_spool_statistics();
 }
 
 

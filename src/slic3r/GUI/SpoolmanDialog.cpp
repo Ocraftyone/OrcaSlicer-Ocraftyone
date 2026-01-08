@@ -239,8 +239,9 @@ void SpoolmanDialog::save_spoolman_settings()
         m_config->save_to_appconfig(wxGetApp().app_config);
 
     if (m_dirty_host)
-        Spoolman::on_server_changed();
-    Spoolman::update_visible_spool_statistics(m_dirty_host);
+        Spoolman::get_instance()->on_server_changed();
+    else
+        Spoolman::update_visible_spool_statistics();
     m_dirty_settings = false;
     m_dirty_host = false;
 }

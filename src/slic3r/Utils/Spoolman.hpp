@@ -56,6 +56,7 @@ class Spoolman
 
 
     bool m_initialized{false};
+    bool m_first_initialization{true};
 
     std::map<unsigned int, double> m_use_undo_buffer{};
     std::string                    m_last_usage_type{};
@@ -67,10 +68,8 @@ class Spoolman
     Spoolman()
     {
         m_instance    = this;
-        if (is_server_valid()) {
-            on_server_changed();
-            m_initialized = pull_spoolman_spools();
-        }
+        if (is_server_valid())
+            pull_spoolman_spools();
     };
 
     enum HTTPAction
@@ -141,13 +140,12 @@ public:
     static SpoolmanResult save_preset_to_spoolman(const Preset* filament_preset);
 
     /// Update the statistics values for the visible filament profiles with spoolman enabled
-    /// clear_cache should be set true if the update is due to a change in printer profile or other change that requires it
-    static void update_visible_spool_statistics(bool clear_cache = false);
+    static void update_visible_spool_statistics();
 
     /// Update the statistics values for the filament profiles tied to the specified spool IDs
     static void update_specific_spool_statistics(const std::vector<unsigned int>& spool_ids);
 
-    static void on_server_changed();
+    void on_server_changed();
 
     /// Check if Spoolman is enabled and the provided host is valid
     static bool is_server_valid(bool force_check = false);
@@ -158,14 +156,14 @@ public:
     const std::map<unsigned int, SpoolmanSpoolShrPtr>& get_spoolman_spools(bool update = false)
     {
         if (update || !m_initialized)
-            m_initialized = pull_spoolman_spools();
+            pull_spoolman_spools();
         return m_spools;
     }
 
     std::optional<SpoolmanSpoolShrPtr> get_spoolman_spool_by_id(unsigned int spool_id, bool update = false)
     {
         if (!m_initialized)
-            m_initialized = pull_spoolman_spools();
+            pull_spoolman_spools();
 
         // Attempt to pull the spool from the server
         if (update || !contains(m_spools, spool_id))
