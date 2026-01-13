@@ -39,32 +39,40 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
     if (preset->spoolman_enabled()) {
         m_combobox           = new ComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
         control               = m_combobox;
-        m_combobox->GetDropDown().SetUseContentWidth(true);
-        m_combobox->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& e) {
-            auto current_sel = e.GetInt();
-            auto evt = new wxCommandEvent(EVT_SPOOL_WIDGET_SELECTION);
-            evt->SetString(m_preset->name);
-            evt->SetInt(current_sel);
-            evt->SetClientData(m_combobox->GetClientData(current_sel));
-            evt->SetEventObject(this);
-            wxQueueEvent(m_parent, evt);
-        });
 
         const auto spoolman   = Spoolman::get_instance();
         const auto curr_spool = spoolman->get_spoolman_spool_by_id(preset->config.opt_int("spoolman_spool_id", 0));
-        if (!curr_spool.has_value())
-            throw RuntimeError("Failed to get the current spool");
-        for (const auto& [spool_id, spool] : spoolman->get_spoolman_spools()) {
-            if (spool->filament == curr_spool.value()->filament) {
-                m_combobox->Append(format("#%1% - %2% g / %3% g", spool_id, double_to_string(spool->remaining_weight, 2),
-                                          double_to_string(spool->filament->weight, 2)),
-                                   wxNullBitmap, &spool->id);
-                if (curr_spool == spool)
-                    m_combobox->SetSelection(m_combobox->GetCount() - 1);
+        if (curr_spool.has_value()) {
+            for (const auto& [spool_id, spool] : spoolman->get_spoolman_spools()) {
+                if (spool->filament == curr_spool.value()->filament) {
+                    m_combobox->Append(format("#%1% - %2% g / %3% g", spool_id, double_to_string(spool->remaining_weight, 2),
+                                              double_to_string(spool->filament->weight, 2)),
+                                       wxNullBitmap, &spool->id);
+                    if (curr_spool == spool)
+                        m_combobox->SetSelection(m_combobox->GetCount() - 1);
+                }
             }
-        }
+            m_combobox->GetDropDown().SetUseContentWidth(true);
+            m_combobox->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& e) {
+                auto current_sel = e.GetInt();
+                auto evt = new wxCommandEvent(EVT_SPOOL_WIDGET_SELECTION);
+                evt->SetString(m_preset->name);
+                evt->SetInt(current_sel);
+                evt->SetClientData(m_combobox->GetClientData(current_sel));
+                evt->SetEventObject(this);
+                wxQueueEvent(m_parent, evt);
+            });
+            m_combobox->SetMinSize({m_combobox->GetDropDown().GetSize().GetX(), -1});
+        } else {
+            delete m_combobox;
+            m_combobox = nullptr;
 
-        m_combobox->SetMinSize({m_combobox->GetDropDown().GetSize().GetX(), -1});
+            auto label = new Label(this);
+            control = label;
+            label->SetLabelText(_L("Failed to get spool data"));
+            label->SetForegroundColour(*wxRED);
+            control->SetFont(Label::Body_12);
+        }
     } else {
         auto label = new Label(this);
         control = label;
@@ -251,13 +259,8 @@ void SpoolmanDialog::OnFinishLoading(wxCommandEvent& event)
     if (event.GetInt()) {
         m_info_widgets_parent_sizer->Show(true);
         auto preset_bundle = wxGetApp().preset_bundle;
-        try {
-            for (auto& filament_preset_name : preset_bundle->filament_presets) {
-                m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel, preset_bundle->filaments.find_preset(filament_preset_name)), 0, wxEXPAND);
-            }
-        } catch (RuntimeError& e) {
-            show_error(this, e.what());
-            this->EndModal(wxID_CANCEL);
+        for (auto& filament_preset_name : preset_bundle->filament_presets) {
+            m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel, preset_bundle->filaments.find_preset(filament_preset_name)), 0, wxEXPAND);
         }
     }
     show_loading(false);
