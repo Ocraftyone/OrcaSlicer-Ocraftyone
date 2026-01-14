@@ -15,7 +15,6 @@
 
 namespace Slic3r::GUI {
 
-wxDEFINE_EVENT(EVT_FINISH_LOADING, wxCommandEvent);
 wxDEFINE_EVENT(EVT_SPOOL_WIDGET_SELECTION, wxCommandEvent);
 static BitmapCache cache;
 
@@ -166,7 +165,6 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     this->SetSizerAndFit(window_sizer);
     this->SetMinSize(wxDefaultSize);
 
-    this->Bind(EVT_FINISH_LOADING, &SpoolmanDialog::OnFinishLoading, this);
     this->Bind(EVT_SPOOL_WIDGET_SELECTION, &SpoolmanDialog::OnSpoolWidgetSelection, this);
 
     wxGetApp().UpdateDlgDarkUI(this);
@@ -207,9 +205,16 @@ void SpoolmanDialog::build_spool_info()
         }
 
         // Finish loading on the main thread
-        auto evt = new wxCommandEvent(EVT_FINISH_LOADING);
-        evt->SetInt(show_widgets);
-        wxQueueEvent(this, evt);
+        this->CallAfter([&, show_widgets] {
+            if (show_widgets) {
+                m_info_widgets_parent_sizer->Show(true);
+                auto preset_bundle = wxGetApp().preset_bundle;
+                for (auto& filament_preset_name : preset_bundle->filament_presets) {
+                    m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel, preset_bundle->filaments.find_preset(filament_preset_name)), 0, wxEXPAND);
+                }
+            }
+            show_loading(false);
+        });
     });
 }
 
@@ -252,18 +257,6 @@ void SpoolmanDialog::save_spoolman_settings()
         Spoolman::update_visible_spool_statistics();
     m_dirty_settings = false;
     m_dirty_host = false;
-}
-
-void SpoolmanDialog::OnFinishLoading(wxCommandEvent& event)
-{
-    if (event.GetInt()) {
-        m_info_widgets_parent_sizer->Show(true);
-        auto preset_bundle = wxGetApp().preset_bundle;
-        for (auto& filament_preset_name : preset_bundle->filament_presets) {
-            m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel, preset_bundle->filaments.find_preset(filament_preset_name)), 0, wxEXPAND);
-        }
-    }
-    show_loading(false);
 }
 
 void SpoolmanDialog::OnRefresh(wxCommandEvent& e)

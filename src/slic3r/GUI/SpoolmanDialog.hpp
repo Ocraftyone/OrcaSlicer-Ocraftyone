@@ -38,7 +38,6 @@ public:
     void build_spool_info();
     void show_loading(bool show = true);
     void save_spoolman_settings();
-    void OnFinishLoading(wxCommandEvent& event);
     void OnRefresh(wxCommandEvent& e);
     void OnOK(wxCommandEvent& e);
 
