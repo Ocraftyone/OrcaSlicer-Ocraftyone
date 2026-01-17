@@ -210,7 +210,7 @@ private:
 
     explicit SpoolmanVendor(const pt::ptree& json_data) : m_spoolman(Spoolman::m_instance) { update_from_json(json_data); };
 
-    void update_from_json(pt::ptree json_data);
+    void update_from_json(const pt::ptree& json_data);
     void apply_to_config(Slic3r::DynamicConfig& config) const;
 
     friend class Spoolman;
@@ -253,7 +253,7 @@ private:
         update_from_json(json_data);
     };
 
-    void update_from_json(pt::ptree json_data);
+    void update_from_json(const pt::ptree& json_data);
     void apply_to_config(DynamicConfig& config) const;
 
     friend class Spoolman;
@@ -295,7 +295,7 @@ private:
         update_from_json(json_data);
     }
 
-    void update_from_json(pt::ptree json_data);
+    void update_from_json(const pt::ptree& json_data);
 
     friend class Spoolman;
 };

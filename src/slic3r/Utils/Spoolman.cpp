@@ -9,7 +9,7 @@
 namespace Slic3r {
 
 namespace {
-template<class Type> Type get_opt(pt::ptree& data, const string& path, Type default_val = {}) { return data.get_optional<Type>(path).value_or(default_val); }
+template<class Type> Type get_opt(const pt::ptree& data, const string& path, Type default_val = {}) { return data.get_optional<Type>(path).value_or(default_val); }
 
 void update_note(std::string& config_note, const std::string& type, const std::string& value)
 {
@@ -573,7 +573,7 @@ bool Spoolman::is_enabled() { return GUI::wxGetApp().app_config->get_bool("spool
 
 void SpoolmanVendor::update_from_server() { update_from_json(Spoolman::get_spoolman_json("vendor/" + std::to_string(id))); }
 
-void SpoolmanVendor::update_from_json(pt::ptree json_data)
+void SpoolmanVendor::update_from_json(const pt::ptree& json_data)
 {
     id      = json_data.get<int>("id");
     name    = get_opt<string>(json_data, "name");
@@ -599,7 +599,7 @@ void SpoolmanFilament::update_from_server(bool recursive)
         vendor->update_from_json(json_data.get_child("vendor"));
 }
 
-void SpoolmanFilament::update_from_json(pt::ptree json_data)
+void SpoolmanFilament::update_from_json(const pt::ptree& json_data)
 {
     auto vendor_id = json_data.get_optional<int>("vendor.id");
     if (vendor && !vendor_id.has_value()) {
@@ -727,7 +727,7 @@ void SpoolmanSpool::apply_to_preset(Preset* preset, bool only_update_statistics)
     this->apply_to_config(preset->config);
 }
 
-void SpoolmanSpool::update_from_json(pt::ptree json_data)
+void SpoolmanSpool::update_from_json(const pt::ptree& json_data)
 {
     if (int filament_id = json_data.get<int>("filament.id"); !filament || filament->id != filament_id) {
         if (!m_spoolman->m_filaments.count(filament_id))
