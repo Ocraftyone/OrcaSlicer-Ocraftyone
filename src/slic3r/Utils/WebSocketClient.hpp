@@ -5,6 +5,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/log/trivial.hpp>
 #include <iostream>
 #include <string>
 #include <chrono>
