@@ -180,7 +180,7 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
     main_sizer->Add(buttons, 0, wxCENTER | wxEXPAND | wxALL, EM);
 
     // Load data into SVC
-    for (const auto& spoolman_spool : m_spoolman->get_spoolman_spools(true))
+    for (const auto& spoolman_spool : m_spoolman->get_spoolman_spools())
         m_svc->get_model()->AddSpool(spoolman_spool.second);
 
 #ifdef  __LINUX__

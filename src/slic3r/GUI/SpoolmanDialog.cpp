@@ -253,8 +253,6 @@ void SpoolmanDialog::save_spoolman_settings()
 
     if (m_dirty_host)
         Spoolman::get_instance()->on_server_changed();
-    else
-        Spoolman::update_visible_spool_statistics();
     m_dirty_settings = false;
     m_dirty_host = false;
 }

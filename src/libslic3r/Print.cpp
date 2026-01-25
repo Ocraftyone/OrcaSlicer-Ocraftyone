@@ -38,7 +38,6 @@
 
 #include "GCode/ConflictChecker.hpp"
 #include "ParameterUtils.hpp"
-#include "slic3r/Utils/Spoolman.hpp"
 
 #include <codecvt>
 

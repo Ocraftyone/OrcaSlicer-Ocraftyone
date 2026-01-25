@@ -2,6 +2,7 @@
 #define SLIC3R_SPOOLMAN_HPP
 
 #include "Http.hpp"
+#include "WebSocketClient.hpp"
 #include "libslic3r/libslic3r.h"
 #include <boost/property_tree/ptree.hpp>
 #include <map>
@@ -67,8 +68,33 @@ class Spoolman
     std::map<unsigned int, SpoolmanFilamentShrPtr> m_filaments{};
     std::map<unsigned int, SpoolmanSpoolShrPtr>    m_spools{};
 
+    AsyncWebSocketClient websocket_client;
+
     Spoolman()
     {
+        // Setup websocket handlers
+        websocket_client.set_on_connect_fn([&](const beast::error_code& ec) {
+            if (ec) {
+                BOOST_LOG_TRIVIAL(error) << "Failed to connect to Spoolman websocket: " << ec.message();
+                return;
+            }
+            BOOST_LOG_TRIVIAL(info) << "Websocket client connected to Spoolman server. Listening for changes...";
+            websocket_client.async_receive();
+        });
+        websocket_client.set_on_receive_fn([&](const std::string& message, const beast::error_code& ec, size_t) {
+            this->on_websocket_receive(message, ec);
+        });
+        websocket_client.set_on_close_fn([&](const websocket::close_reason& reason, const bool client_requested_disconnect) {
+            BOOST_LOG_TRIVIAL(info) << "Spoolman Websocket client closed. Reason: "
+            << (client_requested_disconnect ? "Requested by client" :
+                reason.reason.empty() ? "Normal" : reason.reason);
+
+            // The client only requests a disconnect when changing servers
+            // Clearing the instance will be handled by the code closing the server
+            if (!client_requested_disconnect)
+                this->clear();
+        });
+
         m_instance    = this;
         if (is_server_valid())
             pull_spoolman_spools();
@@ -101,20 +127,21 @@ class Spoolman
     /// \returns the json response
     static pt::ptree patch_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(PATCH, api_endpoint, data); }
 
-    bool pull_spoolman_spool(unsigned int spool_id);
+    void setup_websocket_connection();
+    void on_websocket_receive(const std::string& message, beast::error_code ec);
 
     /// get all the spools from the api and store them
     /// \returns if succeeded
     bool pull_spoolman_spools();
 
-    /// uses/consumes filament from the specified spool then updates the spool
+    /// uses/consumes filament from the specified spool
     /// \param usage_type The consumption metric to be used. Should be "length" or "weight". This will NOT be checked.
     /// \returns if succeeded
     bool use_spoolman_spool(const unsigned int& spool_id, const double& usage, const std::string& usage_type);
 public:
     static constexpr auto DEFAULT_PORT = "7912";
 
-    /// uses/consumes filament from multiple specified spools then updates them
+    /// uses/consumes filament from multiple specified spools
     /// \param data a map with the spool ID as the key and the amount to be consumed as the value
     /// \param usage_type The consumption metric to be used. Should be "length" or "weight". This will be checked.
     /// \returns if succeeded
@@ -135,17 +162,15 @@ public:
                                                             bool                       use_preset_data = false,
                                                             bool                       detach = false,
                                                             bool                       force = false);
-    static SpoolmanResult update_filament_preset_from_spool(Preset* filament_preset,
-                                                            bool    update_from_server     = true,
-                                                            bool    only_update_statistics = false);
+    static SpoolmanResult update_filament_preset_from_spool(Preset* filament_preset, bool only_update_statistics = false);
 
     static SpoolmanResult save_preset_to_spoolman(const Preset* filament_preset);
 
     /// Update the statistics values for the visible filament profiles with spoolman enabled
     static void update_visible_spool_statistics();
 
-    /// Update the statistics values for the filament profiles tied to the specified spool IDs
-    static void update_specific_spool_statistics(const std::vector<unsigned int>& spool_ids);
+    /// Update the statistics values for the filament profiles tied to the specified spool ID
+    static void update_specific_spool_statistics(unsigned spool_id);
 
     void on_server_changed();
 
@@ -155,22 +180,20 @@ public:
     /// Check if Spoolman is enabled
     static bool is_enabled();
 
-    const std::map<unsigned int, SpoolmanSpoolShrPtr>& get_spoolman_spools(bool update = false)
+    const std::map<unsigned int, SpoolmanSpoolShrPtr>& get_spoolman_spools()
     {
-        if (update || !m_initialized)
+        if (!m_initialized)
             pull_spoolman_spools();
         return m_spools;
     }
 
-    std::optional<SpoolmanSpoolShrPtr> get_spoolman_spool_by_id(unsigned int spool_id, bool update = false)
+    std::optional<SpoolmanSpoolShrPtr> get_spoolman_spool_by_id(unsigned int spool_id)
     {
         if (!m_initialized)
             pull_spoolman_spools();
 
-        // Attempt to pull the spool from the server
-        if (update || !contains(m_spools, spool_id))
-            if (!pull_spoolman_spool(spool_id))
-                return std::nullopt;
+        if (!contains(m_spools, spool_id))
+            return std::nullopt;
 
         return m_spools.at(spool_id);
     }
@@ -203,12 +226,11 @@ public:
     std::string name;
     std::string comment;
 
-    void update_from_server();
-
 private:
     Spoolman* m_spoolman;
 
-    explicit SpoolmanVendor(const pt::ptree& json_data) : m_spoolman(Spoolman::m_instance) { update_from_json(json_data); };
+    SpoolmanVendor() : m_spoolman(Spoolman::m_instance) {}
+    explicit SpoolmanVendor(const pt::ptree& json_data) : SpoolmanVendor() { update_from_json(json_data); };
 
     void update_from_json(const pt::ptree& json_data);
     void apply_to_config(Slic3r::DynamicConfig& config) const;
@@ -240,13 +262,14 @@ public:
     // Can be nullptr
     SpoolmanVendorShrPtr vendor;
 
-    void update_from_server(bool recursive = false);
     bool get_config_from_preset_data(DynamicPrintConfig& config, std::map<std::string, std::string>* additional_values = nullptr) const;
 
 private:
     Spoolman* m_spoolman;
 
-    explicit SpoolmanFilament(const pt::ptree& json_data) : m_spoolman(Spoolman::m_instance)
+    SpoolmanFilament() : m_spoolman(Spoolman::m_instance) {}
+
+    explicit SpoolmanFilament(const pt::ptree& json_data) : SpoolmanFilament()
     {
         if (const auto vendor_id = json_data.get_optional<int>("vendor.id"); vendor_id.has_value())
             vendor = m_spoolman->m_vendors[vendor_id.value()];
@@ -278,8 +301,6 @@ public:
     // Can be nullptr
     SpoolmanVendorShrPtr& get_vendor() { return filament->vendor; }
 
-    void update_from_server(bool recursive = false);
-
     /// builds a preset name based on spool data
     std::string get_preset_name();
 
@@ -289,7 +310,9 @@ public:
 private:
     Spoolman* m_spoolman;
 
-    explicit SpoolmanSpool(const pt::ptree& json_data) : m_spoolman(Spoolman::m_instance)
+    SpoolmanSpool() : m_spoolman(Spoolman::m_instance) {}
+
+    explicit SpoolmanSpool(const pt::ptree& json_data) : SpoolmanSpool()
     {
         filament = m_spoolman->m_filaments[json_data.get<int>("filament.id")];
         update_from_json(json_data);

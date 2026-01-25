@@ -44,29 +44,33 @@ static constexpr long MAX_TIMEOUT = 5;
 // Spoolman
 //---------------------------------
 
-static std::string get_spoolman_api_url()
+static std::pair<std::string, std::string> get_spoolman_url_components()
 {
-    std::string spoolman_host = wxGetApp().app_config->get("spoolman", "host");
-    std::string spoolman_port = Spoolman::DEFAULT_PORT;
+    std::string host = wxGetApp().app_config->get("spoolman", "host");
+    std::string port = Spoolman::DEFAULT_PORT;
 
     // Remove http(s) designator from the string as it interferes with the next step
-    spoolman_host = boost::regex_replace(spoolman_host, boost::regex("https?://"), "");
+    host = boost::regex_replace(host, boost::regex("https?://"), "");
 
     // If the host contains a port, use that rather than the default
-    if (spoolman_host.find_last_of(':') != string::npos) {
+    if (host.find_last_of(':') != string::npos) {
         static const boost::regex pattern(R"((?<host>[a-z0-9.\-_]+):(?<port>[0-9]+))", boost::regex_constants::icase);
         boost::smatch result;
-        if (boost::regex_match(spoolman_host, result, pattern)) {
-            spoolman_port = result["port"]; // get port value first since it is overwritten when setting the host value in the next line
-            spoolman_host = result["host"];
+        if (boost::regex_match(host, result, pattern)) {
+            port = result["port"]; // get port value first since it is overwritten when setting the host value in the next line
+            host = result["host"];
         } else {
-            BOOST_LOG_TRIVIAL(error) << "Failed to parse host string. Host: " << spoolman_host << ", Port: " << spoolman_port;
+            BOOST_LOG_TRIVIAL(error) << "Failed to parse host string. Host: " << host << ", Port: " << port;
         }
     }
-
-    return spoolman_host + ":" + spoolman_port + "/api/v1/";
+    return {std::move(host), std::move(port)};
 }
 
+static std::string get_spoolman_api_url()
+{
+    const auto& [host, port] = get_spoolman_url_components();
+    return host + ":" + port + "/api/v1/";
+}
 
 Http Spoolman::get_http_instance(const HTTPAction action, const std::string& url)
 {
@@ -129,14 +133,70 @@ pt::ptree Spoolman::spoolman_api_call(const HTTPAction http_action, const std::s
     return tree;
 }
 
-bool Spoolman::pull_spoolman_spool(unsigned int spool_id)
+void Spoolman::setup_websocket_connection()
 {
-    pt::ptree tree = get_spoolman_json("spool/" + std::to_string(spool_id));
-    if (tree.empty())
-        return false;
-    // Get or create spool then update it from json
-    m_spools[spool_id]->update_from_json(tree);
-    return true;
+    if (!websocket_client.ready_to_connect())
+        return;
+
+    auto [host, port] = get_spoolman_url_components();
+    websocket_client.async_connect(std::move(host), std::move(port), "/api/v1/");
+}
+
+void Spoolman::on_websocket_receive(const std::string& message, beast::error_code ec)
+{
+    // If there is an error, log it and continue. If the server is closed, this function will not be called
+    if (ec) {
+        BOOST_LOG_TRIVIAL(error) << ": " << "Failure on Spoolman websocket receive: " << ec.message();
+        return;
+    }
+
+    try {
+        // Parse the message
+        pt::ptree tree;
+        std::istringstream ss(message);
+        boost::property_tree::read_json(ss, tree);
+
+        const auto  type        = tree.get<string>("type");     // Enum: "added", "updated", "deleted"
+        const auto  resource    = tree.get<string>("resource"); // Enum: "spool", "filament", "vendor"
+        const auto& payload     = tree.get_child("payload");    // data of resource
+        const int   resource_id = payload.get<int>("id");
+
+        if (type == "deleted") {
+            if (resource == "spool")
+                m_spools.erase(resource_id);
+            else if (resource == "filament")
+                m_filaments.erase(resource_id);
+            else if (resource == "vendor")
+                m_vendors.erase(resource_id);
+            else
+                BOOST_LOG_TRIVIAL(error) << "Spoolman Websocket: Unknown resource type: " << resource;
+        } else {
+            // "added" or "updated"
+            if (resource == "spool") {
+                auto spool = m_spools[resource_id];
+                if (!spool)
+                    spool = std::make_shared<SpoolmanSpool>(SpoolmanSpool());
+                spool->update_from_json(payload);
+                update_specific_spool_statistics(resource_id);
+            } else if (resource == "filament") {
+                auto filament = m_filaments[resource_id];
+                if (!filament)
+                    filament = std::make_shared<SpoolmanFilament>(SpoolmanFilament());
+                filament->update_from_json(payload);
+            } else if (resource == "vendor") {
+                auto vendor = m_vendors[resource_id];
+                if (!vendor)
+                    vendor = std::make_shared<SpoolmanVendor>(SpoolmanVendor());
+                vendor->update_from_json(payload);
+            } else
+                BOOST_LOG_TRIVIAL(error) << "Spoolman Websocket: Unknown resource type: " << resource;
+        }
+    } catch (std::exception& e) {
+        BOOST_LOG_TRIVIAL(error) << "Exception during parsing from Spoolman websocket: " << e.what();
+    }
+
+    // Queue another receive command
+    websocket_client.async_receive();
 }
 
 bool Spoolman::pull_spoolman_spools()
@@ -170,7 +230,11 @@ bool Spoolman::pull_spoolman_spools()
     if (m_first_initialization) {
         on_server_changed();
         m_first_initialization = false;
+    } else {
+        setup_websocket_connection();
     }
+
+    update_visible_spool_statistics();
 
     return true;
 }
@@ -184,13 +248,6 @@ bool Spoolman::use_spoolman_spool(const unsigned int& spool_id, const double& us
     tree = put_spoolman_json(endpoint, tree);
     if (tree.empty())
         return false;
-
-    auto spool_opt = get_spoolman_spool_by_id(spool_id);
-    // The get_spoolman_spool_by_id function attempts to pull the spool if it is not in the cache
-    // If this fails but the above succeeds, there is a problem
-    if (!spool_opt.has_value())
-        throw RuntimeError("Failed to get the spool from cache after successfully performing a use operation on it");
-    spool_opt.value()->update_from_json(tree);
     return true;
 }
 
@@ -220,8 +277,6 @@ bool Spoolman::use_spoolman_spools(const std::map<unsigned int, double>& data, c
         return false;
     }
 
-    update_specific_spool_statistics(spool_ids);
-
     m_use_undo_buffer = data;
     m_last_usage_type = usage_type;
     return true;
@@ -239,8 +294,6 @@ bool Spoolman::undo_use_spoolman_spools()
             return false;
         spool_ids.emplace_back(spool_id);
     }
-
-    update_specific_spool_statistics(spool_ids);
 
     m_use_undo_buffer.clear();
     m_last_usage_type.clear();
@@ -389,7 +442,7 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
     return result;
 }
 
-SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_preset, bool update_from_server, bool only_update_statistics)
+SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_preset, bool only_update_statistics)
 {
     DynamicConfig  config;
     SpoolmanResult result;
@@ -409,8 +462,6 @@ SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_pres
         return result;
     }
     SpoolmanSpoolShrPtr spool = spool_opt.value();
-    if (update_from_server)
-        spool->update_from_server(!only_update_statistics);
     spool->apply_to_preset(filament_preset, only_update_statistics);
     return result;
 }
@@ -456,17 +507,15 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
     // Spoolman extra fields are a string read as json
     // To save a string to an extra field, the data must be surrounded by double quotes
     // and literal quotes must be escaped twice
-    std::string formated_preset_data = boost::replace_all_copy(preset_data, "\"", "\\\"");
-    formated_preset_data = "\"" + formated_preset_data + "\"";
+    preset_data = boost::replace_all_copy(preset_data, "\"", "\\\"");
+    preset_data = "\"" + preset_data + "\"";
 
     pt::ptree pt;
-    pt.add("extra.orcaslicer_preset_data", formated_preset_data);
+    pt.add("extra.orcaslicer_preset_data", preset_data);
     auto res = patch_spoolman_json("filament/" + std::to_string(spool->filament->id), pt);
 
     if (res.empty())
         result.messages.emplace_back("Failed to save the data");
-    else
-        spool->filament->preset_data = std::move(preset_data);
     return result;
 }
 
@@ -479,7 +528,7 @@ void Spoolman::update_visible_spool_statistics()
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
             if (item->is_user() && item->spoolman_enabled()) {
-                if (auto res = update_filament_preset_from_spool(item, true, true); res.has_failed())
+                if (auto res = update_filament_preset_from_spool(item, true); res.has_failed())
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Failed to update spoolman statistics with the following error: "
                                              << res.build_single_line_message() << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
             }
@@ -487,19 +536,18 @@ void Spoolman::update_visible_spool_statistics()
     }
 }
 
-void Spoolman::update_specific_spool_statistics(const std::vector<unsigned int>& spool_ids)
+void Spoolman::update_specific_spool_statistics(const unsigned spool_id)
 {
     PresetBundle* preset_bundle = GUI::wxGetApp().preset_bundle;
     PresetCollection& filaments    = preset_bundle->filaments;
 
-    std::set spool_ids_set(spool_ids.begin(), spool_ids.end());
-    // make sure '0' is not a value
-    spool_ids_set.erase(0);
+    if (spool_id < 1)
+        return;
 
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
-            if (item->is_user() && spool_ids_set.count(item->config.opt_int("spoolman_spool_id", 0)) > 0) {
-                if (auto res = update_filament_preset_from_spool(item, true, true); res.has_failed())
+            if (item->is_user() && item->config.opt_int("spoolman_spool_id", 0) == spool_id) {
+                if (auto res = update_filament_preset_from_spool(item, true); res.has_failed())
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Failed to update spoolman statistics with the following error: "
                                              << res.build_single_line_message() << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
             }
@@ -510,6 +558,10 @@ void Spoolman::update_specific_spool_statistics(const std::vector<unsigned int>&
 
 void Spoolman::on_server_changed()
 {
+    // Close websocket to current server
+    if (websocket_client.is_connected())
+        websocket_client.async_close();
+
     if (!is_server_valid()) {
         if (m_initialized)
             clear();
@@ -527,15 +579,14 @@ void Spoolman::on_server_changed()
         return;
     }
 
+    setup_websocket_connection();
+
     // Add the extra field to filament to store preset data
     pt::ptree pt;
     pt.add("name", "OrcaSlicer Preset Data");
     pt.add("field_type", "text");
     post_spoolman_json("field/filament/orcaslicer_preset_data", pt);
-
-    update_visible_spool_statistics();
 }
-
 
 bool Spoolman::is_server_valid(bool force_check)
 {
@@ -543,16 +594,20 @@ bool Spoolman::is_server_valid(bool force_check)
     static time_point<steady_clock> last_validity_check;
     static bool                     last_res;
 
-    bool res = false;
     if (!is_enabled())
-        return res;
+        return false;
+
+    if (get_instance()->websocket_client.is_connected())
+        return true;
 
     if (!force_check) {
         if (duration_cast<seconds>(steady_clock::now() - last_validity_check).count() < 5)
             return last_res;
     }
 
-    Http::get(get_spoolman_api_url() + "info").on_complete([&res](std::string, unsigned http_status) {
+    bool res = false;
+    auto [host, port] = get_spoolman_url_components();
+    Http::head(host + ":" + port + "/api/v1").on_complete([&res](std::string, unsigned http_status) {
         if (http_status == 200)
             res = true;
     })
@@ -571,8 +626,6 @@ bool Spoolman::is_enabled() { return GUI::wxGetApp().app_config->get_bool("spool
 // SpoolmanVendor
 //---------------------------------
 
-void SpoolmanVendor::update_from_server() { update_from_json(Spoolman::get_spoolman_json("vendor/" + std::to_string(id))); }
-
 void SpoolmanVendor::update_from_json(const pt::ptree& json_data)
 {
     id      = json_data.get<int>("id");
@@ -590,14 +643,6 @@ void SpoolmanVendor::apply_to_config(Slic3r::DynamicConfig& config) const
 //---------------------------------
 // SpoolmanFilament
 //---------------------------------
-
-void SpoolmanFilament::update_from_server(bool recursive)
-{
-    const boost::property_tree::ptree& json_data = Spoolman::get_spoolman_json("filament/" + std::to_string(id));
-    update_from_json(json_data);
-    if (recursive && vendor)
-        vendor->update_from_json(json_data.get_child("vendor"));
-}
 
 void SpoolmanFilament::update_from_json(const pt::ptree& json_data)
 {
@@ -680,17 +725,6 @@ bool SpoolmanFilament::get_config_from_preset_data(DynamicPrintConfig& config, s
 //---------------------------------
 // SpoolmanSpool
 //---------------------------------
-
-void SpoolmanSpool::update_from_server(bool recursive)
-{
-    const boost::property_tree::ptree& json_data = Spoolman::get_spoolman_json("spool/" + std::to_string(id));
-    update_from_json(json_data);
-    if (recursive) {
-        filament->update_from_json(json_data.get_child("filament"));
-        if (get_vendor())
-            get_vendor()->update_from_json(json_data.get_child("filament.vendor"));
-    }
-}
 
 std::string SpoolmanSpool::get_preset_name()
 {

@@ -24,7 +24,6 @@
 #include <boost/locale.hpp>
 #include <boost/log/trivial.hpp>
 #include <miniz/miniz.h>
-#include <slic3r/Utils/Spoolman.hpp>
 
 // Mark string for localization and translate.
 #define L(s) Slic3r::I18N::translate(s)
