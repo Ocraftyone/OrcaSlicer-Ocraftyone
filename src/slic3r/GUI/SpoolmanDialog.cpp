@@ -75,7 +75,8 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
     } else {
         auto label = new Label(this);
         control = label;
-        label->SetLabelText(_L("Not Spoolman enabled"));
+        const bool has_filament_id = preset->config.opt_int("spoolman_filament_id", 0) > 0;
+        label->SetLabelText(has_filament_id ? _L("No spools for this filament") : _L("Not Spoolman enabled"));
         label->SetForegroundColour(*wxRED);
         control->SetFont(Label::Body_12);
     }

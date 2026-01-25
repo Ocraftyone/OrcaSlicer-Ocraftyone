@@ -234,6 +234,7 @@ bool Spoolman::pull_spoolman_spools()
         setup_websocket_connection();
     }
 
+    normalize_visible_spoolman_ids();
     update_visible_spool_statistics();
 
     return true;
@@ -300,11 +301,11 @@ bool Spoolman::undo_use_spoolman_spools()
     return true;
 }
 
-SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolShrPtr& spool,
-                                                           const Preset*              base_preset,
-                                                           bool                       use_preset_data,
-                                                           bool                       detach,
-                                                           bool                       force)
+SpoolmanResult Spoolman::create_filament_preset(const SpoolmanFilamentShrPtr& filament,
+                                                const Preset*                 base_preset,
+                                                bool                          use_preset_data,
+                                                bool                          detach,
+                                                bool                          force)
 {
     PresetCollection& filaments = wxGetApp().preset_bundle->filaments;
     SpoolmanResult    result;
@@ -313,10 +314,10 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
     std::map<std::string, std::string> additional_preset_data;
     if (use_preset_data) {
         // If the preset data is empty, use the base_preset
-        if (spool->filament->preset_data.empty()) {
+        if (filament->preset_data.empty()) {
             use_preset_data = false;
         } else {
-            if (spool->filament->get_config_from_preset_data(preset_data_config, &additional_preset_data)) {
+            if (filament->get_config_from_preset_data(preset_data_config, &additional_preset_data)) {
                 if (const auto& inherits = preset_data_config.opt_string("inherits"); inherits.empty()) {
                     // If inherits is empty, the profile data is detached. When use_preset_data,
                     // the base_preset is not important, so just provide the default preset
@@ -341,7 +342,7 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
     if (!base_preset)
         base_preset = &filaments.get_edited_preset();
 
-    std::string filament_preset_name = spool->get_preset_name();
+    std::string filament_preset_name = filament->get_preset_name();
 
     // Add a printer/vendor identifier
     if (auto idx = base_preset->name.rfind(" @"); idx != std::string::npos && base_preset->name.substr(idx) != " @System") {
@@ -372,7 +373,7 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
         // Check for presets with the same spool ID
         int compatible(0);
         for (const auto item : filaments.get_compatible()) { // count num of visible and invisible
-            if (item->is_user() && item->config.opt_int("spoolman_spool_id", 0) == spool->id) {
+            if (item->is_user() && item->config.opt_int("spoolman_filament_id", 0) == filament->id) {
                 compatible++;
                 if (compatible > 1)
                     break;
@@ -381,14 +382,14 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
         // if there were any, build the message
         if (compatible) {
             if (compatible > 1)
-                result.messages.emplace_back(_u8L("Multiple compatible presets share the same spool ID"));
+                result.messages.emplace_back(_u8L("Multiple compatible presets share the same filament ID"));
             else
-                result.messages.emplace_back(_u8L("A compatible preset shares the same spool ID"));
+                result.messages.emplace_back(_u8L("A compatible preset shares the same filament ID"));
         }
 
         // Check if the material types match between the base preset and the spool
-        if (!use_preset_data && base_preset->config.opt_string("filament_type", 0) != spool->filament->material) {
-            result.messages.emplace_back(_u8L("The materials of the base preset and the Spoolman spool do not match"));
+        if (!use_preset_data && base_preset->config.opt_string("filament_type", 0) != filament->material) {
+            result.messages.emplace_back(_u8L("The materials of the base preset and the Spoolman filament do not match"));
         }
     }
 
@@ -419,8 +420,13 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
     preset->config.set_key_value("filament_settings_id", new ConfigOptionStrings({filament_preset_name}));
     preset->filament_id = get_filament_id(filament_preset_name);
 
-    // Apply settings from the spool on top of the base preset
-    spool->apply_to_preset(preset);
+    // Apply settings from the most used spool on top of the base preset
+    // If there is no spool, just apply the filament settings. The preset will be normalized when a spool is available
+    auto spool_opt = filament->get_most_used_spool();
+    if (spool_opt.has_value())
+        spool_opt.value()->apply_to_preset(preset);
+    else
+        filament->apply_to_config(preset->config);
 
     // Finalize and save
     if (use_preset_data) {
@@ -442,7 +448,7 @@ SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolSh
     return result;
 }
 
-SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_preset, bool only_update_statistics)
+SpoolmanResult Spoolman::update_filament_preset(Preset* filament_preset, bool only_update_statistics)
 {
     DynamicConfig  config;
     SpoolmanResult result;
@@ -450,19 +456,39 @@ SpoolmanResult Spoolman::update_filament_preset_from_spool(Preset* filament_pres
         result.messages.emplace_back("Preset is not a filament preset");
         return result;
     }
+    if (!only_update_statistics)
+        normalize_spoolman_ids(filament_preset->config);
+
+    // Attempt to use the spool to update the preset first.
+    // The spool data is only absolutely required if only the statistics are being updated
     const int&     spool_id = filament_preset->config.opt_int("spoolman_spool_id", 0);
-    if (spool_id < 1) {
-        result.messages.emplace_back(
-            "Preset provided does not have a valid Spoolman spool ID"); // IDs below 1 are not used by spoolman and should be ignored
+    if (auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id); spool_opt.has_value()) {
+        SpoolmanSpoolShrPtr spool = spool_opt.value();
+        spool->apply_to_preset(filament_preset, only_update_statistics);
         return result;
     }
-    auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
-    if (!spool_opt.has_value()) {
-        result.messages.emplace_back("The spool ID does not exist in the local spool cache");
+    if (only_update_statistics) {
+        if (spool_id < 1) { // IDs below 1 are not used by spoolman and should be ignored
+            result.messages.emplace_back("Preset provided does not have a valid Spoolman spool ID");
+        }
+        result.messages.emplace_back("The spool ID does not exist in the local cache");
         return result;
     }
-    SpoolmanSpoolShrPtr spool = spool_opt.value();
-    spool->apply_to_preset(filament_preset, only_update_statistics);
+
+    // If the spool is not available, attempt to apply the data from the filament
+    const int& filament_id = filament_preset->config.opt_int("spoolman_filament_id", 0);
+    auto filament_opt = get_instance()->get_spoolman_filament_by_id(filament_id);
+    if (!filament_opt.has_value()) {
+        if (filament_id < 1) { // IDs below 1 are not used by spoolman and should be ignored
+            result.messages.emplace_back("Preset provided does not have a valid Spoolman filament ID");
+        }
+        result.messages.emplace_back("The filament ID does not exist in the local cache");
+        return result;
+    }
+
+    SpoolmanFilamentShrPtr filament = filament_opt.value();
+    filament->apply_to_config(filament_preset->config);
+
     return result;
 }
 
@@ -473,18 +499,18 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
         result.messages.emplace_back("Preset is not a filament preset");
         return result;
     }
-    const int&     spool_id = filament_preset->config.opt_int("spoolman_spool_id", 0);
-    if (spool_id < 1) {
+    const int&     filament_id = filament_preset->config.opt_int("spoolman_filament_id", 0);
+    if (filament_id < 1) {
         result.messages.emplace_back(
-            "Preset provided does not have a valid Spoolman spool ID"); // IDs below 1 are not used by spoolman and should be ignored
+            "Preset provided does not have a valid Spoolman filament ID"); // IDs below 1 are not used by spoolman and should be ignored
         return result;
     }
-    auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
-    if (!spool_opt.has_value()) {
-        result.messages.emplace_back("The spool ID does not exist in the local spool cache");
+    auto filament_opt = get_instance()->get_spoolman_filament_by_id(filament_id);
+    if (!filament_opt.has_value()) {
+        result.messages.emplace_back("The filament ID does not exist in the local spool cache");
         return result;
     }
-    SpoolmanSpoolShrPtr spool = spool_opt.value();
+    const SpoolmanFilamentShrPtr& filament = filament_opt.value();
     if (filament_preset->is_dirty) {
         result.messages.emplace_back("Please save the current changes to the preset");
         return result;
@@ -512,13 +538,68 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
 
     pt::ptree pt;
     pt.add("extra.orcaslicer_preset_data", preset_data);
-    auto res = patch_spoolman_json("filament/" + std::to_string(spool->filament->id), pt);
+    auto res = patch_spoolman_json("filament/" + std::to_string(filament->id), pt);
 
     if (res.empty())
         result.messages.emplace_back("Failed to save the data");
     return result;
 }
 
+bool Spoolman::normalize_spoolman_ids(DynamicPrintConfig& config)
+{
+    auto& filament_id = config.opt_int("spoolman_filament_id", 0u);
+    auto& spool_id = config.opt_int("spoolman_spool_id", 0u);
+
+    // If there is a spool ID, but no filament ID, get the filament ID from the spool
+    if (filament_id < 1 && spool_id > 0) {
+        auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
+        if (!spool_opt.has_value())
+            return false;
+        filament_id = spool_opt.value()->filament->id;
+        return true;
+    }
+
+    // If there is a filament ID, but no spool id, get the most used spool ID (if there is a child spool)
+    if (filament_id > 0 && spool_id < 1) {
+        auto filament_opt = get_instance()->get_spoolman_filament_by_id(filament_id);
+        if (!filament_opt.has_value())
+            return false;
+        auto most_used_opt = filament_opt.value()->get_most_used_spool();
+        spool_id       = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
+        return true;
+    }
+
+    // If both are valid, check if the spool has been archived. If so, replace with the most used
+    if (filament_id > 0 && spool_id > 0) {
+        auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id);
+        if (!spool_opt.has_value())
+            return false;
+        const auto& spool = spool_opt.value();
+        if (!spool->archived)
+            return false;
+        auto most_used_opt = spool->filament->get_most_used_spool();
+        spool_id       = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
+        return true;
+    }
+
+    // If both are invalid, do nothing
+    return false;
+}
+
+void Spoolman::normalize_visible_spoolman_ids()
+{
+    PresetCollection& filaments = GUI::wxGetApp().preset_bundle->filaments;
+
+    if (is_server_valid()) {
+        for (const auto item : filaments.get_compatible()) {
+            if (item->is_user() && normalize_spoolman_ids(item->config))
+                // Save the preset to file if the normalization changes a value
+                item->save(&filaments.get_preset_parent(*item)->config);
+        }
+        // Normalize the edited preset so the IDs aren't different if the selected preset is updated
+        normalize_spoolman_ids(filaments.get_edited_preset().config);
+    }
+}
 
 void Spoolman::update_visible_spool_statistics()
 {
@@ -528,9 +609,11 @@ void Spoolman::update_visible_spool_statistics()
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
             if (item->is_user() && item->spoolman_enabled()) {
-                if (auto res = update_filament_preset_from_spool(item, true); res.has_failed())
+                if (auto res = update_filament_preset(item, true); res.has_failed())
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Failed to update spoolman statistics with the following error: "
-                                             << res.build_single_line_message() << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
+                                             << res.build_single_line_message()
+                                             << "Filament ID: " << item->config.opt_int("spoolman_filament_id", 0) << ","
+                                             << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
             }
         }
     }
@@ -547,9 +630,11 @@ void Spoolman::update_specific_spool_statistics(const unsigned spool_id)
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
             if (item->is_user() && item->config.opt_int("spoolman_spool_id", 0) == spool_id) {
-                if (auto res = update_filament_preset_from_spool(item, true); res.has_failed())
+                if (auto res = update_filament_preset(item, true); res.has_failed())
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Failed to update spoolman statistics with the following error: "
-                                             << res.build_single_line_message() << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
+                                             << res.build_single_line_message()
+                                             << "Filament ID: " << item->config.opt_int("spoolman_filament_id", 0) << ","
+                                             << "Spool ID: " << item->config.opt_int("spoolman_spool_id", 0);
             }
         }
     }
@@ -676,6 +761,7 @@ void SpoolmanFilament::update_from_json(const pt::ptree& json_data)
 
 void SpoolmanFilament::apply_to_config(Slic3r::DynamicConfig& config) const
 {
+    config.set_key_value("spoolman_filament_id", new ConfigOptionInts({id}));
     config.set_key_value("filament_type", new ConfigOptionStrings({material}));
     config.set_key_value("filament_cost", new ConfigOptionFloats({price}));
     config.set_key_value("filament_density", new ConfigOptionFloats({density}));
@@ -721,24 +807,41 @@ bool SpoolmanFilament::get_config_from_preset_data(DynamicPrintConfig& config, s
     return true;
 }
 
+std::optional<SpoolmanSpoolShrPtr> SpoolmanFilament::get_most_used_spool() const
+{
+    SpoolmanSpoolShrPtr most_used = nullptr;
+
+    for (const auto& [_, spool] : m_spoolman->m_spools) {
+        if (spool->archived) continue;
+        if (this != spool->filament.get()) continue;
+        if (most_used) {
+            if (spool->used_length > most_used->used_length)
+                most_used = spool;
+        } else {
+            most_used = spool;
+        }
+    }
+
+    return most_used ? std::optional(most_used) : std::nullopt;
+}
+
+std::string SpoolmanFilament::get_preset_name() const
+{
+    string out_name;
+    if (vendor)
+        out_name += vendor->name;
+    if (!name.empty())
+        out_name += " " + name;
+    if (!material.empty())
+        out_name += " " + material;
+    boost::trim(out_name);
+
+    return remove_special_key(out_name);
+}
 
 //---------------------------------
 // SpoolmanSpool
 //---------------------------------
-
-std::string SpoolmanSpool::get_preset_name()
-{
-    string name;
-    if (get_vendor())
-        name += get_vendor()->name;
-    if (!filament->name.empty())
-        name += " " + filament->name;
-    if (!filament->material.empty())
-        name += " " + filament->material;
-    boost::trim(name);
-
-    return remove_special_key(name);
-}
 
 void SpoolmanSpool::apply_to_config(Slic3r::DynamicConfig& config) const
 {

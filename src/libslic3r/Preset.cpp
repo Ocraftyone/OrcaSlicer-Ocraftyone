@@ -1002,7 +1002,7 @@ static std::vector<std::string> s_Preset_filament_options {/*"filament_colour", 
     //BBS filament change length while the extruder color
     "filament_change_length","filament_flush_volumetric_speed","filament_flush_temp",
     "long_retractions_when_ec", "retraction_distances_when_ec",
-    "spoolman_spool_id"
+    "spoolman_filament_id", "spoolman_spool_id"
     };
 
 static std::vector<std::string> s_Preset_machine_limits_options {

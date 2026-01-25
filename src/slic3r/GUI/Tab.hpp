@@ -374,6 +374,7 @@ public:
 	virtual void	build() = 0;
 	virtual void	update() = 0;
 	virtual void	toggle_options() = 0;
+    virtual void    on_begin_saving_preset() {}
 	virtual void	init_options_list();
     virtual void    update_custom_dirty(std::vector<std::string> &dirty_options, std::vector<std::string> &nonsys_options) {}
 	void			load_initial_data();
@@ -584,6 +585,7 @@ public:
 	void		reload_config() override;
 	void		update_description_lines() override;
 	void		toggle_options() override;
+	void        on_begin_saving_preset() override;
 	void		update() override;
     void        init_options_list() override;
     void        clear_pages() override;

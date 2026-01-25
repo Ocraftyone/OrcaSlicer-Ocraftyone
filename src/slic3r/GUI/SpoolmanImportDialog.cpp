@@ -3,6 +3,7 @@
 #include "GUI_App.hpp"
 #include "ExtraRenderers.hpp"
 #include "MsgDialog.hpp"
+#include "Plater.hpp"
 #include "Widgets/DialogButtons.hpp"
 #include "oneapi/tbb/parallel_for_each.h"
 
@@ -22,9 +23,9 @@ namespace Slic3r { namespace GUI {
 // SpoolmanViewModel
 //-----------------------------------------
 
-wxDataViewItem SpoolmanViewModel::AddSpool(SpoolmanSpoolShrPtr spool)
+wxDataViewItem SpoolmanViewModel::AddFilament(const SpoolmanFilamentShrPtr& filament)
 {
-    m_top_children.emplace_back(std::make_unique<SpoolmanNode>(spool));
+    m_top_children.emplace_back(std::make_unique<SpoolmanNode>(filament));
     wxDataViewItem item(m_top_children.back().get());
     ItemAdded(wxDataViewItem(nullptr), item);
     return item;
@@ -37,13 +38,13 @@ void SpoolmanViewModel::SetAllToggles(bool value)
             ItemChanged(wxDataViewItem(item.get()));
 }
 
-std::vector<SpoolmanSpoolShrPtr> SpoolmanViewModel::GetSelectedSpools()
+std::vector<SpoolmanFilamentShrPtr> SpoolmanViewModel::GetSelectedFilaments()
 {
-    std::vector<SpoolmanSpoolShrPtr> spools;
+    std::vector<SpoolmanFilamentShrPtr> filaments;
     for (auto& item : m_top_children)
         if (item->get_checked())
-            spools.emplace_back(item->get_spool());
-    return spools;
+            filaments.emplace_back(item->get_filament());
+    return filaments;
 }
 
 wxString SpoolmanViewModel::GetColumnType(unsigned int col) const
@@ -91,8 +92,6 @@ bool SpoolmanViewModel::SetValue(const wxVariant& variant, const wxDataViewItem&
     wxLogError("Out of bounds column call to SpoolmanViewModel::SetValue. Only column 0 should be set to a value. col = %d", col);
     return false;
 }
-
-bool SpoolmanViewModel::IsEnabled(const wxDataViewItem& item, unsigned int col) const { return !get_node(item)->is_archived(); }
 
 //-----------------------------------------
 // SpoolmanViewCtrl
@@ -180,8 +179,8 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
     main_sizer->Add(buttons, 0, wxCENTER | wxEXPAND | wxALL, EM);
 
     // Load data into SVC
-    for (const auto& spoolman_spool : m_spoolman->get_spoolman_spools())
-        m_svc->get_model()->AddSpool(spoolman_spool.second);
+    for (const auto& spoolman_filament : m_spoolman->get_spoolman_filaments())
+        m_svc->get_model()->AddFilament(spoolman_filament.second);
 
 #ifdef  __LINUX__
     // Column width is not updated until shown in wxGTK
@@ -230,6 +229,12 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
     this->ShowModal();
 }
 
+void SpoolmanImportDialog::EndModal(int retCode)
+{
+    wxGetApp().plater()->sidebar().update_presets(Preset::TYPE_FILAMENT);
+    DPIDialog::EndModal(retCode);
+}
+
 void SpoolmanImportDialog::on_dpi_changed(const wxRect& suggested_rect)
 {
 #ifndef __LINUX__
@@ -245,53 +250,53 @@ void SpoolmanImportDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 void SpoolmanImportDialog::on_import()
 {
-    auto&       filaments       = wxGetApp().preset_bundle->filaments;
-    const auto  current_preset  = filaments.find_preset(m_preset_combobox->GetStringSelection().ToUTF8().data());
-    const auto& selected_spools = m_svc->get_model()->GetSelectedSpools();
-    if (selected_spools.empty()) {
-        show_error(this, _L("No spools are selected"));
+    auto&       filament_collection       = wxGetApp().preset_bundle->filaments;
+    const auto  current_preset  = filament_collection.find_preset(m_preset_combobox->GetStringSelection().ToUTF8().data());
+    const auto& selected_filaments = m_svc->get_model()->GetSelectedFilaments();
+    if (selected_filaments.empty()) {
+        show_error(this, _L("No filaments are selected"));
         return;
     }
 
     const bool                                                  detach = m_detach_checkbox->GetValue();
     const bool                                                  ignore_preset_data = m_ignore_preset_data_checkbox->GetValue();
-    std::vector<std::pair<SpoolmanSpoolShrPtr, SpoolmanResult>> failed_spools;
+    std::vector<std::pair<SpoolmanFilamentShrPtr, SpoolmanResult>> failed_filaments;
 
-    auto create_presets = [&](const vector<SpoolmanSpoolShrPtr>& spools, bool force = false) {
-        failed_spools.clear();
+    auto create_presets = [&](const vector<SpoolmanFilamentShrPtr>& filaments, bool force = false) {
+        failed_filaments.clear();
         // Save selected preset
-        const auto selected_preset_name = filaments.get_selected_preset_name();
-        auto edited_preset = filaments.get_edited_preset();
+        const auto selected_preset_name = filament_collection.get_selected_preset_name();
+        auto edited_preset = filament_collection.get_edited_preset();
 
         std::mutex failed_spools_mutex;
-        auto create_preset = [&](const SpoolmanSpoolShrPtr& spool) {
-            auto res = Spoolman::create_filament_preset_from_spool(spool, current_preset, !ignore_preset_data, detach, force);
+        auto create_preset = [&](const SpoolmanFilamentShrPtr& filament) {
+            auto res = Spoolman::create_filament_preset(filament, current_preset, !ignore_preset_data, detach, force);
             if (res.has_failed()) {
                 std::lock_guard lock(failed_spools_mutex);
-                failed_spools.emplace_back(spool, res);
+                failed_filaments.emplace_back(filament, res);
             }
         };
 
         // Calculating the hash for the internal filament id takes a bit, so using multithreading to speed it up
         wxBusyCursor busy_cursor;
-        if (spools.size() > 1)
-            tbb::parallel_for_each(spools.begin(), spools.end(), create_preset);
+        if (filaments.size() > 1)
+            tbb::parallel_for_each(filaments.begin(), filaments.end(), create_preset);
         else
-            create_preset(spools[0]);
+            create_preset(filaments[0]);
 
         // Restore selected preset
-        filaments.select_preset_by_name(selected_preset_name, true);
-        filaments.get_edited_preset() = std::move(edited_preset);
+        filament_collection.select_preset_by_name(selected_preset_name, true);
+        filament_collection.get_edited_preset() = std::move(edited_preset);
     };
 
-    create_presets(selected_spools);
+    create_presets(selected_filaments);
 
     // Show message with any errors
-    if (!failed_spools.empty()) {
+    if (!failed_filaments.empty()) {
         auto build_error_msg = [&](const wxString& prefix, const wxString& postfix = "") {
             wxString error_message = prefix + ":\n\n";
-            for (const auto& [spool_ptr, result] : failed_spools) {
-                error_message += wxString::FromUTF8(spool_ptr->get_preset_name()) + ":\n";
+            for (const auto& [filament_ptr, result] : failed_filaments) {
+                error_message += wxString::FromUTF8(filament_ptr->get_preset_name()) + ":\n";
                 for (const auto& msg : result.messages) {
                     error_message += " - " + msg + "\n";
                 }
@@ -304,16 +309,16 @@ void SpoolmanImportDialog::on_import()
             return error_message;
         };
 
-        const auto error_message = build_error_msg(_L("Errors were generated while trying to import the selected spools"),
+        const auto error_message = build_error_msg(_L("Errors were generated while trying to import the selected filaments"),
                                                    _L("Would you like to ignore these issues and continue?"));
 
         auto dlg = WarningDialog(this, error_message, wxEmptyString, wxYES | wxCANCEL);
         if (dlg.ShowModal() == wxID_YES) {
-            std::vector<SpoolmanSpoolShrPtr> retry_spools;
-            for (const auto& [spool_ptr, res] : failed_spools)
-                retry_spools.emplace_back(spool_ptr);
-            create_presets(retry_spools, true);
-            if (!failed_spools.empty())
+            std::vector<SpoolmanFilamentShrPtr> retry_filaments;
+            for (const auto& [filament_ptr, res] : failed_filaments)
+                retry_filaments.emplace_back(filament_ptr);
+            create_presets(retry_filaments, true);
+            if (!failed_filaments.empty())
                 show_error(this, build_error_msg(_L("Errors were still generated during force import")));
             this->EndModal(wxID_OK);
         }

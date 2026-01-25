@@ -1388,6 +1388,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionStrings,              small_area_infill_flow_compensation_model))
 
     ((ConfigOptionBool,                has_scarf_joint_seam))
+    ((ConfigOptionInts,                spoolman_filament_id))
     ((ConfigOptionInts,                spoolman_spool_id))
     ((ConfigOptionFloats,              filament_remaining_weight))
     ((ConfigOptionFloats,              filament_remaining_length))

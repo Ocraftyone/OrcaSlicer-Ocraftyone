@@ -2709,12 +2709,21 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionStrings{L("(Undefined)")});
     def->cli = ConfigOptionDef::nocli;
 
-    def = this->add("spoolman_spool_id", coInts);
-    def->label = L("Spoolman ID");
-    def->tooltip = L("The spool ID of this filament profile within your Spoolman instance. This will allow automatic spool switching when "
+    def = this->add("spoolman_filament_id", coInts);
+    def->label = L("Filament ID");
+    def->tooltip = L("The filament ID of this profile within your Spoolman instance. This will allow automatic spool switching when "
                      "using moonraker to track spool usage and one touch updating of this filament profile from the Spoolman properties. "
                      "Setting this to a value of 0 disables its functionality.");
     def->mode = comSimple;
+    def->set_default_value(new ConfigOptionInts({ 0 }));
+    def->cli = ConfigOptionDef::nocli;
+
+    def = this->add("spoolman_spool_id", coInts);
+    def->label = L("Spool ID");
+    def->tooltip = L("The currently selected spool ID of this profile. "
+                     "After providing a valid filament ID, the spool can be selected using the Spoolman button on the sidebar.");
+    def->mode = comSimple;
+    def->readonly = true;
     def->set_default_value(new ConfigOptionInts({ 0 }));
     def->cli = ConfigOptionDef::nocli;
 

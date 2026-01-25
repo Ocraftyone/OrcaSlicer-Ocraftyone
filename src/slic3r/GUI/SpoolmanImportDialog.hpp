@@ -19,15 +19,14 @@ enum Column { COL_CHECK = 0, COL_ID, COL_COLOR, COL_VENDOR, COL_NAME, COL_MATERI
 class SpoolmanNode
 {
 public:
-    explicit SpoolmanNode(const SpoolmanSpoolShrPtr& spool) : m_spool(spool) {}
+    explicit SpoolmanNode(const SpoolmanFilamentShrPtr& filament) : m_filament(filament) {}
 
-    int         get_id() const { return m_spool->id; };
-    wxColour    get_color() const { return wxColour(m_spool->filament->color); }
-    wxString    get_vendor_name() const { return m_spool->get_vendor() ? wxString::FromUTF8(m_spool->get_vendor()->name) : wxString(); }
-    wxString    get_filament_name() const { return wxString::FromUTF8(m_spool->filament->name); }
-    wxString    get_material() const { return wxString::FromUTF8(m_spool->filament->material); }
-    bool        get_has_preset_data() const { return !m_spool->filament->preset_data.empty(); }
-    bool        is_archived() const { return m_spool->archived; }
+    int         get_id() const { return m_filament->id; };
+    wxColour    get_color() const { return { m_filament->color }; }
+    wxString    get_vendor_name() const { return m_filament->vendor ? wxString::FromUTF8(m_filament->vendor->name) : wxString(); }
+    wxString    get_filament_name() const { return wxString::FromUTF8(m_filament->name); }
+    wxString    get_material() const { return wxString::FromUTF8(m_filament->material); }
+    bool        get_has_preset_data() const { return !m_filament->preset_data.empty(); }
 
     bool get_checked() { return m_checked; };
     // return if value has changed
@@ -39,11 +38,11 @@ public:
         return true;
     };
 
-    SpoolmanSpoolShrPtr get_spool() { return m_spool; }
+    SpoolmanFilamentShrPtr get_filament() { return m_filament; }
 
 protected:
-    SpoolmanSpoolShrPtr m_spool;
-    bool                m_checked{false};
+    SpoolmanFilamentShrPtr m_filament;
+    bool                   m_checked{false};
 };
 
 typedef std::shared_ptr<SpoolmanNode> SpoolmanNodeShrPtr;
@@ -67,11 +66,11 @@ class SpoolmanViewModel : public wxDataViewModel
 public:
     SpoolmanViewModel() {}
 
-    wxDataViewItem AddSpool(SpoolmanSpoolShrPtr spool);
+    wxDataViewItem AddFilament(const SpoolmanFilamentShrPtr& filament);
 
     void SetAllToggles(bool value);
 
-    std::vector<SpoolmanSpoolShrPtr> GetSelectedSpools();
+    std::vector<SpoolmanFilamentShrPtr> GetSelectedFilaments();
 
     wxString     GetColumnType(unsigned int col) const override;
     unsigned int GetColumnCount() const override { return 5; }
@@ -85,7 +84,6 @@ public:
     void GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const override;
     bool SetValue(const wxVariant& variant, const wxDataViewItem& item, unsigned int col) override;
 
-    bool IsEnabled(const wxDataViewItem& item, unsigned int col) const override;
     // Not using container functionality
     bool IsContainer(const wxDataViewItem& item) const override { return false; };
 
@@ -126,6 +124,8 @@ class SpoolmanImportDialog : public DPIDialog
 {
 public:
     SpoolmanImportDialog(wxWindow* parent);
+
+    void EndModal(int retCode) override;
 
 protected:
     void on_dpi_changed(const wxRect& suggested_rect) override;

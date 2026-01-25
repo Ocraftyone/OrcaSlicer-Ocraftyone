@@ -1976,14 +1976,23 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
         result->filename = path;
     }
 
+    // Check for filaments that have a filament ID, but no spool ID
+    for (int i = 0; i < m_config.spoolman_filament_id.size(); ++i) {
+        if (m_config.spoolman_filament_id.get_at(i) > 0 && m_config.spoolman_spool_id.get_at(i) < 1) {
+            std::string msg = (boost::format(_("Filament %1% has a valid filament ID, but an invalid spool ID. Spoolman consumption will not be "
+                                     "available for this filament.")) % m_config.filament_settings_id.get_at(i)).str();
+            print->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL, msg);
+        }
+    }
+
     // Check the consumption of filament against the remaining filament as reported by Spoolman
     for (const auto& est : print->get_spoolman_filament_consumption_estimates()) {
         double remaining_length   = print->config().filament_remaining_length.get_at(est.print_config_idx);
         double remaining_weight   = print->config().filament_remaining_weight.get_at(est.print_config_idx);
 
         if (est.est_used_length > remaining_length || est.est_used_weight > remaining_weight) {
-            std::string msg = boost::str(boost::format(_("Filament %1% does not have enough material for the print. Used: %2$.2f m, %3$.2f g, Remaining: %4$.2f m, %5$.2f g")) %
-                                         est.filament_name % (est.est_used_length * 0.001) % est.est_used_weight % (remaining_length * 0.001) % remaining_weight);
+            std::string msg = (boost::format(_("Filament %1% does not have enough material for the print. Used: %2$.2f m, %3$.2f g, Remaining: %4$.2f m, %5$.2f g")) %
+                                         est.filament_name % (est.est_used_length * 0.001) % est.est_used_weight % (remaining_length * 0.001) % remaining_weight).str();
             print->active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL, msg, PrintStateBase::SlicingNotificationType::SlicingNotEnoughFilament);
         }
     }

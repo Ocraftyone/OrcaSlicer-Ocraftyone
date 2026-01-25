@@ -273,7 +273,7 @@ public:
     // works for filament presets only. All other profiles return false
     bool spoolman_enabled() const {
         if (type == TYPE_FILAMENT)
-            return config.opt_int("spoolman_spool_id", 0) > 0;
+            return config.opt_int("spoolman_filament_id", 0) > 0 && config.opt_int("spoolman_spool_id", 0) > 0;
         return false;
     }
 

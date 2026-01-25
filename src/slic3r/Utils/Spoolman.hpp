@@ -151,20 +151,23 @@ public:
     /// \returns if succeeded
     bool undo_use_spoolman_spools();
 
-    /// Create a filament preset from a Spoolman spool
-    /// \param spool Spoolman spool
+    /// Create a filament preset from a Spoolman filament
+    /// \param filament Spoolman filament
     /// \param base_preset preset to inherit settings from
-    /// \param use_preset_data if the spool has preset data, the SpoolmanFilament's preset_data will be used instead of using the base preset
+    /// \param use_preset_data if the filament has preset data, it will be used instead of using the base preset
     /// \param detach create profile without depending
     /// \param force attempt to force past errors
-    static SpoolmanResult create_filament_preset_from_spool(const SpoolmanSpoolShrPtr& spool,
+    static SpoolmanResult create_filament_preset(const SpoolmanFilamentShrPtr& filament,
                                                             const Preset*              base_preset,
                                                             bool                       use_preset_data = false,
                                                             bool                       detach = false,
                                                             bool                       force = false);
-    static SpoolmanResult update_filament_preset_from_spool(Preset* filament_preset, bool only_update_statistics = false);
+    static SpoolmanResult update_filament_preset(Preset* filament_preset, bool only_update_statistics = false);
 
     static SpoolmanResult save_preset_to_spoolman(const Preset* filament_preset);
+
+    static bool           normalize_spoolman_ids(DynamicPrintConfig& config);
+    static void           normalize_visible_spoolman_ids();
 
     /// Update the statistics values for the visible filament profiles with spoolman enabled
     static void update_visible_spool_statistics();
@@ -187,8 +190,18 @@ public:
         return m_spools;
     }
 
+    const std::map<unsigned int, SpoolmanFilamentShrPtr>& get_spoolman_filaments()
+    {
+        if (!m_initialized)
+            pull_spoolman_spools();
+        return m_filaments;
+    }
+
     std::optional<SpoolmanSpoolShrPtr> get_spoolman_spool_by_id(unsigned int spool_id)
     {
+        if (spool_id < 1)
+            return std::nullopt;
+
         if (!m_initialized)
             pull_spoolman_spools();
 
@@ -196,6 +209,21 @@ public:
             return std::nullopt;
 
         return m_spools.at(spool_id);
+    }
+
+    std::optional<SpoolmanFilamentShrPtr> get_spoolman_filament_by_id(unsigned int filament_id)
+    {
+        if (filament_id < 1)
+            return std::nullopt;
+
+        if (!m_initialized)
+            pull_spoolman_spools();
+
+        // Attempt to pull the filament from the server
+        if (!contains(m_filaments, filament_id))
+            return std::nullopt;
+
+        return m_filaments.at(filament_id);
     }
 
     void clear()
@@ -263,6 +291,10 @@ public:
     SpoolmanVendorShrPtr vendor;
 
     bool get_config_from_preset_data(DynamicPrintConfig& config, std::map<std::string, std::string>* additional_values = nullptr) const;
+    std::optional<SpoolmanSpoolShrPtr> get_most_used_spool() const;
+
+    /// builds a preset name based on filament data
+    std::string         get_preset_name() const;
 
 private:
     Spoolman* m_spoolman;
@@ -300,9 +332,6 @@ public:
 
     // Can be nullptr
     SpoolmanVendorShrPtr& get_vendor() { return filament->vendor; }
-
-    /// builds a preset name based on spool data
-    std::string get_preset_name();
 
     void apply_to_config(DynamicConfig& config) const;
     void apply_to_preset(Preset* preset, bool only_update_statistics = false) const;

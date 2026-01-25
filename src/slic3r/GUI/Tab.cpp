@@ -59,6 +59,7 @@
 #endif // WIN32
 
 #include <algorithm>
+#include <utility>
 
 namespace Slic3r {
 
@@ -3824,12 +3825,13 @@ void TabFilament::update_filament_overrides_page(const DynamicPrintConfig* print
 }
 
 void TabFilament::update_spoolman_statistics() {
-    Preset* selected_preset = &m_presets->get_selected_preset();
+    static constexpr Preset::SpoolmanStatistics empty_stats;
 
-    if (!selected_preset->spoolman_enabled())
-        return;
+    const auto& selected_preset = m_presets->get_selected_preset();
+    const Preset::SpoolmanStatistics* spoolman_stats = &empty_stats;
 
-    auto spoolman_stats = selected_preset->spoolman_statistics;
+    if (selected_preset.spoolman_enabled())
+        spoolman_stats = selected_preset.spoolman_statistics.get();
 
     m_active_page->get_field("spoolman_remaining_weight")->set_value(double_to_string(spoolman_stats->remaining_weight, 2), false);
     m_active_page->get_field("spoolman_used_weight")->set_value(double_to_string(spoolman_stats->used_weight, 2), false);
@@ -4081,29 +4083,31 @@ void TabFilament::build()
 
     page = add_options_page(L("Spoolman"), "advanced");
         optgroup = page->new_optgroup("Basic information");
+        optgroup->append_single_option_line("spoolman_filament_id");
         optgroup->append_single_option_line("spoolman_spool_id");
 
         line = {"Spoolman Update", ""};
         line.append_option(Option(ConfigOptionDef(), "spoolman_update"));
-        line.widget = [&](wxWindow* parent){
+        line.widget = [&, optgroup](wxWindow* parent){
             auto sizer = new wxBoxSizer(wxHORIZONTAL);
 
             auto on_click = [&](bool stats_only) {
-                if (m_presets->current_is_dirty() && m_active_page->get_field("spoolman_spool_id")->m_is_modified_value) {
-                    show_error(this, "This profile cannot be updated with an unsaved Spool ID value. Please save the profile, then try updating again.");
+                if (m_presets->current_is_dirty() && m_active_page->get_field("spoolman_filament_id")->m_is_modified_value) {
+                    show_error(this, "This profile cannot be updated with an unsaved Filament ID value. Please save the profile, then try updating again.");
                     return;
                 }
                 if (!Spoolman::is_server_valid()) {
                     show_error(this, "Failed to get data from the Spoolman server. Make sure that the port is correct and the server is running.");
                     return;
                 }
-                auto res = Spoolman::update_filament_preset_from_spool(&m_presets->get_edited_preset(), stats_only);
+                auto res = Spoolman::update_filament_preset(&m_presets->get_edited_preset(), stats_only);
 
                 if (res.has_failed()) {
                     show_error(this, res.build_error_dialog_message());
                     return;
                 }
 
+                optgroup->reload_config();
                 update_spoolman_statistics();
                 this->update_dirty();
             };
@@ -4137,8 +4141,8 @@ void TabFilament::build()
 
             auto load_from_spoolman_btn = new Button(parent, _L("Load Preset"));
             load_from_spoolman_btn->Bind(wxEVT_BUTTON, [&](wxCommandEvent& evt) {
-                if (m_presets->current_is_dirty() && m_active_page->get_field("spoolman_spool_id")->m_is_modified_value) {
-                    show_error(this, "This profile cannot be updated with an unsaved Spool ID value. Please save the profile, then try updating again.");
+                if (m_presets->current_is_dirty() && m_active_page->get_field("spoolman_filament_id")->m_is_modified_value) {
+                    show_error(this, "This profile cannot be updated with an unsaved Filament ID value. Please save the profile, then try updating again.");
                     return;
                 }
 
@@ -4416,8 +4420,30 @@ void TabFilament::toggle_options()
     }
 
     if (m_active_page->title() == L("Spoolman")) {
-        toggle_line("spoolman_update", m_config->opt_int("spoolman_spool_id", 0) > 0);
+        bool spoolman_enabled = m_presets->get_selected_preset().config.opt_int("spoolman_filament_id", 0u) > 0;
+        toggle_line("spoolman_update", spoolman_enabled);
+        toggle_line("spoolman_preset_sync", spoolman_enabled);
         update_spoolman_statistics();
+    }
+}
+
+void TabFilament::on_begin_saving_preset()
+{
+    // If the filament id value was dirty, force normalize the IDs
+    auto dirty_keys = m_presets->current_dirty_options();
+    if (std::find(dirty_keys.begin(), dirty_keys.end(), "spoolman_filament_id") != dirty_keys.end()) {
+        // Set spool ID to 0 and normalize to get the most used spool ID
+        m_config->opt_int("spoolman_spool_id", 0) = 0;
+        Spoolman::normalize_spoolman_ids(*m_config);
+
+        if (m_active_page->title() == _L("Spoolman"))
+            this->CallAfter([&] {
+                m_active_page->reload_config();
+                Spoolman::update_filament_preset(&m_presets->get_selected_preset(), true);
+                update();
+                m_active_page->update_visibility(m_mode, true);
+                m_page_view->GetParent()->Layout();
+            });
     }
 }
 
@@ -6542,6 +6568,8 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
         //BBS: add project embedded preset relate logic
         save_to_project = dlg.get_save_to_project_selection(m_type);
     }
+
+    on_begin_saving_preset();
 
     //BBS record current preset name
     std::string curr_preset_name = m_presets->get_edited_preset().name;

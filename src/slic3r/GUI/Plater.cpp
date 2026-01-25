@@ -9148,6 +9148,7 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
             view3D->deselect_all();
         }
 
+        Spoolman::normalize_visible_spoolman_ids();
         Spoolman::update_visible_spool_statistics();
 
 #if 0   // do not toggle auto calc when change printer
