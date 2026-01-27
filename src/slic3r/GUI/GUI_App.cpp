@@ -2614,9 +2614,37 @@ int GUI_App::OnExit()
 
 class wxBoostLog : public wxLog
 {
-    void DoLogText(const wxString &msg) override {
+    void DoLogRecord(wxLogLevel level, const wxString& msg, const wxLogRecordInfo& info) override
+    {
+        boost::log::trivial::severity_level boostLevel;
+        switch (level) {
+            case wxLOG_FatalError:
+                boostLevel = boost::log::trivial::fatal;
+                break;
+            case wxLOG_Error:
+                boostLevel = boost::log::trivial::error;
+                break;
+            case wxLOG_Warning:
+                boostLevel = boost::log::trivial::warning;
+                break;
+            case wxLOG_Message:
+            case wxLOG_Status:
+            case wxLOG_Info:
+                boostLevel = boost::log::trivial::info;
+                break;
+            case wxLOG_Debug:
+                boostLevel = boost::log::trivial::debug;
+                break;
+            case wxLOG_Trace:
+                boostLevel = boost::log::trivial::trace;
+                break;
+            default:
+                boostLevel = boost::log::trivial::warning;
+        }
 
-        BOOST_LOG_TRIVIAL(warning) << msg.ToUTF8().data();
+        BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::logger::get(),
+            (::boost::log::keywords::severity = boostLevel)) << " " << info.func
+            << ":" << info.line << ": " << msg.ToUTF8().data();
     }
     ~wxBoostLog() override
     {
