@@ -351,6 +351,7 @@ void set_log_path_and_level(const std::string& file, unsigned int level)
 
 	g_log_sink = boost::log::add_file_log(
 		keywords::file_name = full_path.string() + ".%N",
+		keywords::file_name = full_path.string() + "_%N.log",
 		keywords::rotation_size = 100 * 1024 * 1024,
 		keywords::format =
 		(
