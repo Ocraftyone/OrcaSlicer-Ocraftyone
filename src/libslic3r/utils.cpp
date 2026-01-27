@@ -554,7 +554,7 @@ namespace WindowsSupport
 		if (! from_handle)
 		{
 			auto err_code = map_windows_error(GetLastError());
-			BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format("can not open file %1%, error: %2%") % from.c_str() % err_code.message();
+			BOOST_LOG_TRIVIAL(error) << boost::format("can not open file %1%, error: %2%") % from.c_str() % err_code.message();
 			return err_code;
 		}
 
@@ -578,7 +578,7 @@ namespace WindowsSupport
 		  		return errcode;
 
 			//BBS: add some log for error tracing
-			BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(",first rename file from %1% to %2% failed, reason: %3%") % from.c_str() % to.c_str() % errcode.message();
+			BOOST_LOG_TRIVIAL(error) << boost::format(",first rename file from %1% to %2% failed, reason: %3%") % from.c_str() % to.c_str() % errcode.message();
 			// The destination file probably exists and is currently open in another
 			// process, either because the file was opened without FILE_SHARE_DELETE or
 			// it is mapped into memory (e.g. using MemoryBuffer). Rename it in order to
@@ -595,7 +595,7 @@ namespace WindowsSupport
 					continue;
 
 				//BBS: add some log for error tracing
-				BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(",open dest file %1% failed, reason: %2%") % to.c_str() % errcode.message();
+				BOOST_LOG_TRIVIAL(error) << boost::format(",open dest file %1% failed, reason: %2%") % to.c_str() % errcode.message();
 				return errcode;
 			}
 
@@ -619,7 +619,7 @@ namespace WindowsSupport
 							if (errcode == std::errc::no_such_file_or_directory)
 						  		break;
 							//BBS: add some log for error tracing
-							BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
+							BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
 							return errcode;
 						}
 						BY_HANDLE_FILE_INFORMATION FI2;
@@ -630,7 +630,7 @@ namespace WindowsSupport
 						continue;
 					}
 					//BBS: add some log for error tracing
-					BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
+					BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
 					return errcode;
 				}
 				break;
@@ -644,7 +644,7 @@ namespace WindowsSupport
 
 		// The most likely root cause.
 		//BBS: add some log for error tracing
-		BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", line %1%, error in the end, permission_denied") % __LINE__;
+		BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error in the end, permission_denied") % __LINE__;
 		return std::make_error_code(std::errc::permission_denied);
 	}
 } // namespace WindowsSupport
@@ -963,7 +963,7 @@ bool copy_framework(const std::string &from, const std::string &to)
         }
         return true;
     } catch (const boost::filesystem::filesystem_error &e) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "Filesystem error: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Filesystem error: " << e.what();
     }
     return false;
 }

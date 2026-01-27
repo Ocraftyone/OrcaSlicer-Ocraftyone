@@ -821,7 +821,7 @@ void GUI_App::post_init()
 
     if (!this->init_params->input_files.empty()) {
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", init with input files, size %1%, input_gcode %2%")
+        BOOST_LOG_TRIVIAL(info) << boost::format(", init with input files, size %1%, input_gcode %2%")
             %this->init_params->input_files.size() %this->init_params->input_gcode;
 
         switch_to_3d = true;
@@ -852,7 +852,7 @@ void GUI_App::post_init()
                         m_open_method = "file_" + path.extension().string();
                     }
                 } catch (...) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ", file path exception!";
+                    BOOST_LOG_TRIVIAL(error) << ", file path exception!";
                     m_open_method = "file";
                 }
             }
@@ -863,10 +863,10 @@ void GUI_App::post_init()
     bool slow_bootup = false;
     if (app_config->get("slow_bootup") == "true") {
         slow_bootup = true;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", slow bootup, won't render gl here.";
+        BOOST_LOG_TRIVIAL(info) << ", slow bootup, won't render gl here.";
     }
     if (!switch_to_3d) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", begin load_gl_resources";
+        BOOST_LOG_TRIVIAL(info) << ", begin load_gl_resources";
         mainframe->Freeze();
         plater_->canvas3D()->enable_render(false);
         mainframe->select_tab(size_t(MainFrame::tp3DEditor));
@@ -877,27 +877,27 @@ void GUI_App::post_init()
 //#endif
             Size canvas_size = plater_->canvas3D()->get_canvas_size();
             wxGetApp().imgui()->set_display_size(static_cast<float>(canvas_size.get_width()), static_cast<float>(canvas_size.get_height()));
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", start to init opengl";
+            BOOST_LOG_TRIVIAL(info) << ", start to init opengl";
             wxGetApp().init_opengl();
 
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished init opengl";
+            BOOST_LOG_TRIVIAL(info) << ", finished init opengl";
             plater_->canvas3D()->init();
 
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished init canvas3D";
+            BOOST_LOG_TRIVIAL(info) << ", finished init canvas3D";
             wxGetApp().imgui()->new_frame();
 
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished init imgui frame";
+            BOOST_LOG_TRIVIAL(info) << ", finished init imgui frame";
             plater_->canvas3D()->enable_render(true);
 
             if (!slow_bootup) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", start to render a first frame for test";
+                BOOST_LOG_TRIVIAL(info) << ", start to render a first frame for test";
                 plater_->canvas3D()->render(false);
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished rendering a first frame for test";
+                BOOST_LOG_TRIVIAL(info) << ", finished rendering a first frame for test";
             }
 //#ifdef __linux__
         }
         else {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << "Found glcontext not ready, postpone the init";
+            BOOST_LOG_TRIVIAL(warning) << "Found glcontext not ready, postpone the init";
         }
 //#endif
         if (is_editor())
@@ -905,7 +905,7 @@ void GUI_App::post_init()
         if (app_config->get("default_page") == "1")
             mainframe->select_tab(size_t(1));
         mainframe->Thaw();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", end load_gl_resources";
+        BOOST_LOG_TRIVIAL(info) << ", end load_gl_resources";
     }
 
     plater_->trigger_restore_project(1);
@@ -973,9 +973,9 @@ void GUI_App::post_init()
         if (m_agent) {
             start_sync_user_preset();
         }
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: true";
+        BOOST_LOG_TRIVIAL(info) << " sync_user_preset: true";
     } else {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " sync_user_preset: false";
+        BOOST_LOG_TRIVIAL(info) << " sync_user_preset: false";
     }
 
     // The extra CallAfter() is needed because of Mac, where this is the only way
@@ -1104,7 +1104,7 @@ void GUI_App::shutdown()
 
     // destroy login dialog
     if (login_dlg != nullptr) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy login dialog");
+        BOOST_LOG_TRIVIAL(info)<< boost::format(": destroy login dialog");
         delete login_dlg;
         login_dlg = nullptr;
     }
@@ -1395,7 +1395,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
         boost::filesystem::create_directory(plugin_folder);
     }
     if (!boost::filesystem::exists(backup_folder)) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", will create directory %1%")%backup_folder.string();
+        BOOST_LOG_TRIVIAL(info) << boost::format(", will create directory %1%")%backup_folder.string();
         boost::filesystem::create_directory(backup_folder);
     }
 
@@ -1474,7 +1474,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                         try {
                             boost::filesystem::create_symlink(link, dest_path);
                         } catch (const std::exception &e) {
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " create_symlink:" << e.what();
+                            BOOST_LOG_TRIVIAL(info) << " create_symlink:" << e.what();
                         }
                     } else {
 #endif
@@ -1482,7 +1482,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
 #ifndef WIN32
                     }
 #endif
-                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", extract  %1% from plugin zip %2%\n") % dest_file % stat.m_filename;
+                    BOOST_LOG_TRIVIAL(info) << boost::format(", extract  %1% from plugin zip %2%\n") % dest_file % stat.m_filename;
                     if (res == 0) {
 #ifdef WIN32
                         std::wstring new_dest_zip_file = boost::locale::conv::utf_to_utf<wchar_t>(dest_path.generic_string());
@@ -1600,7 +1600,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
 
 void GUI_App::restart_networking()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" enter, mainframe %1%")%mainframe;
+    BOOST_LOG_TRIVIAL(info)<< boost::format(" enter, mainframe %1%")%mainframe;
     on_init_network(true);
     StaticBambuLib::reset();
     if(m_agent) {
@@ -1640,7 +1640,7 @@ void GUI_App::restart_networking()
         //     if (mainframe->m_webview) { mainframe->m_webview->SendDesignStaffpick(has_model_mall()); }
         // }
     }
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" exit, m_agent=%1%")%m_agent;
+    BOOST_LOG_TRIVIAL(info)<< boost::format(" exit, m_agent=%1%")%m_agent;
 }
 
 // Network plugin hot reload timeout constants (in milliseconds)
@@ -1690,7 +1690,7 @@ bool GUI_App::wait_for_network_idle(int timeout_ms)
         bool server_disconnected = !m_agent->is_server_connected();
 
         if (server_disconnected) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": network is idle";
+            BOOST_LOG_TRIVIAL(info) << ": network is idle";
             return true;
         }
 
@@ -1702,14 +1702,14 @@ bool GUI_App::wait_for_network_idle(int timeout_ms)
         std::this_thread::sleep_for(std::chrono::milliseconds(POLL_INTERVAL_MS));
     }
 
-    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": timeout after " << timeout_ms
+    BOOST_LOG_TRIVIAL(warning) << ": timeout after " << timeout_ms
                                 << "ms, server_connected=" << (m_agent ? m_agent->is_server_connected() : false);
     return false;
 }
 
 bool GUI_App::hot_reload_network_plugin()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": starting hot reload";
+    BOOST_LOG_TRIVIAL(info) << ": starting hot reload";
 
     wxBusyCursor busy;
     wxBusyInfo info(_L("Reloading network plugin..."), mainframe);
@@ -1719,24 +1719,24 @@ bool GUI_App::hot_reload_network_plugin()
     if (mainframe) {
         int current_tab = mainframe->m_tabpanel->GetSelection();
         if (current_tab == MainFrame::TabPosition::tpMonitor) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": navigating away from Monitor tab before unload";
+            BOOST_LOG_TRIVIAL(info) << ": navigating away from Monitor tab before unload";
             mainframe->m_tabpanel->SetSelection(MainFrame::TabPosition::tp3DEditor);
         }
     }
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": stopping sync thread before unload";
+    BOOST_LOG_TRIVIAL(info) << ": stopping sync thread before unload";
     if (m_user_sync_token) {
         m_user_sync_token.reset();
     }
     if (m_sync_update_thread.joinable()) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": waiting for sync thread to finish";
+        BOOST_LOG_TRIVIAL(info) << ": waiting for sync thread to finish";
         m_sync_update_thread.join();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": sync thread finished";
+        BOOST_LOG_TRIVIAL(info) << ": sync thread finished";
     }
 
     if (m_agent) {
         // Phase 1: Clear all callbacks (stops new invocations)
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 1 - clearing callbacks";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 1 - clearing callbacks";
         m_agent->set_on_ssdp_msg_fn(nullptr);
         m_agent->set_on_user_login_fn(nullptr);
         m_agent->set_on_printer_connected_fn(nullptr);
@@ -1750,65 +1750,65 @@ bool GUI_App::hot_reload_network_plugin()
         m_agent->set_queue_on_main_fn(nullptr);
 
         // Phase 2: Drain pending CallAfter callbacks (bounded)
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 2 - draining callbacks";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 2 - draining callbacks";
         drain_pending_events(CALLBACK_DRAIN_TIMEOUT_MS);
 
         // Phase 3: Stop operations and verify return values
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 3 - stopping operations";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 3 - stopping operations";
         bool discovery_stopped = m_agent->start_discovery(false, false);
         int disconnect_result = m_agent->disconnect_printer();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": discovery_stopped=" << discovery_stopped
+        BOOST_LOG_TRIVIAL(info) << ": discovery_stopped=" << discovery_stopped
                                 << ", disconnect_result=" << disconnect_result;
 
         // Phase 4: Wait for idle with state verification
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 4 - waiting for idle";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 4 - waiting for idle";
         bool became_idle = wait_for_network_idle(NETWORK_IDLE_TIMEOUT_MS);
         if (!became_idle) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": proceeding despite timeout";
+            BOOST_LOG_TRIVIAL(warning) << ": proceeding despite timeout";
         }
 
         // Phase 5: Final bounded drain before destruction
         drain_pending_events(FINAL_DRAIN_TIMEOUT_MS);
 
         // Phase 6: Destroy agent
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 6 - destroying agent";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 6 - destroying agent";
         delete m_agent;
         m_agent = nullptr;
     }
 
     // Phase 7: Unload module
     if (Slic3r::NetworkAgent::is_network_module_loaded()) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Phase 7 - unloading module";
+        BOOST_LOG_TRIVIAL(info) << ": Phase 7 - unloading module";
         drain_pending_events(FINAL_DRAIN_TIMEOUT_MS);
         int unload_result = Slic3r::NetworkAgent::unload_network_module();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": unload_result=" << unload_result;
+        BOOST_LOG_TRIVIAL(info) << ": unload_result=" << unload_result;
     }
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": calling restart_networking";
+    BOOST_LOG_TRIVIAL(info) << ": calling restart_networking";
     restart_networking();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": restart_networking returned";
+    BOOST_LOG_TRIVIAL(info) << ": restart_networking returned";
 
     std::string loaded_version = Slic3r::NetworkAgent::get_version();
     bool success = m_agent != nullptr && !loaded_version.empty() && loaded_version != "00.00.00.00";
     bool user_logged_in = m_agent && m_agent->is_user_login();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": after restart_networking, is_user_login = " << user_logged_in
+    BOOST_LOG_TRIVIAL(info) << ": after restart_networking, is_user_login = " << user_logged_in
                             << ", m_agent = " << (m_agent ? "valid" : "null")
                             << ", version = " << loaded_version;
 
     if (success && m_agent && m_device_manager) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": connecting to cloud server";
+        BOOST_LOG_TRIVIAL(info) << ": connecting to cloud server";
         m_agent->connect_server();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": re-subscribing to cloud printers";
+        BOOST_LOG_TRIVIAL(info) << ": re-subscribing to cloud printers";
         m_device_manager->add_user_subscribe();
     }
 
     if (mainframe && mainframe->m_monitor) {
         mainframe->m_monitor->update_network_version_footer();
         mainframe->m_monitor->set_default();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": reset monitor panel";
+        BOOST_LOG_TRIVIAL(info) << ": reset monitor panel";
     }
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": hot reload " << (success ? "successful" : "failed");
+    BOOST_LOG_TRIVIAL(info) << ": hot reload " << (success ? "successful" : "failed");
     return success;
 }
 
@@ -1939,19 +1939,19 @@ bool GUI_App::check_networking_version()
 
 bool GUI_App::is_compatibility_version()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": m_networking_compatible=%1%")%m_networking_compatible;
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": m_networking_compatible=%1%")%m_networking_compatible;
     return m_networking_compatible;
 }
 
 void GUI_App::cancel_networking_install()
 {
     m_networking_cancel_update = true;
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": plugin install cancelled!");
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": plugin install cancelled!");
 }
 
 void GUI_App::init_networking_callbacks()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter, m_agent=%1%")%m_agent;
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": enter, m_agent=%1%")%m_agent;
     if (m_agent) {
         //set callbacks
         //m_agent->set_on_user_login_fn([this](int online_login, bool login) {
@@ -1959,7 +1959,7 @@ void GUI_App::init_networking_callbacks()
         //    });
 
         m_agent->set_server_callback([](std::string url, int status) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": server_callback, url=%1%, status=%2%") % url % status;
+            BOOST_LOG_TRIVIAL(warning) << boost::format(": server_callback, url=%1%, status=%2%") % url % status;
             //CallAfter([this]() {
             //    if (!m_server_error_dialog) {
             //        /*m_server_error_dialog->EndModal(wxCLOSE);
@@ -2211,30 +2211,30 @@ void GUI_App::init_networking_callbacks()
             CallAfter(callback);
         });
     }
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit, m_agent=%1%")%m_agent;
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": exit, m_agent=%1%")%m_agent;
 }
 
 GUI_App::~GUI_App()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": enter");
     if (app_config != nullptr) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy app_config");
+        BOOST_LOG_TRIVIAL(info)<< boost::format(": destroy app_config");
         delete app_config;
     }
 
     if (preset_bundle != nullptr) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset_bundle");
+        BOOST_LOG_TRIVIAL(info)<< boost::format(": destroy preset_bundle");
         delete preset_bundle;
     }
 
     if (preset_updater != nullptr) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset updater");
+        BOOST_LOG_TRIVIAL(info)<< boost::format(": destroy preset updater");
         delete preset_updater;
     }
 
     StaticBambuLib::release();
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
+    BOOST_LOG_TRIVIAL(info)<< boost::format(": exit");
 }
 
 bool GUI_App::is_blocking_printing(MachineObject *obj_)
@@ -2522,7 +2522,7 @@ void GUI_App::on_start_subscribe_again(std::string dev_id)
         if ( (dev_id == obj->get_dev_id()) && obj->is_connecting() && obj->subscribe_counter > 0) {
             obj->subscribe_counter--;
             if(wxGetApp().getAgent()) wxGetApp().getAgent()->set_user_selected_machine(dev_id);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": dev_id=" << obj->get_dev_id();
+            BOOST_LOG_TRIVIAL(info) << ": dev_id=" << obj->get_dev_id();
         }
     });
     start_subscribe_timer->Start(5000, wxTIMER_ONE_SHOT);
@@ -2684,7 +2684,7 @@ bool GUI_App::on_init_inner()
 #endif
 
     wxGetApp().Bind(wxEVT_QUERY_END_SESSION, [this](auto & e) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< "received wxEVT_QUERY_END_SESSION";
+        BOOST_LOG_TRIVIAL(info)<< "received wxEVT_QUERY_END_SESSION";
         if (mainframe) {
             wxCloseEvent e2(wxEVT_CLOSE_WINDOW);
             e2.SetCanVeto(true);
@@ -3201,14 +3201,14 @@ void GUI_App::copy_network_if_available()
             ifs >> j;
             if (j.contains("version"))
                 cached_version = j["version"];
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": cached_version = " << cached_version;
+            BOOST_LOG_TRIVIAL(info) << ": cached_version = " << cached_version;
         } catch (nlohmann::detail::parse_error& err) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": parse " << changelog_file << " failed: " << err.what();
+            BOOST_LOG_TRIVIAL(error) << ": parse " << changelog_file << " failed: " << err.what();
         }
     }
 
     if (cached_version.empty()) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": no version found in changelog, aborting copy";
+        BOOST_LOG_TRIVIAL(error) << ": no version found in changelog, aborting copy";
         app_config->set("update_network_plugin", "false");
         return;
     }
@@ -3237,23 +3237,23 @@ void GUI_App::copy_network_if_available()
     live555_library_dst = plugin_folder.string() + "/liblive555.so";
 #endif
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": checking network_library " << network_library << ", player_library " << player_library;
+    BOOST_LOG_TRIVIAL(info) << ": checking network_library " << network_library << ", player_library " << player_library;
     if (!boost::filesystem::exists(plugin_folder)) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": create directory " << plugin_folder.string();
+        BOOST_LOG_TRIVIAL(info) << ": create directory " << plugin_folder.string();
         boost::filesystem::create_directory(plugin_folder);
     }
     std::string error_message;
     if (boost::filesystem::exists(network_library)) {
         CopyFileResult cfr = copy_file(network_library, network_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
+            BOOST_LOG_TRIVIAL(error) << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
         static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
         fs::permissions(network_library_dst, perms);
         fs::remove(network_library);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying network library from " << network_library << " to " << network_library_dst << " successfully.";
+        BOOST_LOG_TRIVIAL(info) << ": Copying network library from " << network_library << " to " << network_library_dst << " successfully.";
 
         app_config->set(SETTING_NETWORK_PLUGIN_VERSION, cached_version);
         app_config->save();
@@ -3262,27 +3262,27 @@ void GUI_App::copy_network_if_available()
     if (boost::filesystem::exists(player_library)) {
         CopyFileResult cfr = copy_file(player_library, player_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
+            BOOST_LOG_TRIVIAL(error) << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
         static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
         fs::permissions(player_library_dst, perms);
         fs::remove(player_library);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying player library from " << player_library << " to " << player_library_dst << " successfully.";
+        BOOST_LOG_TRIVIAL(info) << ": Copying player library from " << player_library << " to " << player_library_dst << " successfully.";
     }
 
     if (boost::filesystem::exists(live555_library)) {
         CopyFileResult cfr = copy_file(live555_library, live555_library_dst, error_message, false);
         if (cfr != CopyFileResult::SUCCESS) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": Copying failed(" << cfr << "): " << error_message;
+            BOOST_LOG_TRIVIAL(error) << ": Copying failed(" << cfr << "): " << error_message;
             return;
         }
 
         static constexpr const auto perms = fs::owner_read | fs::owner_write | fs::group_read | fs::others_read;
         fs::permissions(live555_library_dst, perms);
         fs::remove(live555_library);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying live555 library from " << live555_library << " to " << live555_library_dst << " successfully.";
+        BOOST_LOG_TRIVIAL(info) << ": Copying live555 library from " << live555_library << " to " << live555_library_dst << " successfully.";
     }
     if (boost::filesystem::exists(changelog_file))
         fs::remove(changelog_file);
@@ -3297,10 +3297,10 @@ bool GUI_App::on_init_network(bool try_backup)
     std::string config_version = app_config->get_network_plugin_version();
 
     if(!should_load_networking_plugin) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Don't load plugin as installed_networking is false";
+        BOOST_LOG_TRIVIAL(info) << "Don't load plugin as installed_networking is false";
     } else {
     if (config_version.empty()) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": no version configured, need to download";
+        BOOST_LOG_TRIVIAL(info) << ": no version configured, need to download";
         m_networking_need_update = true;
 
         if (!m_device_manager)
@@ -3313,24 +3313,24 @@ bool GUI_App::on_init_network(bool try_backup)
     int load_agent_dll = Slic3r::NetworkAgent::initialize_network_module(false, config_version);
 __retry:
     if (!load_agent_dll) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, load dll ok";
+        BOOST_LOG_TRIVIAL(info) << ": on_init_network, load dll ok";
 
         std::string loaded_version = Slic3r::NetworkAgent::get_version();
         if (app_config && !loaded_version.empty() && loaded_version != "00.00.00.00") {
             std::string config_version = app_config->get_network_plugin_version();
             std::string config_base = BBL::extract_base_version(config_version);
             if (config_base != loaded_version) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": syncing config version from " << config_version << " to loaded " << loaded_version;
+                BOOST_LOG_TRIVIAL(info) << ": syncing config version from " << config_version << " to loaded " << loaded_version;
                 app_config->set(SETTING_NETWORK_PLUGIN_VERSION, loaded_version);
                 app_config->save();
             }
         }
 
         if (check_networking_version()) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, compatibility version";
+            BOOST_LOG_TRIVIAL(info) << ": on_init_network, compatibility version";
             auto bambu_source = Slic3r::NetworkAgent::get_bambu_source_entry();
             if (!bambu_source) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": can not get bambu source module!";
+                BOOST_LOG_TRIVIAL(info) << ": can not get bambu source module!";
                 m_networking_compatible = false;
                 if (should_load_networking_plugin) {
                     m_networking_need_update = true;
@@ -3346,22 +3346,22 @@ __retry:
                 try_backup = false;
                 goto __retry;
             }
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, version dismatch, need upload network module";
+            BOOST_LOG_TRIVIAL(info) << ": on_init_network, version dismatch, need upload network module";
             if (should_load_networking_plugin) {
                 m_networking_need_update = true;
             }
         }
     } else {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, load dll failed";
+        BOOST_LOG_TRIVIAL(info) << ": on_init_network, load dll failed";
         if (should_load_networking_plugin) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, need upload network module";
+            BOOST_LOG_TRIVIAL(info) << ": on_init_network, need upload network module";
             m_networking_need_update = true;
         }
     }
     }
 
     if (create_network_agent) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", create network agent...");
+        BOOST_LOG_TRIVIAL(info) << boost::format(", create network agent...");
         //std::string data_dir = wxStandardPaths::Get().GetUserDataDir().ToUTF8().data();
         std::string data_directory = data_dir();
 
@@ -3682,7 +3682,7 @@ void GUI_App::UpdateDarkUIWin(wxWindow* win)
 void GUI_App::Update_dark_mode_flag()
 {
     m_is_dark_mode = dark_mode();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": switch the current dark mode status to %1% ")%m_is_dark_mode;
+    BOOST_LOG_TRIVIAL(info) << boost::format(": switch the current dark mode status to %1% ")%m_is_dark_mode;
 }
 
 void GUI_App::UpdateDlgDarkUI(wxDialog* dlg)
@@ -3917,7 +3917,7 @@ void release_window_pools();
 
 void GUI_App::recreate_GUI(const wxString &msg_name)
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI enter";
+    BOOST_LOG_TRIVIAL(info) << "recreate_GUI enter";
     m_is_recreating_gui = true;
 
     update_http_extra_header();
@@ -3976,7 +3976,7 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
 
     m_is_recreating_gui = false;
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "recreate_GUI exit";
+    BOOST_LOG_TRIVIAL(info) << "recreate_GUI exit";
 }
 
 void GUI_App::system_info()
@@ -4164,7 +4164,7 @@ void GUI_App::persist_window_geometry(wxTopLevelWindow *window, bool default_max
     const std::string name = into_u8(window->GetName());
 
     window->Bind(wxEVT_CLOSE_WINDOW, [=](wxCloseEvent &event) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ": received wxEVT_CLOSE_WINDOW, trigger save for window_mainframe";
+        BOOST_LOG_TRIVIAL(info)<< ": received wxEVT_CLOSE_WINDOW, trigger save for window_mainframe";
         window_pos_save(window, "mainframe");
         event.Skip();
     });
@@ -5588,7 +5588,7 @@ void GUI_App::reload_settings()
     if (preset_bundle && m_agent) {
         std::map<std::string, std::map<std::string, std::string>> user_presets;
         m_agent->get_user_presets(&user_presets);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " cloud user preset number is: " << user_presets.size();
+        BOOST_LOG_TRIVIAL(info) << " cloud user preset number is: " << user_presets.size();
         preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
         preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
         mainframe->update_side_preset_ui();
@@ -5810,7 +5810,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                     return true;
                 }
             }, progressFn, cancelFn);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " get_setting_list2 ret = " << ret << " m_is_closing = " << m_is_closing;
+            BOOST_LOG_TRIVIAL(info) << " get_setting_list2 ret = " << ret << " m_is_closing = " << m_is_closing;
             finishFn(ret == 0);
 
             int count = 0, sync_count = 0;
@@ -6961,7 +6961,7 @@ void GUI_App::MacOpenFiles(const wxArrayString &fileNames)
     std::vector<std::string> files;
     std::vector<wxString>    gcode_files;
     std::vector<wxString>    non_gcode_files;
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", open files, size " << fileNames.size();
+    BOOST_LOG_TRIVIAL(info) << ", open files, size " << fileNames.size();
     for (const auto& filename : fileNames) {
         if (is_gcode_file(into_u8(filename)))
             gcode_files.emplace_back(filename);

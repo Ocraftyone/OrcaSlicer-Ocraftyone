@@ -1264,7 +1264,7 @@ bool GLCanvas3D::init()
     if (m_multisample_allowed)
         glsafe(::glEnable(GL_MULTISAMPLE));
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": before m_layers_editing init";
+    BOOST_LOG_TRIVIAL(info) << ": before m_layers_editing init";
     if (m_main_toolbar.is_enabled())
         m_layers_editing.init();
 
@@ -6795,7 +6795,7 @@ bool GLCanvas3D::_update_imgui_select_plate_toolbar()
 //init the assemble view toolbar on the top
 bool GLCanvas3D::_init_assemble_view_toolbar()
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": enter,  m_assemble_view_toolbar.is_enabled=" << m_assemble_view_toolbar.is_enabled() << "\n";
+    BOOST_LOG_TRIVIAL(info) << ": enter,  m_assemble_view_toolbar.is_enabled=" << m_assemble_view_toolbar.is_enabled() << "\n";
     if (!m_assemble_view_toolbar.is_enabled())
         return true;
 
@@ -6839,7 +6839,7 @@ bool GLCanvas3D::_init_assemble_view_toolbar()
     if (!m_assemble_view_toolbar.add_item(item))
         return false;
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Finished Successfully\n";
+    BOOST_LOG_TRIVIAL(info) << ": Finished Successfully\n";
     return true;
 }
 

@@ -204,7 +204,7 @@ typedef struct _cli_callback_mgr {
 
     void set_plate_info(int index, int count)
     {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": index="<<index<< ", count = "<< count;
+        BOOST_LOG_TRIVIAL(info) << ": index="<<index<< ", count = "<< count;
         std::unique_lock<std::mutex> lck(m_mutex);
         m_plate_count = count;
         m_plate_index = index;
@@ -237,7 +237,7 @@ typedef struct _cli_callback_mgr {
         snprintf(pipe_message, PIPE_BUFFER_SIZE, "%s\n", notify_message.c_str());
 
         int ret = write(m_pipe_fd, pipe_message, strlen(pipe_message));
-        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ": write returns "<<ret;
+        BOOST_LOG_TRIVIAL(debug) << ": write returns "<<ret;
 
         return;
     }
@@ -254,7 +254,7 @@ typedef struct _cli_callback_mgr {
         while(1) {
             lck.lock();
             m_condition.wait(lck, [this](){ return m_data_ready || m_exit; });
-            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ": wakeup.";
+            BOOST_LOG_TRIVIAL(debug) << ": wakeup.";
             if (m_data_ready) {
                 notify();
                 m_data_ready = false;
@@ -284,7 +284,7 @@ typedef struct _cli_callback_mgr {
             return;
         }
         int old_total_progress = m_total_progress;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": percent="<<percent<< ", warning_step=" << warning_step << ", plate_index = "<< m_plate_index<<", plate_count="<< m_plate_count<<", message="<<message;
+        BOOST_LOG_TRIVIAL(info) << ": percent="<<percent<< ", warning_step=" << warning_step << ", plate_index = "<< m_plate_index<<", plate_count="<< m_plate_count<<", message="<<message;
         if (warning_step == -1) {
             m_progress = percent;
             if ((m_plate_count <= 1) && (m_plate_index >= 1))
@@ -302,7 +302,7 @@ typedef struct _cli_callback_mgr {
         m_data_ready = true;
         lck.unlock();
         m_condition.notify_one();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": m_total_progress="<<m_total_progress;
+        BOOST_LOG_TRIVIAL(info) << ": m_total_progress="<<m_total_progress;
         return;
     }
 
@@ -360,7 +360,7 @@ void cli_status_callback(const PrintBase::SlicingStatus& slicing_status)
 {
     if (slicing_status.warning_step != -1) {
         g_slicing_warnings.push_back(slicing_status);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": percent=%1%, warning_step=%2%, message=%3%, message_type=%4%, flag=%5%")
+        BOOST_LOG_TRIVIAL(info) << boost::format(": percent=%1%, warning_step=%2%, message=%3%, message_type=%4%, flag=%5%")
             %slicing_status.percent %slicing_status.warning_step %slicing_status.text %(int)(slicing_status.message_type) %slicing_status.flags;
     }
     g_cli_callback_mgr.update(slicing_status.percent, slicing_status.text, slicing_status.warning_step);
@@ -373,7 +373,7 @@ void default_status_callback(const PrintBase::SlicingStatus& slicing_status)
     if (slicing_status.warning_step != -1) {
         g_slicing_warnings.push_back(slicing_status);
     }
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": percent=%1%, warning_step=%2%, message=%3%, message_type=%4%")%slicing_status.percent %slicing_status.warning_step %slicing_status.text %(int)(slicing_status.message_type);
+    BOOST_LOG_TRIVIAL(debug) << boost::format(": percent=%1%, warning_step=%2%, message=%3%, message_type=%4%")%slicing_status.percent %slicing_status.warning_step %slicing_status.text %(int)(slicing_status.message_type);
 
     return;
 }
@@ -445,7 +445,7 @@ void record_exit_reson(std::string outputdir, int code, int plate_id, std::strin
         c << std::setw(4) << j << std::endl;
         c.close();
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" <<__LINE__ << boost::format(", saved config to %1%\n")%result_file;
+        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", saved config to %1%\n")%result_file;
     }
     catch (...) {}
 #endif
@@ -499,7 +499,7 @@ static int load_key_values_from_json(const std::string &file, std::map<std::stri
     json j;
     CNumericLocalesSetter locales_setter;
 
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__<< ": begin to parse "<<file;
+    BOOST_LOG_TRIVIAL(debug)<< ": begin to parse "<<file;
     try {
         boost::nowide::ifstream ifs(file);
         ifs >> j;
@@ -516,18 +516,18 @@ static int load_key_values_from_json(const std::string &file, std::map<std::stri
         }
     }
     catch (const std::ifstream::failure &err)  {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse "<<file<<" got a ifstream error, reason = " << err.what();
+        BOOST_LOG_TRIVIAL(error)<< ": parse "<<file<<" got a ifstream error, reason = " << err.what();
         return -1;
     }
     catch(nlohmann::detail::parse_error &err) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse "<<file<<" got a nlohmann::detail::parse_error, reason = " << err.what();
+        BOOST_LOG_TRIVIAL(error)<< ": parse "<<file<<" got a nlohmann::detail::parse_error, reason = " << err.what();
         return -2;
     }
     catch(std::exception &err) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse "<<file<<" got a generic exception, reason = " << err.what();
+        BOOST_LOG_TRIVIAL(error)<< ": parse "<<file<<" got a generic exception, reason = " << err.what();
         return -3;
     }
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__<< ": finished parse, key_values size "<<key_values.size();
+    BOOST_LOG_TRIVIAL(debug)<< ": finished parse, key_values size "<<key_values.size();
     return 0;
 }
 
@@ -537,60 +537,60 @@ static std::set<std::string> gcodes_key_set =  {"filament_end_gcode", "filament_
 static void load_default_gcodes_to_config(DynamicPrintConfig& config, Preset::Type type)
 {
     if (config.size() == 0) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ", empty config, return directly";
+        BOOST_LOG_TRIVIAL(info)<< ", empty config, return directly";
         return;
     }
     //add those empty gcodes by default
     if (type == Preset::TYPE_PRINTER)
     {
         std::string change_filament_gcode = config.option<ConfigOptionString>("change_filament_gcode", true)->value;
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", change_filament_gcode: "<< change_filament_gcode;
+        BOOST_LOG_TRIVIAL(trace)<< ", change_filament_gcode: "<< change_filament_gcode;
 
         ConfigOptionString* layer_change_gcode_opt = config.option<ConfigOptionString>("layer_change_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", layer_change_gcode: "<<layer_change_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", layer_change_gcode: "<<layer_change_gcode_opt->value;
 
         ConfigOptionString* machine_end_gcode_opt = config.option<ConfigOptionString>("machine_end_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", machine_end_gcode: "<<machine_end_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", machine_end_gcode: "<<machine_end_gcode_opt->value;
 
         ConfigOptionString* machine_pause_gcode_opt = config.option<ConfigOptionString>("machine_pause_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", machine_pause_gcode: "<<machine_pause_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", machine_pause_gcode: "<<machine_pause_gcode_opt->value;
 
         ConfigOptionString* machine_start_gcode_opt = config.option<ConfigOptionString>("machine_start_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", machine_start_gcode: "<<machine_start_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", machine_start_gcode: "<<machine_start_gcode_opt->value;
 
         ConfigOptionString* template_custom_gcode_opt = config.option<ConfigOptionString>("template_custom_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", template_custom_gcode: "<<template_custom_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", template_custom_gcode: "<<template_custom_gcode_opt->value;
 
         ConfigOptionString* printing_by_object_gcode_opt = config.option<ConfigOptionString>("printing_by_object_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", printing_by_object_gcode: "<<printing_by_object_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", printing_by_object_gcode: "<<printing_by_object_gcode_opt->value;
 
         ConfigOptionString* before_layer_change_gcode_opt = config.option<ConfigOptionString>("before_layer_change_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", before_layer_change_gcode: "<<before_layer_change_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", before_layer_change_gcode: "<<before_layer_change_gcode_opt->value;
 
         ConfigOptionString* timeplase_gcode_opt = config.option<ConfigOptionString>("time_lapse_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", time_lapse_gcode: "<<timeplase_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace)<< ", time_lapse_gcode: "<<timeplase_gcode_opt->value;
 
         ConfigOptionString *wrapping_detection_gcode_opt = config.option<ConfigOptionString>("wrapping_detection_gcode", true);
-        BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ", wrapping_detection_gcode: " << wrapping_detection_gcode_opt->value;
+        BOOST_LOG_TRIVIAL(trace) << ", wrapping_detection_gcode: " << wrapping_detection_gcode_opt->value;
     }
     else if (type == Preset::TYPE_FILAMENT)
     {
         std::vector<std::string>& filament_start_gcodes = config.option<ConfigOptionStrings>("filament_start_gcode", true)->values;
         if (filament_start_gcodes.empty()) {
             filament_start_gcodes.resize(1, std::string());
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ", set filament_start_gcodes to empty";
+            BOOST_LOG_TRIVIAL(info)<< ", set filament_start_gcodes to empty";
         }
         else {
-            BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", filament_start_gcodes: "<<filament_start_gcodes[0];
+            BOOST_LOG_TRIVIAL(trace)<< ", filament_start_gcodes: "<<filament_start_gcodes[0];
         }
 
         std::vector<std::string>& filament_end_gcodes = config.option<ConfigOptionStrings>("filament_end_gcode", true)->values;
         if (filament_end_gcodes.empty()) {
             filament_end_gcodes.resize(1, std::string());
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ", set filament_end_gcode to empty";
+            BOOST_LOG_TRIVIAL(info)<< ", set filament_end_gcode to empty";
         }
         else {
-            BOOST_LOG_TRIVIAL(trace) << __FUNCTION__<< ", filament_end_gcode: "<<filament_end_gcodes[0];
+            BOOST_LOG_TRIVIAL(trace)<< ", filament_end_gcode: "<<filament_end_gcodes[0];
         }
     }
 }
@@ -614,7 +614,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
 
         int plate_count = root_json[JSON_ASSEMPLE_PLATES].size();
         if ((plate_count <= 0) || (plate_count > MAX_PLATE_COUNT)) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< boost::format(": invalid plate count %1%")%plate_count;
+            BOOST_LOG_TRIVIAL(error)<< boost::format(": invalid plate count %1%")%plate_count;
             return CLI_CONFIG_FILE_ERROR;
         }
         assemble_plate_info_list.resize(plate_count);
@@ -633,7 +633,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
 
             int object_count = plate_json[JSON_ASSEMPLE_OBJECTS].size();
             if (object_count <= 0) {
-                BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< boost::format(": invalid object count %1% in plate %2%")%object_count %(plate_index+1);
+                BOOST_LOG_TRIVIAL(error)<< boost::format(": invalid object count %1% in plate %2%")%object_count %(plate_index+1);
                 return CLI_CONFIG_FILE_ERROR;
             }
 
@@ -647,14 +647,14 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
                 assemble_object.count = object_json[JSON_ASSEMPLE_OBJECT_COUNT];
 
                 if (assemble_object.count <= 0) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": invalid object clone count %1% in plate %2% Object %3%") % assemble_object.count % (plate_index + 1) % assemble_object.path;
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": invalid object clone count %1% in plate %2% Object %3%") % assemble_object.count % (plate_index + 1) % assemble_object.path;
                     return CLI_CONFIG_FILE_ERROR;
                 }
 
                 assemble_object.filaments = object_json.at(JSON_ASSEMPLE_OBJECT_FILAMENTS).get<std::vector<int>>();
                 if ((assemble_object.filaments.size() > 0) && (assemble_object.filaments.size() != assemble_object.count) && (assemble_object.filaments.size() != 1))
                 {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": object %1%'s filaments count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.filaments.size() % assemble_object.count;
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": object %1%'s filaments count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.filaments.size() % assemble_object.count;
                     return CLI_CONFIG_FILE_ERROR;
                 }
 
@@ -662,7 +662,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
                     assemble_object.assemble_index = object_json[JSON_ASSEMPLE_OBJECT_ASSEMBLE_INDEX].get<std::vector<int>>();
                     if ((assemble_object.assemble_index.size() > 0) && (assemble_object.assemble_index.size() != assemble_object.count) && (assemble_object.assemble_index.size() != 1))
                     {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": object %1%'s assemble_index count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.assemble_index.size() % assemble_object.count;
+                        BOOST_LOG_TRIVIAL(error) << boost::format(": object %1%'s assemble_index count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.assemble_index.size() % assemble_object.count;
                         return CLI_CONFIG_FILE_ERROR;
                     }
                 }
@@ -671,7 +671,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
                     assemble_object.pos_x = object_json[JSON_ASSEMPLE_OBJECT_POS_X].get<std::vector<float>>();
                     if ((assemble_object.pos_x.size() > 0) && (assemble_object.pos_x.size() != assemble_object.count) && (assemble_object.pos_x.size() != 1))
                     {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": object %1%'s pos_x count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_x.size() % assemble_object.count;
+                        BOOST_LOG_TRIVIAL(error) << boost::format(": object %1%'s pos_x count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_x.size() % assemble_object.count;
                         return CLI_CONFIG_FILE_ERROR;
                     }
                 }
@@ -679,7 +679,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
                     assemble_object.pos_y = object_json[JSON_ASSEMPLE_OBJECT_POS_Y].get<std::vector<float>>();
                     if ((assemble_object.pos_y.size() > 0) && (assemble_object.pos_y.size() != assemble_object.count) && (assemble_object.pos_y.size() != 1))
                     {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": object %1%'s pos_y count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_y.size() % assemble_object.count;
+                        BOOST_LOG_TRIVIAL(error) << boost::format(": object %1%'s pos_y count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_y.size() % assemble_object.count;
                         return CLI_CONFIG_FILE_ERROR;
                     }
                 }
@@ -687,7 +687,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
                     assemble_object.pos_z = object_json[JSON_ASSEMPLE_OBJECT_POS_Z].get<std::vector<float>>();
                     if ((assemble_object.pos_z.size() > 0) && (assemble_object.pos_z.size() != assemble_object.count) && (assemble_object.pos_z.size() != 1))
                     {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": object %1%'s pos_z count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_z.size() % assemble_object.count;
+                        BOOST_LOG_TRIVIAL(error) << boost::format(": object %1%'s pos_z count %2% not equal to clone count %3%, also not equal to 1") % assemble_object.path % assemble_object.pos_z.size() % assemble_object.count;
                         return CLI_CONFIG_FILE_ERROR;
                     }
                 }
@@ -744,7 +744,7 @@ static int load_assemble_plate_list(std::string config_file, std::vector<assembl
         }
     }
     catch(std::exception &err) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse file "<<config_file<<" got a generic exception, reason = " << err.what();
+        BOOST_LOG_TRIVIAL(error)<< ": parse file "<<config_file<<" got a generic exception, reason = " << err.what();
         ret = CLI_CONFIG_FILE_ERROR;
     }
 
@@ -862,7 +862,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
 
         int object_count = assemble_plate_info.assemble_obj_list.size();
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": Plate %1%, name %2%, obj count %3%, plate params count %4%") % (index + 1) %assemble_plate_info.plate_name %object_count %assemble_plate_info.plate_params.size();
+        BOOST_LOG_TRIVIAL(info) << boost::format(": Plate %1%, name %2%, obj count %3%, plate params count %4%") % (index + 1) %assemble_plate_info.plate_name %object_count %assemble_plate_info.plate_params.size();
         PlateData* plate_data = new PlateData();
         plate_list[index] = plate_data;
         plate_data->plate_name = assemble_plate_info.plate_name;
@@ -873,7 +873,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
             for (auto plate_iter = assemble_plate_info.plate_params.begin(); plate_iter != assemble_plate_info.plate_params.end(); plate_iter++)
             {
                 plate_data->config.set_deserialize(plate_iter->first, plate_iter->second, config_substitutions);
-                BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": Plate %1%, key %2%, value %3%") % (index + 1) % plate_iter->first % plate_iter->second;
+                BOOST_LOG_TRIVIAL(debug) << boost::format(": Plate %1%, key %2%, value %3%") % (index + 1) % plate_iter->first % plate_iter->second;
             }
         }
 
@@ -889,7 +889,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
 
             boost::filesystem::path object_path(assemble_object.path);
             if (!fs::exists(object_path)) {
-                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": directory %1% not exist in plate %2%") % assemble_object.path % (index + 1);
+                BOOST_LOG_TRIVIAL(error) << boost::format(": directory %1% not exist in plate %2%") % assemble_object.path % (index + 1);
                 return CLI_FILE_NOTFOUND;
             }
 
@@ -900,18 +900,18 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
             if (boost::algorithm::iends_with(assemble_object.path, ".stl"))
             {
                 if (!mesh.ReadSTLFile(path_str, true, nullptr)) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": failed to read stl file from %1%, plate index %2%, object index %3%") % assemble_object.path % (index+1) % (obj_index+1);
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": failed to read stl file from %1%, plate index %2%, object index %3%") % assemble_object.path % (index+1) % (obj_index+1);
                     return CLI_DATA_FILE_ERROR;
                 }
                 if (mesh.empty()) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": found no mesh data from stl file %1%, plate index %2%, object index %3%") % assemble_object.path % (index + 1) % (obj_index + 1);
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": found no mesh data from stl file %1%, plate index %2%, object index %3%") % assemble_object.path % (index + 1) % (obj_index + 1);
                     return CLI_DATA_FILE_ERROR;
                 }
                 object_name.erase(object_name.end() - 4, object_name.end());
                 object_1_name = object_name + "_1";
                 object = temp_model.add_object(object_1_name.c_str(), path_str, std::move(mesh));
                 if (!object) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": add_object %1% for stl failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": add_object %1% for stl failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
                     return CLI_DATA_FILE_ERROR;
                 }
             }
@@ -921,11 +921,11 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
                 ObjInfo  obj_info;
                 bool    result = load_obj(path_str, &mesh, obj_info, message);
                 if (!result) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, error %4%") % assemble_object.path % (index + 1) % (obj_index + 1) % message;
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, error %4%") % assemble_object.path % (index + 1) % (obj_index + 1) % message;
                     return CLI_DATA_FILE_ERROR;
                 }
                 if (obj_info.lost_material_name != "") {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, mtl lost material: %4% ,please check mtl file") %
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, mtl lost material: %4% ,please check mtl file") %
                                                     assemble_object.path % (index + 1) % (obj_index + 1) % obj_info.lost_material_name;
                     return CLI_DATA_FILE_ERROR;
                 }
@@ -934,7 +934,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
                     auto temp1         = mesh.facets_count();
                     bool some_face_no_color = temp0 < temp1;
                     if (some_face_no_color) {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, error:some_face_no_color,please check mtl file and obj file.") %
+                        BOOST_LOG_TRIVIAL(error)<< boost::format(": failed to read a valid mesh from obj file %1%, plate index %2%, object index %3%, error:some_face_no_color,please check mtl file and obj file.") %
                                                         assemble_object.path % (index + 1) % (obj_index + 1);
                         return CLI_DATA_FILE_ERROR;
                     }
@@ -945,7 +945,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
                 Model obj_temp_model;
                 ModelObject* temp_object = obj_temp_model.add_object(object_1_name.c_str(), path_str, std::move(mesh));
                 if (!temp_object) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": add_object %1%  for obj failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": add_object %1%  for obj failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
                     return CLI_DATA_FILE_ERROR;
                 }
 
@@ -966,19 +966,19 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
                     skip_filament = true;
                 }
                 if (!result) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": failed to convert colors for %1%, plate index %2%, object index %3%, error %4%") % assemble_object.path % (index + 1) % (obj_index + 1) % message;
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": failed to convert colors for %1%, plate index %2%, object index %3%, error %4%") % assemble_object.path % (index + 1) % (obj_index + 1) % message;
                     return CLI_DATA_FILE_ERROR;
                 }
                 object =  temp_model.add_object(*temp_object);
                 if (!object) {
-                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": add_object %1% for stl failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
+                    BOOST_LOG_TRIVIAL(error) << boost::format(": add_object %1% for stl failed, plate index %2%, object index %3%") % object_1_name % (index + 1) % (obj_index + 1);
                     return CLI_DATA_FILE_ERROR;
                 }
                 obj_temp_model.clear_objects();
                 obj_temp_model.clear_materials();
             }
             else {
-                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(": unsupported file %1%, plate index %2%, object index %3%") % assemble_object.path % (index + 1) % (obj_index + 1);
+                BOOST_LOG_TRIVIAL(error) << boost::format(": unsupported file %1%, plate index %2%, object index %3%") % assemble_object.path % (index + 1) % (obj_index + 1);
                 return CLI_INVALID_PARAMS;
             }
 
@@ -1030,7 +1030,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
             object->translate(assemble_object.pos_x[0], assemble_object.pos_y[0], assemble_object.pos_z[0]);
             merge_or_add_object(assemble_plate_info, model, assemble_object.assemble_index[0], merged_objects, object);
 
-            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": object %1%, name %2%, pos_x %3% pos_y %4%, pos_z %5%, filament %6%, assemble_index %7%")
+            BOOST_LOG_TRIVIAL(debug) << boost::format(": object %1%, name %2%, pos_x %3% pos_y %4%, pos_z %5%, filament %6%, assemble_index %7%")
                 %obj_index %object->name %assemble_object.pos_x[0] %assemble_object.pos_y[0] %assemble_object.pos_z[0] %assemble_object.filaments[0] %assemble_object.assemble_index[0];
 
             for (size_t copy_index = 1; copy_index < assemble_object.count; copy_index++)
@@ -1063,7 +1063,7 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
                     array_index = 0;
                 merge_or_add_object(assemble_plate_info, model, assemble_object.assemble_index[array_index], merged_objects, copy_obj);
 
-                BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": cloned object %1%, name %2%, pos_x %3% pos_y %4%, pos_z %5%")
+                BOOST_LOG_TRIVIAL(debug) << boost::format(": cloned object %1%, name %2%, pos_x %3% pos_y %4%, pos_z %5%")
                     %copy_index %object->name %assemble_object.pos_x[array_index] %assemble_object.pos_y[array_index] %assemble_object.pos_z[array_index];
             }
         }
@@ -1113,10 +1113,10 @@ static int construct_assemble_list(std::vector<assemble_plate_info_t> &assemble_
         assemble_plate_info.assemble_obj_list.shrink_to_fit();
         assemble_plate_info.plate_params.clear();
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": Plate %1%, used filaments %2%") % (index + 1) % assemble_plate_info.filaments_count;
+        BOOST_LOG_TRIVIAL(info) << boost::format(": Plate %1%, used filaments %2%") % (index + 1) % assemble_plate_info.filaments_count;
     }
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": has objects need to be merged, total plates %1%, total objects %2%") % plate_count % model.objects.size();
+    BOOST_LOG_TRIVIAL(info) << boost::format(": has objects need to be merged, total plates %1%, total objects %2%") % plate_count % model.objects.size();
 
     temp_model.clear_objects();
     temp_model.clear_materials();
@@ -1168,7 +1168,7 @@ static void load_downward_settings_list_from_config(std::string config_file, std
             }
         }
         catch (std::exception &err) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse file "<<config_file<<" got a generic exception, reason = " << err.what();
+            BOOST_LOG_TRIVIAL(error)<< ": parse file "<<config_file<<" got a generic exception, reason = " << err.what();
         }
     }
 }
@@ -1293,11 +1293,11 @@ int CLI::run(int argc, char **argv)
         if (non_gcode_files.empty() && !gcode_files.empty()) {
             params.input_gcode = true;
             params.input_files  = std::move(gcode_files);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", gcode only, gcode_files size = "<<params.input_files.size();
+            BOOST_LOG_TRIVIAL(info) << ", gcode only, gcode_files size = "<<params.input_files.size();
         }
         else {
             params.input_files  = std::move(m_input_files);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", normal mode, input_files size = "<<params.input_files.size();
+            BOOST_LOG_TRIVIAL(info) << ", normal mode, input_files size = "<<params.input_files.size();
         }
         //BBS: remove GCodeViewer as separate APP logic
         //params.start_as_gcodeviewer = start_as_gcodeviewer;
@@ -1811,7 +1811,7 @@ int CLI::run(int argc, char **argv)
         // parse the custom gcode json file
         std::string file = custom_gcode_file;
         if(!boost::filesystem::exists(file)) {
-            boost::nowide::cerr << __FUNCTION__ << ": can not find custom_gcode file: " << file << std::endl;
+            boost::nowide::cerr << ": can not find custom_gcode file: " << file << std::endl;
             record_exit_reson(outfile_dir, CLI_FILE_NOTFOUND, 0, cli_errors[CLI_FILE_NOTFOUND], sliced_info);
             flush_and_exit(CLI_FILE_NOTFOUND);
         }
@@ -1834,7 +1834,7 @@ int CLI::run(int argc, char **argv)
             BOOST_LOG_TRIVIAL(info) << boost::format("load custom_gcode from file %1% success, store custom gcodes to plate %2%")%file %(plate_id+1);
         }
         catch (std::exception &ex) {
-            boost::nowide::cerr << __FUNCTION__<< ":Loading custom-gcode file \"" << file << "\" failed: " << ex.what() << std::endl;
+            boost::nowide::cerr<< ":Loading custom-gcode file \"" << file << "\" failed: " << ex.what() << std::endl;
             record_exit_reson(outfile_dir, CLI_CONFIG_FILE_ERROR, 0, cli_errors[CLI_CONFIG_FILE_ERROR], sliced_info);
             flush_and_exit(CLI_CONFIG_FILE_ERROR);
         }
@@ -1843,12 +1843,12 @@ int CLI::run(int argc, char **argv)
     auto load_config_file = [config_substitution_rule](const std::string& file, DynamicPrintConfig& config, std::string& config_type,
                                 std::string& config_name, std::string& filament_id, std::string& config_from) {
         if (! boost::filesystem::exists(file)) {
-            boost::nowide::cerr << __FUNCTION__<< ": can not find setting file: " << file << std::endl;
+            boost::nowide::cerr<< ": can not find setting file: " << file << std::endl;
             return CLI_FILE_NOTFOUND;
         }
         ConfigSubstitutions config_substitutions;
         try {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ":load setting file "<< file << ", with rule "<< config_substitution_rule << std::endl;
+            BOOST_LOG_TRIVIAL(info)<< ":load setting file "<< file << ", with rule "<< config_substitution_rule << std::endl;
             std::map<std::string, std::string> key_values;
             std::string reason;
 
@@ -1903,12 +1903,12 @@ int CLI::run(int argc, char **argv)
             //config.erase("compatible_printers");
             //BOOST_LOG_TRIVIAL(info) << "got printable_area "<< config.option("printable_area")->serialize() << std::endl;
         } catch (std::exception &ex) {
-            boost::nowide::cerr << __FUNCTION__<< ":Loading setting file \"" << file << "\" failed: " << ex.what() << std::endl;
+            boost::nowide::cerr<< ":Loading setting file \"" << file << "\" failed: " << ex.what() << std::endl;
             return CLI_CONFIG_FILE_ERROR;
         }
         return 0;
     };
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ":before load settings, file count="<< load_configs.size() << std::endl;
+    BOOST_LOG_TRIVIAL(info)<< ":before load settings, file count="<< load_configs.size() << std::endl;
     //std::vector<std::string> filament_compatible_printers;
     // load config files supplied via --load
     for (auto const &file : load_configs) {
@@ -1948,7 +1948,7 @@ int CLI::run(int argc, char **argv)
                     load_key_values_from_json(printer_model_path, key_values);
                     if (key_values.find("model_id") != key_values.end()) {
                         printer_model_id = key_values["model_id"];
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
+                        BOOST_LOG_TRIVIAL(info)<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
                     }
                 }
             }
@@ -2205,7 +2205,7 @@ int CLI::run(int argc, char **argv)
                                 load_key_values_from_json(printer_model_path, key_values);
                                 if (key_values.find("model_id") != key_values.end()) {
                                     printer_model_id = key_values["model_id"];
-                                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
+                                    BOOST_LOG_TRIVIAL(info)<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
                                 }
                             }
                         }
@@ -2218,7 +2218,7 @@ int CLI::run(int argc, char **argv)
                             orig_printable_depth = (int)(orig_printable_area[2].y() - orig_printable_area[0].y());
                         }
                         orig_printable_height = (int)(config.opt_float("printable_height"));
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(":%1%, check printable size: old_printable_width=%2%, orig_printable_width=%3%, old_printable_depth=%4%, orig_printable_depth=%5%, old_printable_height=%6%, orig_printable_height=%7%")
+                        BOOST_LOG_TRIVIAL(info)<< boost::format(":%1%, check printable size: old_printable_width=%2%, orig_printable_width=%3%, old_printable_depth=%4%, orig_printable_depth=%5%, old_printable_height=%6%, orig_printable_height=%7%")
                                     %__LINE__ %old_printable_width %orig_printable_width %old_printable_depth %orig_printable_depth %old_printable_height %orig_printable_height;
                         if ((orig_printable_width > 0) && (orig_printable_depth > 0) && (orig_printable_height > 0))
                         {
@@ -2260,7 +2260,7 @@ int CLI::run(int argc, char **argv)
                 //use the original printer name in 3mf
                 std::string system_printer_path = resources_dir() + "/profiles/BBL/machine_full/"+current_printer_system_name+".json";
                 if (! boost::filesystem::exists(system_printer_path)) {
-                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
+                    BOOST_LOG_TRIVIAL(warning)<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
                     //use original one
                 }
                 else {
@@ -2286,7 +2286,7 @@ int CLI::run(int argc, char **argv)
                             load_key_values_from_json(printer_model_path, key_values);
                             if (key_values.find("model_id") != key_values.end()) {
                                 printer_model_id = key_values["model_id"];
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
+                                BOOST_LOG_TRIVIAL(info)<< boost::format(":%1%, load printer_model_id %2% from current printer model %3%")%__LINE__ %printer_model_id %printer_model;
                             }
                         }
                     }
@@ -2301,7 +2301,7 @@ int CLI::run(int argc, char **argv)
                 //use the original printer name in 3mf
                 std::string system_process_path = resources_dir() + "/profiles/BBL/process_full/"+current_process_system_name+".json";
                 if (! boost::filesystem::exists(system_process_path)) {
-                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
+                    BOOST_LOG_TRIVIAL(warning)<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
                     //use original one
                 }
                 else {
@@ -2372,7 +2372,7 @@ int CLI::run(int argc, char **argv)
                     std::string system_filament_path = resources_dir() + "/profiles/BBL/filament_full/"+current_filaments_system_name[index]+".json";
                     current_index++;
                     if (! boost::filesystem::exists(system_filament_path)) {
-                        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_filament_path;
+                        BOOST_LOG_TRIVIAL(warning)<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_filament_path;
                         continue;
                     }
                     DynamicPrintConfig  config;
@@ -2410,7 +2410,7 @@ int CLI::run(int argc, char **argv)
             //use the original printer name in 3mf
             std::string system_printer_path = resources_dir() + "/profiles/BBL/machine_full/"+current_printer_system_name+".json";
             if (! boost::filesystem::exists(system_printer_path)) {
-                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
+                BOOST_LOG_TRIVIAL(warning)<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_printer_path;
                 //skip
             }
             else {
@@ -2432,7 +2432,7 @@ int CLI::run(int argc, char **argv)
             //use the original printer name in 3mf
             std::string system_process_path = resources_dir() + "/profiles/BBL/process_full/"+current_process_system_name+".json";
             if (! boost::filesystem::exists(system_process_path)) {
-                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
+                BOOST_LOG_TRIVIAL(warning)<< boost::format(":%1%, can not find system preset file: %2% ")%__LINE__ %system_process_path;
                 //use original one
             }
             else {
@@ -2683,7 +2683,7 @@ int CLI::run(int argc, char **argv)
             const ConfigOption *source_opt = config.option(opt_key);
             if (source_opt == nullptr) {
                 // The key was not found in the source config, therefore it will not be initialized!
-                boost::nowide::cerr << __FUNCTION__<<": can not found option " <<opt_key<<"from config." <<std::endl;
+                boost::nowide::cerr<<": can not found option " <<opt_key<<"from config." <<std::endl;
                 return CLI_CONFIG_FILE_ERROR;
             }
             if (opt_key == "compatible_prints" || opt_key == "compatible_printers" || opt_key == "model_id" || opt_key == "inherits" ||opt_key == "dev_model_name"
@@ -2692,7 +2692,7 @@ int CLI::run(int argc, char **argv)
             else {
                 ConfigOption *dest_opt = full_config.option(opt_key, true);
                 if (dest_opt == nullptr) {
-                    boost::nowide::cerr << __FUNCTION__<<":can not create option " <<opt_key<<" to full_config "<<std::endl;
+                    boost::nowide::cerr<<":can not create option " <<opt_key<<" to full_config "<<std::endl;
                     return CLI_CONFIG_FILE_ERROR;
                 }
                 dest_opt->set(source_opt);
@@ -2823,7 +2823,7 @@ int CLI::run(int argc, char **argv)
                         }
                     }
                     catch (std::exception &err) {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__<< ": parse file "<<cli_config_file<<" got a generic exception, reason = " << err.what();
+                        BOOST_LOG_TRIVIAL(error)<< ": parse file "<<cli_config_file<<" got a generic exception, reason = " << err.what();
                     }
                 }
             }
@@ -4706,7 +4706,7 @@ int CLI::run(int argc, char **argv)
                     partplate_list.postprocess_bed_index_for_current_plate(ap);
                     if (ap.bed_idx != i)
                     {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%") % ap.name % ap.bed_idx % i;
+                        BOOST_LOG_TRIVIAL(error) << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%") % ap.name % ap.bed_idx % i;
                         record_exit_reson(outfile_dir, CLI_OBJECT_ARRANGE_FAILED, 0, cli_errors[CLI_OBJECT_ARRANGE_FAILED], sliced_info);
                         flush_and_exit(CLI_OBJECT_ARRANGE_FAILED);
                     }
@@ -4980,14 +4980,14 @@ int CLI::run(int argc, char **argv)
                                 //skip this object due to be not in current plate, treated as locked
                                 ap.itemid = locked_aps.size();
                                 locked_aps.emplace_back(std::move(ap));
-                                BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format("arrange: skip locked instance, obj_id %1%, name %2%") % oidx % mo->name;
+                                BOOST_LOG_TRIVIAL(debug) << boost::format("arrange: skip locked instance, obj_id %1%, name %2%") % oidx % mo->name;
                             }
                         }
                     }
                     if ((duplicate_count > 0)&&(selected.size() == (duplicate_count + 1)))
                     {
                         duplicate_single_object = true;
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": found single object mode");
+                        BOOST_LOG_TRIVIAL(info) << boost::format(": found single object mode");
                     }
 
                     if (m_print_config.has("wipe_tower_x") && (is_smooth_timelapse || !arrange_cfg.is_seq_print || (selected.size() <= 1))) {
@@ -5016,12 +5016,12 @@ int CLI::run(int argc, char **argv)
                             // slice filaments info invalid
                             std::vector<int> extruders = cur_plate->get_extruders_under_cli(true, m_print_config);
                             filaments_cnt = extruders.size();
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("arrange: slice filaments info invalid or need_skip, get from partplate: filament_count %1%")%filaments_cnt;
+                            BOOST_LOG_TRIVIAL(info) << boost::format("arrange: slice filaments info invalid or need_skip, get from partplate: filament_count %1%")%filaments_cnt;
                         }
 
                         if ((filaments_cnt <= 1) && !is_smooth_timelapse && (!enable_wrapping_detect || current_wrapping_exclude_area.empty()))
                         {
-                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format("arrange: not a multi-color object anymore, drop the wipe tower before arrange.");
+                            BOOST_LOG_TRIVIAL(warning) << boost::format("arrange: not a multi-color object anymore, drop the wipe tower before arrange.");
                         }
                         else
                         {
@@ -5045,20 +5045,20 @@ int CLI::run(int argc, char **argv)
                             if (wipe_tower_brim_width_opt ) {
                                 wp_brim_width = wipe_tower_brim_width_opt->getFloat();
                                 if (wp_brim_width < 0) wp_brim_width = WipeTower::get_auto_brim_by_height((float) wipe_tower_size.z());
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("arrange wipe_tower: wp_brim_width %1%")%wp_brim_width;
+                                BOOST_LOG_TRIVIAL(info) << boost::format("arrange wipe_tower: wp_brim_width %1%")%wp_brim_width;
                             }
                             w = wipe_tower_size(0);
 
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("arrange wipe_tower: x=%1%, y=%2%, width=%3%, depth=%4%, angle=%5%, prime_volume=%6%, filaments_cnt=%7%, layer_height=%8%, plate_width=%9%, plate_depth=%10%")
+                            BOOST_LOG_TRIVIAL(info) << boost::format("arrange wipe_tower: x=%1%, y=%2%, width=%3%, depth=%4%, angle=%5%, prime_volume=%6%, filaments_cnt=%7%, layer_height=%8%, plate_width=%9%, plate_depth=%10%")
                                                             %x %y %w %depth %a %v %filaments_cnt %layer_height %plate_width %plate_depth;
                             if ((y + depth + margin + wp_brim_width) > (float)plate_depth) {
                                 y = (float)plate_depth - depth - margin - wp_brim_width;
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("arrange wipe_tower: exceeds the border, change y to %1%, plate_depth=%2%")%y %plate_depth;
+                                BOOST_LOG_TRIVIAL(info) << boost::format("arrange wipe_tower: exceeds the border, change y to %1%, plate_depth=%2%")%y %plate_depth;
                             }
 
                             if ((x + w + margin + wp_brim_width) > (float)plate_width) {
                                 x = (float)plate_width - w - margin - wp_brim_width;
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("arrange wipe_tower: exceeds the border, change x to %1%, plate_width=%2%")%y %plate_width;
+                                BOOST_LOG_TRIVIAL(info) << boost::format("arrange wipe_tower: exceeds the border, change x to %1%, plate_width=%2%")%y %plate_width;
                             }
                             if (x < margin) {
                                 x = margin;
@@ -5162,7 +5162,7 @@ int CLI::run(int argc, char **argv)
                             partplate_list.postprocess_bed_index_for_current_plate(ap);
                             if (ap.bed_idx != (plate_to_slice-1))
                             {
-                                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
+                                BOOST_LOG_TRIVIAL(error) << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
                                 record_exit_reson(outfile_dir, CLI_OBJECT_ARRANGE_FAILED, 0, cli_errors[CLI_OBJECT_ARRANGE_FAILED], sliced_info);
                                 flush_and_exit(CLI_OBJECT_ARRANGE_FAILED);
                             }
@@ -5219,7 +5219,7 @@ int CLI::run(int argc, char **argv)
                         partplate_list.postprocess_arrange_polygon(ap, true);
 
                         ap.apply();
-                        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(":arrange m_unprintable: name: %4%, bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
+                        BOOST_LOG_TRIVIAL(debug) << boost::format(":arrange m_unprintable: name: %4%, bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
                     }
 
                     //BBS: reload all objects due to arrange
@@ -5239,21 +5239,21 @@ int CLI::run(int argc, char **argv)
                         if (ap.bed_idx != (plate_to_slice-1))
                         {
                             //
-                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
+                            BOOST_LOG_TRIVIAL(warning) << boost::format(":arrange failed: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
                             if (!duplicate_single_object)
                             {
                                 BOOST_LOG_TRIVIAL(warning) << boost::format("arrange failed when duplicate multiple objects at count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
 
                                 if (duplicate_count == 1)
                                 {
-                                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": failed even on duplicate 1 copy, just print one original model");
+                                    BOOST_LOG_TRIVIAL(warning) << boost::format(": failed even on duplicate 1 copy, just print one original model");
                                     duplicate_count = 0;
                                 }
                                 else
                                 {
                                     if (duplicate_count == low_duplicate_count)
                                     {
-                                        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": previous success, but currently failed count %1%!!!")%duplicate_count;
+                                        BOOST_LOG_TRIVIAL(warning) << boost::format(": previous success, but currently failed count %1%!!!")%duplicate_count;
                                         up_duplicate_count = duplicate_count;
                                         low_duplicate_count --;
                                         duplicate_count --;
@@ -5262,7 +5262,7 @@ int CLI::run(int argc, char **argv)
                                         up_duplicate_count = duplicate_count;
                                         duplicate_count = (up_duplicate_count + low_duplicate_count)/2;
                                     }
-                                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": try new count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
+                                    BOOST_LOG_TRIVIAL(warning) << boost::format(": try new count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
                                 }
                                 //record_exit_reson(outfile_dir, CLI_OBJECT_ARRANGE_FAILED, 0, cli_errors[CLI_OBJECT_ARRANGE_FAILED], sliced_info);
                                 //flush_and_exit(CLI_OBJECT_ARRANGE_FAILED);
@@ -5271,19 +5271,19 @@ int CLI::run(int argc, char **argv)
                             }
                         }
                         else {
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(":arrange success: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
+                            BOOST_LOG_TRIVIAL(info) << boost::format(":arrange success: ap.name %1% ap.bed_idx %2%, plate index %3%")% ap.name % ap.bed_idx % (plate_to_slice-1);
                             real_duplicate_count ++;
                         }
 
                         bed_idx_max = std::max(ap.bed_idx, bed_idx_max);
-                        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": arrange selected %4%: bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
+                        BOOST_LOG_TRIVIAL(debug) << boost::format(": arrange selected %4%: bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
                     }
 
                     if (failed_this_time) {
                         if (duplicate_count == 0)
                         {
                             //restore to the original
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": restore to the original model and plates, orig_wipe_x %1%, orig_wipe_y %2%")%orig_wipe_x %orig_wipe_y;
+                            BOOST_LOG_TRIVIAL(info) << boost::format(": restore to the original model and plates, orig_wipe_x %1%, orig_wipe_y %2%")%orig_wipe_x %orig_wipe_y;
                             finished_arrange = true;
                             model = original_model;
                             partplate_list.load_from_3mf_structure(plate_data_src);
@@ -5297,9 +5297,9 @@ int CLI::run(int argc, char **argv)
 
                                 wipe_x_option->set_at(&wt_x_opt, plate_to_slice-1, 0);
                                 wipe_y_option->set_at(&wt_y_opt, plate_to_slice-1, 0);
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
+                                BOOST_LOG_TRIVIAL(info) << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
                             }
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": exit arrange process");
+                            BOOST_LOG_TRIVIAL(info) << boost::format(": exit arrange process");
                         }
                         continue;
                     }
@@ -5324,24 +5324,24 @@ int CLI::run(int argc, char **argv)
 
                                 wipe_x_option->set_at(&wt_x_opt, plate_to_slice-1, 0);
                                 wipe_y_option->set_at(&wt_y_opt, plate_to_slice-1, 0);
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
+                                BOOST_LOG_TRIVIAL(info) << boost::format(": restore wipe_tower position to {%1%, %2%}")%orig_wipe_x %orig_wipe_y;
                             }
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": exit arrange process");
+                            BOOST_LOG_TRIVIAL(info) << boost::format(": exit arrange process");
                             continue;
                         }
                         duplicate_count = real_duplicate_count - 1;
                     }
                     else {
                         //multiple objects case
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": multiple objects mode, arrange success on count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
+                        BOOST_LOG_TRIVIAL(info) << boost::format(": multiple objects mode, arrange success on count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
                         if ((duplicate_count == up_duplicate_count) || (duplicate_count == (up_duplicate_count - 1)))
                         {
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": found the max arrangeable count %1%")%duplicate_count;
+                            BOOST_LOG_TRIVIAL(info) << boost::format(": found the max arrangeable count %1%")%duplicate_count;
                         }
                         else {
                             low_duplicate_count = duplicate_count;
                             duplicate_count = (up_duplicate_count + low_duplicate_count)/2;
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": try new count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
+                            BOOST_LOG_TRIVIAL(info) << boost::format(": try new count %1%, low_duplicate_count %2%, up_duplicate_count %3%")%duplicate_count %low_duplicate_count %up_duplicate_count;
                             continue;
                         }
                     }
@@ -5353,7 +5353,7 @@ int CLI::run(int argc, char **argv)
                             continue;
 
                         bed_idx_max = std::max(ap.bed_idx, bed_idx_max);
-                        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(":arrange unselected %4%: bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
+                        BOOST_LOG_TRIVIAL(debug) << boost::format(":arrange unselected %4%: bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
                     }
 
                     for (ArrangePolygon& ap : locked_aps)
@@ -5393,7 +5393,7 @@ int CLI::run(int argc, char **argv)
                         partplate_list.postprocess_arrange_polygon(ap, true);
 
                         ap.apply();
-                        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(":arrange m_unprintable: name: %4%, bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
+                        BOOST_LOG_TRIVIAL(debug) << boost::format(":arrange m_unprintable: name: %4%, bed_id %1%, trans {%2%,%3%}") % ap.bed_idx % unscale<double>(ap.translation(X)) % unscale<double>(ap.translation(Y)) % ap.name;
                     }
 
                     partplate_list.rebuild_plates_after_arrangement(false, true, plate_to_slice-1);
@@ -6976,7 +6976,7 @@ int CLI::run(int argc, char **argv)
 	model.remove_backup_path_if_exist();
     }
     //BBS: flush logs
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", Finished" << std::endl;
+    BOOST_LOG_TRIVIAL(info) << ", Finished" << std::endl;
     global_current_time = (long long)Slic3r::Utils::get_current_time_utc();
     sliced_info.export_time = (size_t) (global_current_time - global_begin_time);
 
@@ -7303,7 +7303,7 @@ std::string CLI::output_filepath(const ModelObject &object, unsigned int index, 
     if ((pos == std::string::npos) || (pos != ext_pos))
         file_name += ext;
 
-    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": dir = "<< path_dir<<", file_name="<<file_name<< ", pos = "<<pos<<", ext_pos="<<ext_pos;
+    BOOST_LOG_TRIVIAL(trace) << ": dir = "<< path_dir<<", file_name="<<file_name<< ", pos = "<<pos<<", ext_pos="<<ext_pos;
     if (path_dir.empty()) {
         std::string cmdline_param = m_config.opt_string("outputdir");
         if (! cmdline_param.empty()) {
