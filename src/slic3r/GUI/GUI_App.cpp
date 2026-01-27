@@ -2415,9 +2415,9 @@ void GUI_App::init_app_config()
     buf << get_current_pid();
     std::string log_filename = buf.str();
 #if !BBL_RELEASE_TO_PUBLIC
-    set_log_path_and_level(log_filename, 5);
+    init_log(log_filename, 5, true);
 #else
-    set_log_path_and_level(log_filename, 3);
+    init_log(log_filename, 3, true);
 #endif
 
     BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1% build %2%") % SoftFever_VERSION % GIT_COMMIT_HASH;

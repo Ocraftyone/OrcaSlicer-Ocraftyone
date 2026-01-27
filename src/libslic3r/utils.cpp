@@ -47,6 +47,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sinks/text_file_backend.hpp>
+#include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/sources/severity_logger.hpp>
@@ -159,7 +160,8 @@ unsigned get_logging_level()
     }
 }
 
-boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>> g_log_sink;
+boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>> g_file_log_sink;
+boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::basic_text_ostream_backend<char>>> g_console_log_sink;
 
 // Force set_logging_level(<=error) after loading of the DLL.
 // This is currently only needed if libslic3r is loaded as a shared library into Perl interpreter
@@ -332,7 +334,7 @@ namespace src = boost::log::sources;
 namespace expr = boost::log::expressions;
 namespace keywords = boost::log::keywords;
 namespace attrs = boost::log::attributes;
-void set_log_path_and_level(const std::string& file, unsigned int level)
+void init_log(const std::string& file, unsigned int level, bool log_to_console)
 {
 #ifdef __APPLE__
 	//currently on old macos, the boost::log::add_file_log will crash
@@ -349,20 +351,27 @@ void set_log_path_and_level(const std::string& file, unsigned int level)
 	}
 	auto full_path = (log_folder / file).make_preferred();
 
-	g_log_sink = boost::log::add_file_log(
-		keywords::file_name = full_path.string() + ".%N",
+#define slic3r_log_format keywords::format = \
+    ( \
+        expr::stream \
+        << "[" << expr::attr< logging::trivial::severity_level >("Severity") << "]\t" \
+        << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") \
+        <<"[Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "]" \
+        << ":" << expr::smessage \
+    )
+
+    g_file_log_sink = boost::log::add_file_log(
 		keywords::file_name = full_path.string() + "_%N.log",
 		keywords::rotation_size = 100 * 1024 * 1024,
-		keywords::format =
-		(
-			expr::stream
-			<< "[" << expr::attr< logging::trivial::severity_level >("Severity") << "]\t"
-			<< expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-			<<"[Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "]"
-			<< ":" << expr::smessage
-		),
+		slic3r_log_format,
 		keywords::auto_flush = true
 	);
+
+    if (log_to_console) {
+        g_console_log_sink = logging::add_console_log(std::cout, slic3r_log_format, keywords::auto_flush = true);
+    }
+
+#undef slic3r_log_format
 
 	logging::add_common_attributes();
 
@@ -373,10 +382,10 @@ void set_log_path_and_level(const std::string& file, unsigned int level)
 
 void flush_logs()
 {
-	if (g_log_sink)
-		g_log_sink->flush();
-
-	return;
+	if (g_file_log_sink)
+		g_file_log_sink->flush();
+    if (g_console_log_sink)
+        g_console_log_sink->flush();
 }
 
 #ifdef _WIN32
