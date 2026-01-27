@@ -12,6 +12,7 @@
 #include "Platform.hpp"
 #include "Time.hpp"
 #include "libslic3r.h"
+#include "slic3r/Utils/CacheSink.hpp"
 
 #ifdef __APPLE__
 #include "MacUtils.hpp"
@@ -160,16 +161,26 @@ unsigned get_logging_level()
     }
 }
 
-boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>> g_file_log_sink;
-boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::basic_text_ostream_backend<char>>> g_console_log_sink;
+boost::shared_ptr<sinks::synchronous_sink<CacheSink>> g_cache_sink;
+boost::shared_ptr<sinks::synchronous_sink<sinks::text_file_backend>> g_file_log_sink;
+boost::shared_ptr<sinks::synchronous_sink<sinks::basic_text_ostream_backend<char>>> g_console_log_sink;
+
+// Set up a sink that captures all log messages from early in the program
+// Once the appconfig is initialized, the captured messages will be replayed
+// to the actual log sinks
+void setup_cache_sink()
+{
+    auto backend = boost::make_shared<CacheSink>();
+    g_cache_sink = boost::make_shared<sinks::synchronous_sink<CacheSink>>(backend);
+    logging::core::get()->add_sink(g_cache_sink);
+}
 
 // Force set_logging_level(<=error) after loading of the DLL.
 // This is currently only needed if libslic3r is loaded as a shared library into Perl interpreter
 // to perform unit and integration tests.
 static struct RunOnInit {
     RunOnInit() {
-        set_logging_level(2);
-
+        setup_cache_sink();
     }
 } g_RunOnInit;
 
@@ -344,6 +355,9 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 	}
 #endif
 
+    set_logging_level(level);
+    g_cache_sink->locked_backend()->set_log_level(logSeverity);
+
 	//BBS log file at C:\\Users\\[yourname]\\AppData\\Roaming\\OrcaSlicer\\log\\[log_filename].log
 	auto log_folder = boost::filesystem::path(g_data_dir) / "log";
 	if (!boost::filesystem::exists(log_folder)) {
@@ -366,18 +380,18 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 		slic3r_log_format,
 		keywords::auto_flush = true
 	);
+    g_cache_sink->locked_backend()->forward_records(*g_file_log_sink);
 
     if (log_to_console) {
         g_console_log_sink = logging::add_console_log(std::cout, slic3r_log_format, keywords::auto_flush = true);
+        g_cache_sink->locked_backend()->forward_records(*g_console_log_sink);
     }
 
-#undef slic3r_log_format
+    logging::core::get()->remove_sink(g_cache_sink);
 
 	logging::add_common_attributes();
 
-	set_logging_level(level);
-
-	return;
+#undef slic3r_log_format
 }
 
 void flush_logs()

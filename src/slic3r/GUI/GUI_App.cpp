@@ -2407,19 +2407,6 @@ void GUI_App::init_app_config()
         m_datadir_redefined = true;
     }
 
-    // start log here
-    std::time_t       t        = std::time(0);
-    std::tm *         now_time = std::localtime(&t);
-    std::stringstream buf;
-    buf << std::put_time(now_time, "debug_%a_%b_%d_%H_%M_%S_");
-    buf << get_current_pid();
-    std::string log_filename = buf.str();
-#if !BBL_RELEASE_TO_PUBLIC
-    init_log(log_filename, 5, true);
-#else
-    init_log(log_filename, 3, true);
-#endif
-
     BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1% build %2%") % SoftFever_VERSION % GIT_COMMIT_HASH;
 
     //BBS: remove GCodeViewer as seperate APP logic
@@ -2454,8 +2441,16 @@ void GUI_App::init_app_config()
         }
 #endif // _WIN32
     }
-    set_logging_level(Slic3r::level_string_to_boost(app_config->get("log_severity_level")));
 
+    // Orca: start log here
+    // Log messages from earlier were cached and will be replayed to the log sinks
+    std::time_t       t        = std::time(0);
+    std::tm *         now_time = std::localtime(&t);
+    std::stringstream buf;
+    buf << std::put_time(now_time, "debug_%a_%b_%d_%H_%M_%S_");
+    buf << get_current_pid();
+    std::string log_filename = buf.str();
+    init_log(log_filename, level_string_to_boost(app_config->get("log_severity_level")), true);
 }
 
 // returns true if found newer version and user agreed to use it

@@ -629,6 +629,7 @@ set(SLIC3R_GUI_SOURCES
     Utils/WxFontUtils.hpp
     Utils/FileTransferUtils.cpp
     Utils/FileTransferUtils.hpp
+    Utils/CacheSink.hpp
 )
 
 add_subdirectory(GUI/DeviceCore)
