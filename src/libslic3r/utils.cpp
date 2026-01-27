@@ -14,6 +14,8 @@
 #include "libslic3r.h"
 #include "slic3r/Utils/CacheSink.hpp"
 
+#include <boost/phoenix/stl/algorithm/transformation.hpp>
+
 #ifdef __APPLE__
 #include "MacUtils.hpp"
 #endif
@@ -54,6 +56,7 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 #include <boost/log/support/date_time.hpp>
+#include <boost/phoenix/function/adapt_function.hpp>
 
 #include <boost/locale.hpp>
 
@@ -345,6 +348,22 @@ namespace src = boost::log::sources;
 namespace expr = boost::log::expressions;
 namespace keywords = boost::log::keywords;
 namespace attrs = boost::log::attributes;
+
+std::string format_severity(logging::record_view const& rec)
+{
+    static constexpr int padding_size = 14;
+    auto severity = rec[logging::trivial::severity];
+    std::string ret;
+    ret.append("[").append(logging::trivial::to_string(severity.get())).append("]");
+    if (ret.size() < padding_size)
+        ret.insert(ret.end(), padding_size - ret.size(), ' ');
+    return ret;
+}
+
+namespace lazy {
+BOOST_PHOENIX_ADAPT_FUNCTION(std::string, format_severity, ::Slic3r::format_severity, 1)
+}
+
 void init_log(const std::string& file, unsigned int level, bool log_to_console)
 {
 #ifdef __APPLE__
@@ -366,13 +385,13 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 	auto full_path = (log_folder / file).make_preferred();
 
 #define slic3r_log_format keywords::format = \
-    ( \
-        expr::stream \
-        << "[" << expr::attr< logging::trivial::severity_level >("Severity") << "]\t" \
-        << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") \
-        <<"[Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "]" \
-        << ":" << expr::smessage \
-    )
+                                                    (expr::stream \
+                                                    << lazy::format_severity(boost::phoenix::placeholders::_1) \
+                                                    << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") \
+                                                    << "[Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "]" \
+                                                    << ":" << expr::smessage \
+                                                    )
+
 
     g_file_log_sink = boost::log::add_file_log(
 		keywords::file_name = full_path.string() + "_%N.log",
