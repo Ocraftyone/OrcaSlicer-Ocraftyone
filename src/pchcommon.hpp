@@ -8,5 +8,5 @@
 #define BOOST_LOG_TRIVIAL(lvl)\
 BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::logger::get(),\
 (::boost::log::keywords::severity = ::boost::log::trivial::lvl)) \
-<< " " << __FUNCTION__ << ":" << __LINE__ << ": "
+<< __FUNCTION__ << ":" << __LINE__ << ": _MSG_"
 

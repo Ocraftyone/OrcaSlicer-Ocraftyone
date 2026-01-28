@@ -14,6 +14,7 @@
 #include "libslic3r.h"
 #include "slic3r/Utils/CacheSink.hpp"
 
+#include <boost/phoenix/bind/bind_function.hpp>
 #include <boost/phoenix/stl/algorithm/transformation.hpp>
 
 #ifdef __APPLE__
@@ -360,8 +361,21 @@ std::string format_severity(logging::record_view const& rec)
     return ret;
 }
 
-namespace lazy {
-BOOST_PHOENIX_ADAPT_FUNCTION(std::string, format_severity, ::Slic3r::format_severity, 1)
+void add_message(logging::record_view const& rec, logging::formatting_ostream& stream)
+{
+    static constexpr auto message_flag = "_MSG_";
+    static constexpr int flag_len = 5;
+    auto message = rec[expr::smessage];
+    if (!message)
+        return;
+    auto msg_start = message->find(message_flag);
+    if (msg_start == std::string::npos)
+        return;
+    stream << message->substr(0, msg_start);
+    auto log_msg = message->substr(msg_start + flag_len);
+    if (boost::starts_with(log_msg, ": ") || boost::starts_with(log_msg, ", "))
+        log_msg.erase(0, 2);
+    stream << log_msg;
 }
 
 void init_log(const std::string& file, unsigned int level, bool log_to_console)
@@ -386,10 +400,10 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 
 #define slic3r_log_format keywords::format = \
                                                     (expr::stream \
-                                                    << lazy::format_severity(boost::phoenix::placeholders::_1) \
+                                                    << boost::phoenix::bind(format_severity ,boost::phoenix::placeholders::_1) \
                                                     << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") \
-                                                    << "[Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "]" \
-                                                    << ":" << expr::smessage \
+                                                    << " [Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "] " \
+                                                    << expr::wrap_formatter(&add_message) \
                                                     )
 
 
