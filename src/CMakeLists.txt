@@ -168,6 +168,7 @@ target_link_libraries(OrcaSlicer libslic3r_gui)
     #    target_link_libraries(OrcaSlicer ${PSAPI_LIB})
     #endif ()
 endif ()
+add_common_pch(OrcaSlicer)
 
 # On Windows, a shim application is required to produce a console / non console version of the Slic3r application.
 # Also the shim may load the Mesa software OpenGL renderer if the default renderer does not support OpenGL 2.0 and higher.
