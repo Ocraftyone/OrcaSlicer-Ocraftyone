@@ -353,7 +353,7 @@ namespace attrs = boost::log::attributes;
 
 std::string format_severity(logging::record_view const& rec)
 {
-    static constexpr int padding_size = 14;
+    static constexpr int padding_size = 10;
     auto severity = rec[logging::trivial::severity];
     std::string ret;
     ret.append("[").append(logging::trivial::to_string(severity.get())).append("]");
