@@ -4678,7 +4678,7 @@ int Print::load_cached_data(const std::string& directory)
                 json& layer_json = root_json[JSON_LAYERS][index];
                 Layer* new_layer = obj->add_layer(layer_json[JSON_LAYER_ID], layer_json[JSON_LAYER_HEIGHT], layer_json[JSON_LAYER_PRINT_Z], layer_json[JSON_LAYER_SLICE_Z]);
                 if (!new_layer) {
-                    BOOST_LOG_TRIVIAL(error) <<__FUNCTION__<< boost::format(":create_layer failed, out of memory");
+                    BOOST_LOG_TRIVIAL(error) << boost::format(":create_layer failed, out of memory");
                     return CLI_OUT_OF_MEMORY;
                 }
                 if (previous_layer) {
@@ -4696,7 +4696,7 @@ int Print::load_cached_data(const std::string& directory)
                     const PrintRegion *print_region = find_region(obj, config_hash);
 
                     if (!print_region){
-                        BOOST_LOG_TRIVIAL(error) <<__FUNCTION__<< boost::format(":can not find print region of object %1%, layer %2%, print_z %3%, layer_region %4%")
+                        BOOST_LOG_TRIVIAL(error) << boost::format(":can not find print region of object %1%, layer %2%, print_z %3%, layer_region %4%")
                             %name % index %new_layer->print_z %region_index;
                         //delete new_layer;
                         return CLI_IMPORT_CACHE_DATA_CAN_NOT_USE;
@@ -4728,7 +4728,7 @@ int Print::load_cached_data(const std::string& directory)
                 json& layer_json = root_json[JSON_SUPPORT_LAYERS][index];
                 SupportLayer* new_support_layer = obj->add_support_layer(layer_json[JSON_LAYER_ID], layer_json[JSON_SUPPORT_LAYER_INTERFACE_ID], layer_json[JSON_LAYER_HEIGHT], layer_json[JSON_LAYER_PRINT_Z]);
                 if (!new_support_layer) {
-                    BOOST_LOG_TRIVIAL(error) <<__FUNCTION__<< boost::format(":add_support_layer failed, out of memory");
+                    BOOST_LOG_TRIVIAL(error) << boost::format(":add_support_layer failed, out of memory");
                     return CLI_OUT_OF_MEMORY;
                 }
                 if (previous_support_layer) {

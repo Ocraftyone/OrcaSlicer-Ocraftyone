@@ -1324,7 +1324,7 @@ int GUI_App::download_plugin(std::string name, std::string package_name, Install
     }
 
     if (m_networking_cancel_update || cancel) {
-        BOOST_LOG_TRIVIAL(info) << boost::format("[download_plugin 1]: %1%, cancelled by user") % __LINE__;
+        BOOST_LOG_TRIVIAL(info) << "[download_plugin 1]: cancelled by user";
         j["result"] = "failed";
         j["error_msg"] = (boost::format("[download_plugin 1]: %1%, cancelled by user") % __LINE__).str();
         return -1;
@@ -1400,7 +1400,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
     }
 
     if (m_networking_cancel_update) {
-        BOOST_LOG_TRIVIAL(info) << boost::format("[install_plugin]: %1%, cancelled by user")%__LINE__;
+        BOOST_LOG_TRIVIAL(info) << "[install_plugin]: cancelled by user";
         return -1;
     }
     if (pro_fn) {
@@ -1410,7 +1410,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
     mz_zip_archive archive;
     mz_zip_zero_struct(&archive);
     if (!open_zip_reader(&archive, target_file_path)) {
-        BOOST_LOG_TRIVIAL(error) << boost::format("[install_plugin]: %1%, open zip file failed")%__LINE__;
+        BOOST_LOG_TRIVIAL(error) << "[install_plugin]: open zip file failed";
         if (pro_fn) pro_fn(InstallStatusDownloadFailed, 0, cancel);
         return InstallStatusUnzipFailed;
     }
@@ -1443,10 +1443,10 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
 
     mz_uint num_entries = mz_zip_reader_get_num_files(&archive);
     mz_zip_archive_file_stat stat;
-    BOOST_LOG_TRIVIAL(error) << boost::format("[install_plugin]: %1%, got %2% files")%__LINE__ %num_entries;
+    BOOST_LOG_TRIVIAL(error) << boost::format("[install_plugin]: got %1% files") %num_entries;
     for (mz_uint i = 0; i < num_entries; i++) {
         if (m_networking_cancel_update || cancel) {
-            BOOST_LOG_TRIVIAL(info) << boost::format("[install_plugin]: %1%, cancelled by user")%__LINE__;
+            BOOST_LOG_TRIVIAL(info) << "[install_plugin]: cancelled by user";
             return -1;
         }
         if (mz_zip_reader_file_stat(&archive, i, &stat)) {
@@ -1510,7 +1510,7 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
             }
         }
         else {
-            BOOST_LOG_TRIVIAL(error) << boost::format("[install_plugin]: %1%, mz_zip_reader_file_stat for file %2% failed")%__LINE__%i;
+            BOOST_LOG_TRIVIAL(error) << boost::format("[install_plugin]:mz_zip_reader_file_stat for file %1% failed")%i;
         }
     }
 
@@ -6116,7 +6116,7 @@ bool GUI_App::select_language()
 // based on the "language" key stored in the application config.
 bool GUI_App::load_language(wxString language, bool initial)
 {
-    BOOST_LOG_TRIVIAL(info) << boost::format("%1%: language %2%, initial: %3%") %__FUNCTION__ %language %initial;
+    BOOST_LOG_TRIVIAL(info) << boost::format("language %1%, initial: %2%") %language %initial;
     if (initial) {
     	// There is a static list of lookup path prefixes in wxWidgets. Add ours.
 	    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(from_u8(localization_dir()));

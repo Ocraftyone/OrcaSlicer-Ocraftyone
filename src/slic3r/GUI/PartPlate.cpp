@@ -6534,7 +6534,7 @@ void PartPlateList::on_extruder_count_changed(int extruder_count)
     for (unsigned int i = 0; i < (unsigned int) m_plate_list.size(); ++i) {
         m_plate_list[i]->on_extruder_count_changed(extruder_count);
     }
-    BOOST_LOG_TRIVIAL(info) << boost::format("%1%: extruder_count=%2%")% __FUNCTION__ %extruder_count;
+    BOOST_LOG_TRIVIAL(info) << boost::format("extruder_count=%1%") %extruder_count;
 }
 
 void PartPlateList::set_filament_count(int filament_count)
@@ -6544,7 +6544,7 @@ void PartPlateList::set_filament_count(int filament_count)
     {
         m_plate_list[i]->set_filament_count(filament_count);
     }
-    BOOST_LOG_TRIVIAL(info) << boost::format("%1%: filament_count=%2%")% __FUNCTION__ %filament_count;
+    BOOST_LOG_TRIVIAL(info) << boost::format("filament_count=%1%") %filament_count;
 }
 
 void PartPlateList::on_filament_added(int filament_count)
@@ -6554,7 +6554,7 @@ void PartPlateList::on_filament_added(int filament_count)
     {
         m_plate_list[i]->on_filament_added();
     }
-    BOOST_LOG_TRIVIAL(info) << boost::format("%1%: filament_count=%2%")% __FUNCTION__ %filament_count;
+    BOOST_LOG_TRIVIAL(info) << boost::format("filament_count=%1%") %filament_count;
 }
 
 void PartPlateList::on_filament_deleted(int filament_count, int filament_id)
@@ -6564,7 +6564,7 @@ void PartPlateList::on_filament_deleted(int filament_count, int filament_id)
     {
         m_plate_list[i]->on_filament_deleted(filament_count, filament_id);
     }
-    BOOST_LOG_TRIVIAL(info) << boost::format("%1%: filament_count=%2%, filament_id=%3%")% __FUNCTION__ %filament_count %filament_id;
+    BOOST_LOG_TRIVIAL(info) << boost::format("filament_count=%1%, filament_id=%2%") %filament_count %filament_id;
 }
 
 }//end namespace GUI

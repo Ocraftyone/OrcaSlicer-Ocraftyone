@@ -1546,7 +1546,7 @@ void GCodeProcessorResult::reset() {
     //BBS: add mutex for protection of gcode result
     unlock();
     //BBS: add logs
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: this=%2% reset finished")%__LINE__%this;
+    BOOST_LOG_TRIVIAL(info) << boost::format("this=%1% reset finished")%this;
 }
 
 const std::vector<std::pair<GCodeProcessor::EProducer, std::string>> GCodeProcessor::Producers = {

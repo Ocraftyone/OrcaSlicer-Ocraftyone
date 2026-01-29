@@ -341,7 +341,7 @@ void Preview::load_print(bool keep_z_range, bool only_gcode)
 //BBS: add only gcode mode
 void Preview::reload_print(bool only_gcode)
 {
-    BOOST_LOG_TRIVIAL(debug) << boost::format(" %1%: enter")%__LINE__;
+    BOOST_LOG_TRIVIAL(debug) << "enter";
 
     //BBS: add m_loaded_print logic
     //m_loaded = false;
@@ -633,9 +633,9 @@ void Preview::load_print_as_fff(bool keep_z_range, bool only_gcode)
 
     //BBS: add m_loaded_print logic
     const Print *print = m_process->fff_print();
-    BOOST_LOG_TRIVIAL(debug) << boost::format(" %1%: previous print %2%, new print %3%")%__LINE__ %m_loaded_print %print;
+    BOOST_LOG_TRIVIAL(debug) << boost::format("previous print %1%, new print %2%") %m_loaded_print %print;
     if ((m_loaded_print&&(m_loaded_print == print)) || m_process->current_printer_technology() != ptFFF) {
-        BOOST_LOG_TRIVIAL(debug) << boost::format(" %1%: already loaded before, return directly")%__LINE__;
+        BOOST_LOG_TRIVIAL(debug) << "already loaded before, return directly";
         return;
     }
 
@@ -645,8 +645,8 @@ void Preview::load_print_as_fff(bool keep_z_range, bool only_gcode)
     bool has_layers = false;
     //BBS: always load shell at preview
     load_shells(*print, true);
-    BOOST_LOG_TRIVIAL(debug) << boost::format(" %1%: print: %2%, gcode_result %3%, check started")%__LINE__ %print %m_gcode_result;
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: print is step done, posSlice %2%, posSupportMaterial %3%, psGCodeExport %4%") % __LINE__ % print->is_step_done(posSlice) %print->is_step_done(posSupportMaterial) % print->is_step_done(psGCodeExport);
+    BOOST_LOG_TRIVIAL(debug) << boost::format("print: %1%, gcode_result %2%, check started")%print %m_gcode_result;
+    BOOST_LOG_TRIVIAL(info) << boost::format("print is step done, posSlice %1%, posSupportMaterial %2%, psGCodeExport %3%") % print->is_step_done(posSlice) %print->is_step_done(posSupportMaterial) % print->is_step_done(psGCodeExport);
     if (print->is_step_done(posSlice)) {
         for (const PrintObject* print_object : print->objects())
             if (! print_object->layers().empty()) {

@@ -2585,7 +2585,6 @@ void SyncAmsInfoDialog::set_default(bool hide_some)
 
 void SyncAmsInfoDialog::reset_and_sync_ams_list()
 {
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__;
     // for black list
     std::vector<std::string> materials;
     std::vector<std::string> brands;

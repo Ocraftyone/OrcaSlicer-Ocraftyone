@@ -1250,7 +1250,7 @@ bool GLCanvas3D::init()
 
     m_show_world_axes = wxGetApp().app_config->get("show_axes") == "true";
 
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< " enter";
+    BOOST_LOG_TRIVIAL(info) << " enter";
     glsafe(::glClearColor(1.0f, 1.0f, 1.0f, 1.0f));
     glsafe(::glClearDepth(1.0f));
 
@@ -1268,19 +1268,19 @@ bool GLCanvas3D::init()
     if (m_main_toolbar.is_enabled())
         m_layers_editing.init();
 
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< ": before gizmo init";
+    BOOST_LOG_TRIVIAL(info) << ": before gizmo init";
     if (m_gizmos.is_enabled() && !m_gizmos.init())
         std::cout << "Unable to initialize gizmos: please, check that all the required textures are available" << std::endl;
 
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< ": before _init_toolbars";
+    BOOST_LOG_TRIVIAL(info) << ": before _init_toolbars";
     if (!_init_toolbars())
         return false;
 
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< ": finish _init_toolbars";
+    BOOST_LOG_TRIVIAL(info) << ": finish _init_toolbars";
     if (m_selection.is_enabled() && !m_selection.init())
         return false;
 
-    BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< ": finish m_selection";
+    BOOST_LOG_TRIVIAL(info) << ": finish m_selection";
 
 #if ENABLE_IMGUI_STYLE_EDITOR
     //BBS load render color for style editor

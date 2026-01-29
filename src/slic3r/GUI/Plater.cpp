@@ -1250,7 +1250,7 @@ bool Sidebar::priv::sync_extruder_list(bool &only_external_material)
 {
     MachineObject *obj = wxGetApp().getDeviceManager()->get_selected_machine();
     auto           printer_name = plater->get_selected_printer_name_in_combox();
-    BOOST_LOG_TRIVIAL(info) << __LINE__ << " begin sync_extruder_list";
+    BOOST_LOG_TRIVIAL(info) << " begin sync_extruder_list";
     if (obj == nullptr) {
         plater->pop_warning_and_go_to_device_page(printer_name, Plater::PrinterWarningType::NOT_CONNECTED, _L("Sync printer information"));
         return false;
@@ -7629,8 +7629,8 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
         process_completed_with_error = -1;
     }
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: was_running = %2%, running %3%, invalidated=%4%, return_state=%5%, internal_cancel=%6%")
-        % __LINE__ % was_running % this->background_process.running() % invalidated % return_state % this->background_process.is_internal_cancelled();
+    BOOST_LOG_TRIVIAL(info) << boost::format("was_running = %1%, running %2%, invalidated=%3%, return_state=%4%, internal_cancel=%5%")
+        % was_running % this->background_process.running() % invalidated % return_state % this->background_process.is_internal_cancelled();
     if (was_running && ! this->background_process.running() && (return_state & UPDATE_BACKGROUND_PROCESS_RESTART) == 0) {
         if (invalidated != Print::APPLY_STATUS_UNCHANGED || this->background_process.is_internal_cancelled())
         {
@@ -7638,7 +7638,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             // Post the "canceled" callback message, so that it will be processed after any possible pending status bar update messages.
             SlicingProcessCompletedEvent evt(EVT_PROCESS_COMPLETED, 0,
                 SlicingProcessCompletedEvent::Cancelled, nullptr);
-            BOOST_LOG_TRIVIAL(info) << boost::format(" %1%, post an EVT_PROCESS_COMPLETED to main, status %2%")%__LINE__ %evt.status();
+            BOOST_LOG_TRIVIAL(info) << boost::format("post an EVT_PROCESS_COMPLETED to main, status %1%") %evt.status();
             wxQueueEvent(q, evt.Clone());
         }
     }
@@ -7650,7 +7650,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
         this->main_frame->update_slice_print_status(MainFrame::eEventSliceUpdate, false);
 
         process_completed_with_error = partplate_list.get_curr_plate_index();
-        BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: set to process_completed_with_error, return_state=%2%")%__LINE__%return_state;
+        BOOST_LOG_TRIVIAL(info) << boost::format("set to process_completed_with_error, return_state=%1%")%return_state;
     }
     else
     {
@@ -7660,7 +7660,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
             notification_manager->set_slicing_progress_hidden();
 
         //BBS: add slice&&print status update logic
-        BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: background data valid, return_state=%2%")%__LINE__%return_state;
+        BOOST_LOG_TRIVIAL(info) << boost::format("background data valid, return_state=%1%")%return_state;
         PartPlate* cur_plate = background_process.get_current_plate();
         if (background_process.finished() && cur_plate && cur_plate->is_slice_result_valid())
         {
@@ -7703,7 +7703,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
 #endif
     }
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: exit, return_state=%2%")%__LINE__%return_state;
+    BOOST_LOG_TRIVIAL(info) << boost::format("exit, return_state=%1%")%return_state;
     return return_state;
 }
 
@@ -7712,7 +7712,7 @@ bool Plater::priv::restart_background_process(unsigned int state)
 {
     if (!m_worker.is_idle()) {
         // Avoid a race condition
-        BOOST_LOG_TRIVIAL(warning) << boost::format(", Line %1%: ui jobs running, return false")%__LINE__;
+        BOOST_LOG_TRIVIAL(warning) << "ui jobs running, return false";
         return false;
     }
 
@@ -7721,12 +7721,12 @@ bool Plater::priv::restart_background_process(unsigned int state)
          ( ((state & UPDATE_BACKGROUND_PROCESS_FORCE_RESTART) != 0 && ! this->background_process.finished()) ||
            (state & UPDATE_BACKGROUND_PROCESS_FORCE_EXPORT) != 0 ||
            (state & UPDATE_BACKGROUND_PROCESS_RESTART) != 0 ) ) {
-        BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: print is valid, try to start it now")%__LINE__;
+        BOOST_LOG_TRIVIAL(info) << "print is valid, try to start it now";
         // The print is valid and it can be started.
         if (this->background_process.start()) {
             if (!show_warning_dialog)
                 on_slicing_began();
-            BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: start successfully")%__LINE__;
+            BOOST_LOG_TRIVIAL(info) << "start successfully";
             return true;
         }
     }
@@ -7736,12 +7736,12 @@ bool Plater::priv::restart_background_process(unsigned int state)
             if (this->background_process.start()) {
                 if (!show_warning_dialog)
                     on_slicing_began();
-                BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: start successfully")%__LINE__;
+                BOOST_LOG_TRIVIAL(info) << "start successfully";
                 return true;
             }
         }
     }
-    BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: not started")%__LINE__;
+    BOOST_LOG_TRIVIAL(info) << "not started";
     return false;
 }
 
@@ -15261,7 +15261,7 @@ bool Plater::is_multi_extruder_ams_empty()
 //BBS: add multiple plate reslice logic
 void Plater::reslice()
 {
-    BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: enter, process_completed_with_error=%2%")%__LINE__ %p->process_completed_with_error;
+    BOOST_LOG_TRIVIAL(info) << boost::format("enter, process_completed_with_error=%1%") %p->process_completed_with_error;
     // There is "invalid data" button instead "slice now"
     if (p->process_completed_with_error == p->partplate_list.get_curr_plate_index())
     {
@@ -15306,7 +15306,7 @@ void Plater::reslice()
     //BBS: jusdge the result
     bool result = this->p->restart_background_process(state | priv::UPDATE_BACKGROUND_PROCESS_FORCE_RESTART);
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(", Line %1%: restart background,state=%2%, result=%3%")%__LINE__%state %result;
+    BOOST_LOG_TRIVIAL(info) << boost::format("restart background,state=%1%, result=%2%")%state %result;
     if ((state & priv::UPDATE_BACKGROUND_PROCESS_INVALID) != 0)
     {
         //BBS: add logs
@@ -16796,7 +16796,7 @@ void Plater::apply_background_progress()
     else
         invalidated = p->background_process.apply(this->model(), preset_bundle->full_config(false));
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: plate %2%, after apply, invalidated= %3%, previous result_valid %4% ") % __LINE__ % plate_index % invalidated % result_valid;
+    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%, after apply, invalidated= %2%, previous result_valid %3% ") % plate_index % invalidated % result_valid;
     if (invalidated & PrintBase::APPLY_STATUS_INVALIDATED)
     {
         part_plate->update_slice_result_valid_state(false);
@@ -16809,7 +16809,7 @@ void Plater::apply_background_progress()
 int Plater::select_plate(int plate_index, bool need_slice)
 {
     int ret;
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: plate %2%, need_slice %3% ")%__LINE__ %plate_index  %need_slice;
+    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%, need_slice %2% ")%plate_index  %need_slice;
     take_snapshot("select partplate!");
     ret = p->partplate_list.select_plate(plate_index);
     if (!ret) {
@@ -16842,7 +16842,7 @@ int Plater::select_plate(int plate_index, bool need_slice)
             invalidated = p->background_process.apply(this->model(), preset_bundle->full_config(false));
         bool model_fits, validate_err;
 
-        BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: plate %2%, after apply, invalidated= %3%, previous result_valid %4% ")%__LINE__ %plate_index  %invalidated %result_valid;
+        BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%, after apply, invalidated= %2%, previous result_valid %3% ")%plate_index  %invalidated %result_valid;
         if (result_valid)
         {
             if (is_preview_shown())
@@ -16959,7 +16959,7 @@ int Plater::select_plate(int plate_index, bool need_slice)
     SimpleEvent event(EVT_GLCANVAS_PLATE_SELECT);
     p->on_plate_selected(event);
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: plate %2%, return %3%")%__LINE__ %plate_index %ret;
+    BOOST_LOG_TRIVIAL(info) << boost::format("plate %1%, return %2%") %plate_index %ret;
     return ret;
 }
 
@@ -17265,7 +17265,7 @@ int Plater::select_plate_by_hover_id(int hover_id, bool right_click, bool isModi
             bool model_fits, validate_err;
             validate_current_plate(model_fits, validate_err);
 
-            BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: after apply, invalidated= %2%, previous result_valid %3% ")%__LINE__ % invalidated %result_valid;
+            BOOST_LOG_TRIVIAL(info) << boost::format("after apply, invalidated= %1%, previous result_valid %2% ") % invalidated %result_valid;
             if (result_valid)
             {
                 if (invalidated & PrintBase::APPLY_STATUS_INVALIDATED)
@@ -17429,7 +17429,7 @@ int Plater::select_plate_by_hover_id(int hover_id, bool right_click, bool isModi
         ret = -1;
     }
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: return %2%")%__LINE__ % ret;
+    BOOST_LOG_TRIVIAL(info) << boost::format("return %1%") % ret;
     return ret;
 }
 

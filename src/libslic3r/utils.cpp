@@ -645,7 +645,7 @@ namespace WindowsSupport
 							if (errcode == std::errc::no_such_file_or_directory)
 						  		break;
 							//BBS: add some log for error tracing
-							BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
+							BOOST_LOG_TRIVIAL(error) << boost::format("error: %1%") % errcode.message();
 							return errcode;
 						}
 						BY_HANDLE_FILE_INFORMATION FI2;
@@ -656,7 +656,7 @@ namespace WindowsSupport
 						continue;
 					}
 					//BBS: add some log for error tracing
-					BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error: %2%") % __LINE__ % errcode.message();
+					BOOST_LOG_TRIVIAL(error) << boost::format("error: %1%") % errcode.message();
 					return errcode;
 				}
 				break;
@@ -670,7 +670,7 @@ namespace WindowsSupport
 
 		// The most likely root cause.
 		//BBS: add some log for error tracing
-		BOOST_LOG_TRIVIAL(error) << boost::format(", line %1%, error in the end, permission_denied") % __LINE__;
+		BOOST_LOG_TRIVIAL(error) << "error in the end, permission_denied";
 		return std::make_error_code(std::errc::permission_denied);
 	}
 } // namespace WindowsSupport

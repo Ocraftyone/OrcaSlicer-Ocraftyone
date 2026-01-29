@@ -4872,7 +4872,7 @@ wxBoxSizer *CreatePresetForPrinterDialog::create_selected_printer_preset_sizer()
     for (std::pair<std::string, std::vector<std::shared_ptr<Preset>>> printer_to_filament_presets : m_printer_compatible_filament_presets) {
         auto compatible_printer_name = printer_to_filament_presets.first;
         if (compatible_printer_name.empty()) {
-            BOOST_LOG_TRIVIAL(info)<<__FUNCTION__ << " a printer has no name";
+            BOOST_LOG_TRIVIAL(info) << " a printer has no name";
             continue;
         }
         wxString printer_name              = from_u8(compatible_printer_name);

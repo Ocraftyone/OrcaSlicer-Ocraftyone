@@ -1483,7 +1483,7 @@ void ConfigBase::save_to_json(const std::string &file, const std::string &name, 
     c << std::setw(4) << j << std::endl;
     c.close();
 
-    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", saved config to %1%\n")%file;
+    BOOST_LOG_TRIVIAL(info)  << boost::format(", saved config to %1%\n")%file;
 }
 
 void ConfigBase::save(const std::string &file) const
@@ -1495,7 +1495,7 @@ void ConfigBase::save(const std::string &file) const
         c << opt_key << " = " << this->opt_serialize(opt_key) << std::endl;
     c.close();
 
-    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", saved config to %1%\n")%file;
+    BOOST_LOG_TRIVIAL(info)  << boost::format(", saved config to %1%\n")%file;
 }
 
 // Set all the nullable values to nils.

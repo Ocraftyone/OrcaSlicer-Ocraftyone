@@ -199,7 +199,7 @@ void BackgroundSlicingProcess::process_fff()
     m_fff_print->is_BBL_printer() = preset_bundle.is_bbl_vendor();
 	//BBS: add the logic to process from an existed gcode file
 	if (m_print->finished()) {
-		BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: skip slicing, to process previous gcode file")%__LINE__;
+		BOOST_LOG_TRIVIAL(info) << "skip slicing, to process previous gcode file";
 		m_fff_print->set_status(80, _utf8(L("Processing G-code from Previous file...")));
 		wxCommandEvent evt(m_event_slicing_completed_id);
 		// Post the Slicing Finished message for the G-code viewer to update.
@@ -209,7 +209,7 @@ void BackgroundSlicingProcess::process_fff()
 
 		m_temp_output_path = this->get_current_plate()->get_tmp_gcode_path();
 		if (! m_export_path.empty()) {
-			BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: export gcode from %2% directly to %3%")%__LINE__%m_temp_output_path %m_export_path;
+			BOOST_LOG_TRIVIAL(info) << boost::format("export gcode from %1% directly to %2%")%m_temp_output_path %m_export_path;
 		}
 		else {
             if (m_upload_job.empty()) {
@@ -217,18 +217,18 @@ void BackgroundSlicingProcess::process_fff()
                     return this->render_thumbnails(params);
                 });
             }
-            BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: export_gcode_from_previous_file from %2% finished")%__LINE__ % m_temp_output_path;
+            BOOST_LOG_TRIVIAL(info) << boost::format("export_gcode_from_previous_file from %1% finished") % m_temp_output_path;
 		}
 	}
 	else {
 		//BBS: reset the gcode before reload_print in slicing_completed event processing
 		//FIX the gcode rename failed issue
-		BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: will start slicing, reset gcode_result %2% firstly")%__LINE__%m_gcode_result;
+		BOOST_LOG_TRIVIAL(info) << boost::format("will start slicing, reset gcode_result %1% firstly")%m_gcode_result;
 		m_gcode_result->reset();
 
-		BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: gcode_result reseted, will start print::process")%__LINE__;
+		BOOST_LOG_TRIVIAL(info) << "gcode_result reseted, will start print::process";
 		m_print->process();
-		BOOST_LOG_TRIVIAL(info) << boost::format(" %1%: after print::process, send slicing complete event to gui...")%__LINE__;
+		BOOST_LOG_TRIVIAL(info) << "after print::process, send slicing complete event to gui...";
         if (m_current_plate->get_real_filament_map_mode(preset_bundle.project_config) < FilamentMapMode::fmmManual) {
             std::vector<int> f_maps = m_fff_print->get_filament_maps();
             m_current_plate->set_filament_maps(f_maps);
@@ -448,7 +448,7 @@ void BackgroundSlicingProcess::call_process(std::exception_ptr &ex) throw()
 		// Canceled, this is all right.
 		assert(m_print->canceled());
 		ex = std::current_exception();
-		BOOST_LOG_TRIVIAL(error) <<__FUNCTION__ << ":got cancelled exception" << std::endl;
+		BOOST_LOG_TRIVIAL(error)  << ":got cancelled exception" << std::endl;
 	} catch (...) {
 		ex = std::current_exception();
 		BOOST_LOG_TRIVIAL(error) << ":got other exception" << std::endl;

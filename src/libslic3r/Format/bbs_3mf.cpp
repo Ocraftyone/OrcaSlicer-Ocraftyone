@@ -4713,7 +4713,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                         //add the shared mesh logic
                         shared_mesh_id = ::atoi(metadata.value.c_str());
                         found_count++;
-                        BOOST_LOG_TRIVIAL(info) << boost::format(": line %1%, shared_mesh_id %2%")%__LINE__%shared_mesh_id;
+                        BOOST_LOG_TRIVIAL(info) << boost::format("shared_mesh_id %1%")%shared_mesh_id;
                     }
 
                     if (found_count >= 2)
@@ -4727,12 +4727,12 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
             ModelVolume* volume = nullptr;
             ModelVolume *shared_volume = nullptr;
-            BOOST_LOG_TRIVIAL(info) << boost::format(": line %1%, subobject_id %2%, shared_mesh_id %3%")%__LINE__ %sub_object->id %shared_mesh_id;
+            BOOST_LOG_TRIVIAL(info) << boost::format("subobject_id %1%, shared_mesh_id %2%")%sub_object->id %shared_mesh_id;
             if (shared_mesh_id != -1) {
                 std::map<int, ModelVolume*>::iterator iter = m_shared_meshes.find(shared_mesh_id);
                 if (iter != m_shared_meshes.end()) {
                     shared_volume = iter->second;
-                    BOOST_LOG_TRIVIAL(info) << boost::format(": line %1%, found shared mesh, id %2%, mesh %3%")%__LINE__%shared_mesh_id%shared_volume;
+                    BOOST_LOG_TRIVIAL(info) << boost::format("found shared mesh, id %1%, mesh %2%")%shared_mesh_id%shared_volume;
                 }
             }
             else {
@@ -4740,7 +4740,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 std::map<int, ModelVolume*>::iterator iter = m_shared_meshes.find(sub_object->id);
                 if (iter != m_shared_meshes.end()) {
                     shared_volume = iter->second;
-                    BOOST_LOG_TRIVIAL(info) << boost::format(": line %1%, already loaded copy-share mesh before, id %2%, mesh %3%")%__LINE__%sub_object->id%shared_volume;
+                    BOOST_LOG_TRIVIAL(info) << boost::format("already loaded copy-share mesh before, id %1%, mesh %2%")%sub_object->id%shared_volume;
                 }
             }
 
@@ -4804,7 +4804,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             else {
                 //create volume to use shared mesh
                 volume = object.add_volume_with_shared_mesh(*shared_volume);
-                BOOST_LOG_TRIVIAL(info) << boost::format(": line %1%, create volume using shared_mesh %2%")%__LINE__%shared_volume;
+                BOOST_LOG_TRIVIAL(info) << boost::format("create volume using shared_mesh %1%")%shared_volume;
             }
             // stores the volume matrix taken from the metadata, if present
             if (has_transform)
@@ -5816,7 +5816,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         bool cb_cancel = false;
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ <<
+        BOOST_LOG_TRIVIAL(info)  <<
                 boost::format(",before open zip writer, m_skip_static %1%, m_save_gcode %2%, m_use_loaded_id %3%")%m_skip_static %m_save_gcode %m_use_loaded_id;
         if (proFn) {
             proFn(EXPORT_STAGE_OPEN_3MF, 0, 1, cb_cancel);
@@ -5844,7 +5844,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         } lock{ archive, &filename};
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", before add _add_content_types_file_to_archive\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", before add _add_content_types_file_to_archive\n");
         if (proFn) {
             proFn(EXPORT_STAGE_CONTENT_TYPES, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -5859,7 +5859,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
         //BBS progress point
         BOOST_LOG_TRIVIAL(info) << boost::format(",before add thumbnails, count %1%") % thumbnail_data.size();
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",top&&pick thumbnails, count %1%")%top_thumbnail_data.size();
+        BOOST_LOG_TRIVIAL(info)  << boost::format(",top&&pick thumbnails, count %1%")%top_thumbnail_data.size();
 
         //BBS: add thumbnail for each plate
         if (!m_skip_static) {
@@ -5908,7 +5908,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                         return false;
                     }
 
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",add thumbnail %1%'s data into 3mf")%(index+1);
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(",add thumbnail %1%'s data into 3mf")%(index+1);
                     thumbnail_status[index] = true;
                 }
             }
@@ -5928,7 +5928,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             {
                 if (top_thumbnail_data[index]->is_valid())
                 {
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",add top thumbnail %1%'s data into 3mf")%(index+1);
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(",add top thumbnail %1%'s data into 3mf")%(index+1);
                     if (!_add_thumbnail_file_to_archive(archive, *top_thumbnail_data[index], "Metadata/top", index)) {
                         return false;
                     }
@@ -5937,7 +5937,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
                 if (pick_thumbnail_data[index]->is_valid())
                 {
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",add pick thumbnail %1%'s data into 3mf")%(index+1);
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(",add pick thumbnail %1%'s data into 3mf")%(index+1);
                     if (!_add_thumbnail_file_to_archive(archive, *pick_thumbnail_data[index], "Metadata/pick", index)) {
                         return false;
                     }
@@ -5950,7 +5950,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
                 if (!thumbnail_status[i] && !plate_data->thumbnail_file.empty() && (boost::filesystem::exists(plate_data->thumbnail_file))){
                     std::string dst_in_3mf = (boost::format("Metadata/plate_%1%.png") % (i + 1)).str();
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", add thumbnail %1% from file %2%") % (i+1) %plate_data->thumbnail_file;
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(", add thumbnail %1% from file %2%") % (i+1) %plate_data->thumbnail_file;
 
                     if (!_add_file_to_archive(archive, dst_in_3mf, plate_data->thumbnail_file)) {
                         BOOST_LOG_TRIVIAL(error) << boost::format(", add thumbnail %1% from file %2% failed\n") % (i+1) %plate_data->thumbnail_file;
@@ -5960,7 +5960,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
                 if (!no_light_thumbnail_status[i] && !plate_data->no_light_thumbnail_file.empty() && (boost::filesystem::exists(plate_data->no_light_thumbnail_file))){
                     std::string dst_in_3mf = (boost::format("Metadata/plate_no_light_%1%.png") % (i + 1)).str();
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", add no light thumbnail %1% from file %2%") % (i+1) %plate_data->no_light_thumbnail_file;
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(", add no light thumbnail %1% from file %2%") % (i+1) %plate_data->no_light_thumbnail_file;
 
                     if (!_add_file_to_archive(archive, dst_in_3mf, plate_data->no_light_thumbnail_file)) {
                         BOOST_LOG_TRIVIAL(error) << boost::format(", add no light thumbnail %1% from file %2% failed\n") % (i+1) %plate_data->no_light_thumbnail_file;
@@ -5971,7 +5971,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 if (!top_thumbnail_status[i] && !plate_data->top_file.empty() && (boost::filesystem::exists(plate_data->top_file))){
                     std::string dst_in_3mf = (boost::format("Metadata/top_%1%.png") % (i + 1)).str();
 
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", add top thumbnail %1% from file %2%") % (i+1) %plate_data->top_file;
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(", add top thumbnail %1% from file %2%") % (i+1) %plate_data->top_file;
                     if (!_add_file_to_archive(archive, dst_in_3mf, plate_data->top_file)) {
                         BOOST_LOG_TRIVIAL(error) << boost::format(", add top thumbnail %1% failed") % (i+1);
                         return false;
@@ -5982,7 +5982,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 if (!pick_thumbnail_status[i] && !plate_data->pick_file.empty() && (boost::filesystem::exists(plate_data->pick_file))){
                     std::string dst_in_3mf = (boost::format("Metadata/pick_%1%.png") % (i + 1)).str();
 
-                    BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", add pick thumbnail %1% from file %2%") % (i+1) %plate_data->pick_file;
+                    BOOST_LOG_TRIVIAL(info)  << boost::format(", add pick thumbnail %1% from file %2%") % (i+1) %plate_data->pick_file;
                     if (!_add_file_to_archive(archive, dst_in_3mf, plate_data->pick_file)) {
                         BOOST_LOG_TRIVIAL(error) << boost::format(", add pick thumbnail %1% failed") % (i+1);
                         return false;
@@ -5997,7 +5997,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
         }
 
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",before add calibration thumbnails, count %1%\n")%calibration_data.size();
+        BOOST_LOG_TRIVIAL(info)  << boost::format(",before add calibration thumbnails, count %1%\n")%calibration_data.size();
         //BBS add calibration thumbnail for each plate
         if (!m_skip_static && calibration_data.size() > 0) {
             // Adds the file Metadata/calibration_p[X].png.
@@ -6019,7 +6019,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
         }
 
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(",before add calibration boundingbox, count %1%\n")%id_bboxes.size();
+        BOOST_LOG_TRIVIAL(info)  << boost::format(",before add calibration boundingbox, count %1%\n")%id_bboxes.size();
         if (!m_skip_static && id_bboxes.size() > 0) {
             // Adds the file Metadata/calibration_p[X].png.
             for (unsigned int index = 0; index < id_bboxes.size(); index++)
@@ -6035,7 +6035,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         }
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", before add models\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", before add models\n");
         if (proFn) {
             proFn(EXPORT_STAGE_ADD_MODELS, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -6058,7 +6058,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
 
             // BBS progress point
-            /*BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format("export 3mf EXPORT_STAGE_ADD_LAYER_RANGE\n");
+            /*BOOST_LOG_TRIVIAL(info)  << boost::format("export 3mf EXPORT_STAGE_ADD_LAYER_RANGE\n");
             if (proFn) {
                 proFn(EXPORT_STAGE_ADD_LAYER_RANGE, 0, 1, cb_cancel);
                 if (cb_cancel)
@@ -6079,7 +6079,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
 
             // BBS progress point
-            /*BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format("export 3mf EXPORT_STAGE_ADD_SUPPORT\n");
+            /*BOOST_LOG_TRIVIAL(info)  << boost::format("export 3mf EXPORT_STAGE_ADD_SUPPORT\n");
             if (proFn) {
                 proFn(EXPORT_STAGE_ADD_SUPPORT, 0, 1, cb_cancel);
                 if (cb_cancel)
@@ -6199,7 +6199,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         }
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", before add sliced info to 3mf\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", before add sliced info to 3mf\n");
         if (proFn) {
             proFn(EXPORT_STAGE_ADD_SLICE_INFO, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -6214,7 +6214,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         }
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", before add auxiliary dir to 3mf\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", before add auxiliary dir to 3mf\n");
         if (proFn) {
             proFn(EXPORT_STAGE_ADD_AUXILIARIES, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -6222,12 +6222,12 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         }
 
         if (!m_skip_static && !_add_auxiliary_dir_to_archive(archive, model.get_auxiliary_file_temp_path(), temp_data)) {
-            BOOST_LOG_TRIVIAL(error) << ":" <<__LINE__ << boost::format(", _add_auxiliary_dir_to_archive failed\n");
+            BOOST_LOG_TRIVIAL(error)  << boost::format(", _add_auxiliary_dir_to_archive failed\n");
             return false;
         }
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", before add relation file to 3mf\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", before add relation file to 3mf\n");
         if (proFn) {
             proFn(EXPORT_STAGE_ADD_RELATIONS, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -6238,7 +6238,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         // The content of this file is the same for each OrcaSlicer 3mf.
         // The relationshis file contains a reference to the geometry file "3D/3dmodel.model", the name was chosen to be compatible with CURA.
         if (!_add_relationships_file_to_archive(archive, {}, {}, {}, temp_data, export_plate_idx)) {
-            BOOST_LOG_TRIVIAL(error) << ":" <<__LINE__ << boost::format(", _add_relationships_file_to_archive failed\n");
+            BOOST_LOG_TRIVIAL(error)  << boost::format(", _add_relationships_file_to_archive failed\n");
             return false;
         }
 
@@ -6249,7 +6249,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         }
 
         //BBS progress point
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", finished exporting 3mf\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format(", finished exporting 3mf\n");
         if (proFn) {
             proFn(EXPORT_STAGE_FINISH, 0, 1, cb_cancel);
             if (cb_cancel)
@@ -6276,9 +6276,9 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 #endif
         if (!result) {
             add_error("Unable to add file " + src_file_path + " to archive");
-            BOOST_LOG_TRIVIAL(error) << ":" <<__LINE__ << boost::format(", Unable to add file %1% to archive %2%\n") % src_file_path % path_in_zip;
+            BOOST_LOG_TRIVIAL(error)  << boost::format(", Unable to add file %1% to archive %2%\n") % src_file_path % path_in_zip;
         } else {
-            BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", add file %1% to archive %2%\n") % src_file_path % path_in_zip;
+            BOOST_LOG_TRIVIAL(info)  << boost::format(", add file %1% to archive %2%\n") % src_file_path % path_in_zip;
         }
         return result;
     }
@@ -8075,7 +8075,7 @@ bool _BBS_3MF_Exporter::_add_gcode_file_to_archive(mz_zip_archive& archive, cons
                 mz_zip_writer_add_from_zip_reader(&root_archive, &archive, 0);
             }
             mz_zip_reader_end(&archive);
-            BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format(", store  %1% to 3mf %2%\n") % src_gcode_file % gcode_in_3mf;
+            BOOST_LOG_TRIVIAL(info)  << boost::format(", store  %1% to 3mf %2%\n") % src_gcode_file % gcode_in_3mf;
         }
     });
     return result;

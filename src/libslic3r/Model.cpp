@@ -416,7 +416,7 @@ Model Model::read_from_archive(const std::string& input_file, DynamicPrintConfig
     bool cb_cancel;
     if (options & LoadStrategy::AddDefaultInstances) {
         model.add_default_instances();
-        BOOST_LOG_TRIVIAL(info) << ":" <<__LINE__ << boost::format("import 3mf IMPORT_STAGE_ADD_INSTANCE\n");
+        BOOST_LOG_TRIVIAL(info)  << boost::format("import 3mf IMPORT_STAGE_ADD_INSTANCE\n");
         if (proFn) {
             proFn(IMPORT_STAGE_ADD_INSTANCE, 0, 1, cb_cancel);
             if (cb_cancel)
