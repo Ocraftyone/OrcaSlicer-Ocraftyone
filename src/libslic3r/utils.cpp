@@ -367,9 +367,12 @@ std::string add_message(logging::record_view const& rec)
     auto message = rec[expr::smessage];
     if (!message)
         return {};
-    if (boost::starts_with(*message, ": ") || boost::starts_with(*message, ", "))
-        return message->substr(2);
-    return *message;
+    if (boost::starts_with(*message, ":") || boost::starts_with(*message, ",")) {
+        auto substr = message->substr(2);
+        boost::trim(substr);
+        return substr;
+    }
+    return boost::trim_copy(*message);
 }
 
 void init_log(const std::string& file, unsigned int level, bool log_to_console)
