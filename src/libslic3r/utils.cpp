@@ -177,6 +177,7 @@ void setup_cache_sink()
     auto backend = boost::make_shared<CacheSink>();
     g_cache_sink = boost::make_shared<sinks::synchronous_sink<CacheSink>>(backend);
     logging::core::get()->add_sink(g_cache_sink);
+	logging::add_common_attributes();
 }
 
 // Force set_logging_level(<=error) after loading of the DLL.
@@ -421,9 +422,6 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
     }
 
     logging::core::get()->remove_sink(g_cache_sink);
-
-	logging::add_common_attributes();
-
 #undef slic3r_log_format
 }
 
