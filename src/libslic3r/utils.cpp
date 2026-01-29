@@ -399,30 +399,28 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 	}
 	auto full_path = (log_folder / file).make_preferred();
 
-#define slic3r_log_format keywords::format = \
-                                                    (expr::stream \
-                                                    << boost::phoenix::bind(format_severity ,boost::phoenix::placeholders::_1) \
-                                                    << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") \
-                                                    << " [Thread " << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "] " \
-                                                    << expr::wrap_formatter(&add_message) \
-                                                    )
+    auto format = (
+        expr::stream << boost::phoenix::bind(format_severity, boost::phoenix::placeholders::_1)
+                                << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") << " [Thread "
+                                << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "] "
+                                << expr::wrap_formatter(&add_message)
+                                );
 
 
     g_file_log_sink = boost::log::add_file_log(
 		keywords::file_name = full_path.string() + "_%N.log",
 		keywords::rotation_size = 100 * 1024 * 1024,
-		slic3r_log_format,
+		keywords::format = format,
 		keywords::auto_flush = true
 	);
     g_cache_sink->locked_backend()->forward_records(*g_file_log_sink);
 
     if (log_to_console) {
-        g_console_log_sink = logging::add_console_log(std::cout, slic3r_log_format, keywords::auto_flush = true);
+        g_console_log_sink = logging::add_console_log(std::cout, keywords::format = format, keywords::auto_flush = true);
         g_cache_sink->locked_backend()->forward_records(*g_console_log_sink);
     }
 
     logging::core::get()->remove_sink(g_cache_sink);
-#undef slic3r_log_format
 }
 
 void flush_logs()
