@@ -407,6 +407,10 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
                                 << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") << " [Thread "
                                 << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "] "
                                 << expr::attr<std::string>("FunctionName")
+#ifdef SLIC3R_DEV
+                                // When working on a dev build, output {FileName}:{LineNumber} for hyperlinks to source files
+                                << ": " << expr::attr<std::string>("FileName")
+#endif
                                 << ":" << expr::attr<int, logging_tags::line_number>("LineNumber") << ": "
                                 << boost::phoenix::bind(add_message, boost::phoenix::placeholders::_1));
 
