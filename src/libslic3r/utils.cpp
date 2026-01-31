@@ -375,6 +375,13 @@ std::string add_message(logging::record_view const& rec)
     return boost::trim_copy(*message);
 }
 
+logging::formatting_ostream& operator<< (logging::formatting_ostream& strm, logging::to_log_manip<int, logging_tags::line_number> const& ln)
+{
+    if (const auto ln_int = ln.get(); ln_int != -1)
+        strm << ln_int;
+    return strm;
+}
+
 void init_log(const std::string& file, unsigned int level, bool log_to_console)
 {
 #ifdef __APPLE__
@@ -400,7 +407,7 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
                                 << expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%Y-%m-%d %H:%M:%S.%f") << " [Thread "
                                 << expr::attr<attrs::current_thread_id::value_type>("ThreadID") << "] "
                                 << expr::attr<std::string>("FunctionName")
-                                << ":" << expr::attr<int>("LineNumber") << ": "
+                                << ":" << expr::attr<int, logging_tags::line_number>("LineNumber") << ": "
                                 << boost::phoenix::bind(add_message, boost::phoenix::placeholders::_1));
 
 

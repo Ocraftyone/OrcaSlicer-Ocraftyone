@@ -1,8 +1,7 @@
 #ifndef ORCASLICER_LOGGINGEXTENSIONS_HPP
 #define ORCASLICER_LOGGINGEXTENSIONS_HPP
 #include <boost/log/expressions/keyword.hpp>
-#include <boost/scope_exit.hpp>
-#include <boost/log/attributes/constant.hpp>
+#include <boost/log/attributes/mutable_constant.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 
 namespace Slic3r {
@@ -27,53 +26,77 @@ public:
     typedef typename BaseT::char_type char_type;
     typedef typename BaseT::threading_model threading_model;
 
-    function_info_feature(){}
-    function_info_feature(function_info_feature const& that) : BaseT(static_cast<BaseT const&>(that)) {}
+    typedef boost::log::attributes::mutable_constant<std::string> function_name_attribute;
+    typedef boost::log::attributes::mutable_constant<int> line_number_attribute;
+    typedef boost::log::attributes::mutable_constant<std::string> file_name_attribute;
+
+    typedef typename boost::log::strictest_lock<
+        boost::log::no_lock< threading_model >,
+        typename BaseT::open_record_lock,
+        typename BaseT::add_attribute_lock
+    >::type open_record_lock;
+
+    function_info_feature() :
+    m_FunctionNameAttr(""),
+    m_LineNumberAttr(0),
+    m_FileNameAttr("")
+    {
+        add_attributes();
+    }
+
+    function_info_feature(function_info_feature const& that) :
+    BaseT(static_cast<BaseT const&>(that)),
+    m_FunctionNameAttr(that.m_FunctionNameAttr),
+    m_LineNumberAttr(that.m_LineNumberAttr),
+    m_FileNameAttr(that.m_FileNameAttr)
+    {
+        auto attrs = BaseT::attributes();
+        attrs[logging_tags::function_name::get_name()] = m_FunctionNameAttr;
+        attrs[logging_tags::line_number::get_name()] = m_LineNumberAttr;
+        attrs[logging_tags::file_name::get_name()] = m_FileNameAttr;
+    }
+
+    function_info_feature(function_info_feature&& that) BOOST_NOEXCEPT_IF(boost::is_nothrow_move_constructible< BaseT >::value &&
+                                                                                         boost::is_nothrow_move_constructible< function_name_attribute >::value &&
+                                                                                         boost::is_nothrow_move_constructible< line_number_attribute >::value &&
+                                                                                         boost::is_nothrow_move_constructible< file_name_attribute >::value ) :
+    BaseT(boost::move(static_cast< BaseT& >(that))),
+    m_FunctionNameAttr(boost::move(that.m_FunctionNameAttr)),
+    m_LineNumberAttr(boost::move(that.m_LineNumberAttr)),
+    m_FileNameAttr(boost::move(that.m_FileNameAttr))
+    {}
+
     template<typename ArgsT>
-    function_info_feature(ArgsT const& args) : BaseT(args) {}
+    explicit function_info_feature(ArgsT const& args) :
+    BaseT(args),
+    m_FunctionNameAttr(args[logging_keywords::function_name | std::string()]),
+    m_LineNumberAttr(args[logging_keywords::line_number | -1]),
+    m_FileNameAttr(args[logging_keywords::file_name | std::string()])
+    {
+        add_attributes();
+    }
+
+private:
+    function_name_attribute m_FunctionNameAttr;
+    line_number_attribute m_LineNumberAttr;
+    file_name_attribute m_FileNameAttr;
 
 protected:
     template<typename ArgsT>
     boost::log::record open_record_unlocked(ArgsT const& args)
     {
-        const std::string function_name = args[logging_keywords::function_name | std::string()];
-        const int line_number = args[logging_keywords::line_number | -1];
-        const std::string file_name = args[logging_keywords::file_name | std::string()];
-
-        boost::log::attribute_set& attrs = BaseT::attributes();
-        std::vector<boost::log::attribute_set::iterator> to_delete;
-
-        if (!function_name.empty()) {
-            std::pair<boost::log::attribute_set::iterator, bool> res =
-                BaseT::add_attribute_unlocked(logging_tags::function_name::get_name(), boost::log::attributes::constant(function_name));
-
-            if (res.second)
-                to_delete.push_back(std::move(res.first));
-        }
-
-        if (line_number != -1) {
-            std::pair<boost::log::attribute_set::iterator, bool> res =
-                BaseT::add_attribute_unlocked(logging_tags::line_number::get_name(), boost::log::attributes::constant(line_number));
-
-            if (res.second)
-                to_delete.push_back(std::move(res.first));
-        }
-
-        if (!file_name.empty()) {
-            std::pair<boost::log::attribute_set::iterator, bool> res =
-                BaseT::add_attribute_unlocked(logging_tags::file_name::get_name(), boost::log::attributes::constant(file_name));
-
-            if (res.second)
-                to_delete.push_back(std::move(res.first));
-        }
-
-        BOOST_SCOPE_EXIT_TPL((&to_delete)(&attrs))
-        {
-            for (auto it : to_delete)
-                attrs.erase(it);
-        } BOOST_SCOPE_EXIT_END
+        m_FunctionNameAttr.set(args[logging_keywords::function_name | std::string()]);
+        m_LineNumberAttr.set(args[logging_keywords::line_number | -1]);
+        m_FileNameAttr.set(args[logging_keywords::file_name | std::string()]);
 
         return BaseT::open_record_unlocked(args);
+    }
+
+    void add_attributes()
+    {
+        BaseT::add_attribute_unlocked(logging_tags::function_name::get_name(), m_FunctionNameAttr);
+        BaseT::add_attribute_unlocked(logging_tags::line_number::get_name(), m_LineNumberAttr);
+        BaseT::add_attribute_unlocked(logging_tags::file_name::get_name(), m_FileNameAttr);
     }
 };
 
