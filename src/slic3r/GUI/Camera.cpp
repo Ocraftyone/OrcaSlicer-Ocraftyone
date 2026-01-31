@@ -3,6 +3,8 @@
 
 #include "Camera.hpp"
 #include "GUI_App.hpp"
+#include "OrcaSlicer.hpp"
+#include "libslic3r/CLIManager.hpp"
 #if ENABLE_CAMERA_STATISTICS
 #include "Mouse3DController.hpp"
 #include "Plater.hpp"
@@ -55,7 +57,10 @@ void Camera::select_next_type()
 
 void Camera::auto_type(EType preferred_type)
 {
-    if (!wxGetApp().app_config->get_bool("auto_perspective")) return;
+    if (CLIManager::is_cli_mode)
+        return;
+    if (!wxGetApp().app_config->get_bool("auto_perspective"))
+        return;
     if (preferred_type == EType::Perspective) {
         if (!m_prevent_auto_type) {
             set_type(preferred_type);

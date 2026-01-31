@@ -9,6 +9,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "libslic3r/BuildVolume.hpp"
+#include "libslic3r/CLIManager.hpp"
 #include "libslic3r/Geometry/ConvexHull.hpp"
 
 #include <boost/filesystem/operations.hpp>
@@ -608,8 +609,11 @@ void GLModel::render(const std::pair<size_t, size_t>& range)
 
     if (range.second == range.first)
         return;
-
-    GLShaderProgram* shader = wxGetApp().get_current_shader();
+    GLShaderProgram* shader;
+    if (CLIManager::is_cli_mode)
+        shader = CLIManager::m_opengl_mgr->get_current_shader();
+    else
+        shader = wxGetApp().get_current_shader();
     if (shader == nullptr)
         return;
 

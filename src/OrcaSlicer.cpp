@@ -70,6 +70,7 @@ using namespace nlohmann;
 #include "libslic3r/Orient.hpp"
 #include "libslic3r/PNGReadWrite.hpp"
 #include "libslic3r/ObjColorUtils.hpp"
+#include "libslic3r/CLIManager.hpp"
 
 #include "OrcaSlicer.hpp"
 //BBS: add exception handler for win32
@@ -1311,14 +1312,17 @@ int CLI::run(int argc, char **argv)
         return (argc == 0) ? 0 : 1;
 #endif // SLIC3R_GUI
     }
+
+    // BEGIN CLI MODE
+    CLIManager::is_cli_mode = true;
+
+    // Setup logging for CLI
+    const ConfigOptionInt* opt_loglevel = m_config.opt<ConfigOptionInt>("debug");
+    if (opt_loglevel) {
+        set_logging_level(opt_loglevel->value);
+    }
     else {
-        const ConfigOptionInt *opt_loglevel = m_config.opt<ConfigOptionInt>("debug");
-        if (opt_loglevel) {
-            set_logging_level(opt_loglevel->value);
-        }
-        else {
-            set_logging_level(2);
-        }
+        set_logging_level(2);
     }
 
     global_begin_time = (long long)Slic3r::Utils::get_current_time_utc();
@@ -6432,7 +6436,8 @@ int CLI::run(int argc, char **argv)
 
             //opengl manager related logic
             {
-                Slic3r::GUI::OpenGLManager opengl_mgr;
+                CLIManager::m_opengl_mgr = new GUI::OpenGLManager();
+                GUI::OpenGLManager& opengl_mgr = *CLIManager::m_opengl_mgr;
                 bool opengl_valid = opengl_mgr.init_gl(false);
                 if (!opengl_valid) {
                     BOOST_LOG_TRIVIAL(error) << "init opengl failed! skip thumbnail generating" << std::endl;
@@ -6723,6 +6728,8 @@ int CLI::run(int argc, char **argv)
                         }
                     }
                 }
+                delete CLIManager::m_opengl_mgr;
+                CLIManager::m_opengl_mgr = nullptr;
             }
             //BBS: release glfw
             glfwTerminate();

@@ -469,6 +469,8 @@ set(lisbslic3r_sources
     GCode/ToolOrderUtils.cpp
     FlushVolPredictor.hpp
     FlushVolPredictor.cpp
+    CLIManager.hpp
+    CLIManager.cpp
 )
 
 if (APPLE)
