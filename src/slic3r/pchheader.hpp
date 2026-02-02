@@ -82,6 +82,12 @@
 #include <boost/nowide/fstream.hpp>
 #include <boost/optional.hpp>
 
+#undef BOOST_LOG_TRIVIAL
+#define BOOST_LOG_TRIVIAL(lvl)\
+    BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::logger::get(),\
+        (::boost::log::keywords::severity = ::boost::log::trivial::lvl)) \
+        << " " << __FUNCTION__ << ":" << __LINE__ << ": "
+
 // boost/property_tree/json_parser/detail/parser.hpp includes boost/bind.hpp, which is deprecated.
 // Suppress the following boost message:
 // The practice of declaring the Bind placeholders (_1, _2, ...) in the global namespace is deprecated.
