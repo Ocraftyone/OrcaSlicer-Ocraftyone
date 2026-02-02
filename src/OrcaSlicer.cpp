@@ -6400,8 +6400,9 @@ int CLI::run(int argc, char **argv)
             glfwSetErrorCallback(glfw_callback);
             int ret = glfwInit();
             if (ret == GLFW_FALSE) {
-                int code = glfwGetError(NULL);
-                BOOST_LOG_TRIVIAL(error) << "glfwInit return error, code " <<code<< std::endl;
+                const char* error_msg;
+                int code = glfwGetError(&error_msg);
+                BOOST_LOG_TRIVIAL(error) << "glfwInit return error, Error code: " << code << ", Error: " << error_msg << std::endl;
             }
             else {
                 BOOST_LOG_TRIVIAL(info) << "glfwInit Success."<< std::endl;
