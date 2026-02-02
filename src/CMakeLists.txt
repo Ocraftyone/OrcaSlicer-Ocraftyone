@@ -11,6 +11,14 @@ add_subdirectory(dev-utils)
 
 find_package(libnoise REQUIRED)
 
+macro(add_common_pch target)
+    add_precompiled_header(${target} "${CMAKE_SOURCE_DIR}/src/pchcommon.hpp")
+    target_sources(${target} PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/pchcommon.hpp"
+        "${CMAKE_SOURCE_DIR}/src/pchcommon.cpp"
+    )
+endmacro()
+
 add_subdirectory(libslic3r)
 
 if (SLIC3R_GUI)
