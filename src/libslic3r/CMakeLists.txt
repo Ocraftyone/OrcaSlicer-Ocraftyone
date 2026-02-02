@@ -469,7 +469,8 @@ set(lisbslic3r_sources
     GCode/ToolOrderUtils.cpp
     FlushVolPredictor.hpp
     FlushVolPredictor.cpp
-    LoggingExtensions.hpp
+    Logging/CacheSink.hpp
+    Logging/LoggingExtensions.hpp
 )
 
 if (APPLE)

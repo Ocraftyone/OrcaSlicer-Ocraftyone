@@ -12,7 +12,7 @@
 #include "Platform.hpp"
 #include "Time.hpp"
 #include "libslic3r.h"
-#include "slic3r/Utils/CacheSink.hpp"
+#include "Logging/CacheSink.hpp"
 
 #include <boost/phoenix/bind/bind_function.hpp>
 #include <boost/phoenix/stl/algorithm/transformation.hpp>

@@ -3,7 +3,7 @@
 // This header is included in every build, even those with SLIC3R_PCH disabled
 
 #include <boost/log/trivial.hpp>
-#include <libslic3r/LoggingExtensions.hpp>
+#include <libslic3r/Logging/LoggingExtensions.hpp>
 
 #undef BOOST_LOG_TRIVIAL
 #define BOOST_LOG_TRIVIAL(lvl)\
