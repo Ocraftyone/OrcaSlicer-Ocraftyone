@@ -6421,10 +6421,6 @@ int CLI::run(int argc, char **argv)
                 glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 #endif
 
-#ifdef __linux__
-                glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_OSMESA_CONTEXT_API);
-#endif
-
                 GLFWwindow* window = glfwCreateWindow(640, 480, "base_window", NULL, NULL);
                 if (window == NULL)
                 {
