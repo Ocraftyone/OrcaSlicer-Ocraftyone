@@ -58,6 +58,7 @@ public:
     bool can_test() const override { return true; }
     bool has_auto_discovery() const override { return false; }
     bool is_cloud() const override { return true; }
+    bool can_login() const override { return initialized; }
     std::string get_host() const override { return url_home; }
 
     GUI::OAuthParams get_oauth_params() const;
