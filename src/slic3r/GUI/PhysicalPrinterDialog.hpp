@@ -60,6 +60,7 @@ public:
 
     void        update(const std::string& changed_key = "", bool printer_change = false);
     void        update_host_type(bool printer_change);
+    void        update_printer_agent_type();
     void        update_preset_input();
     void        update_printhost_buttons();
     void        update_printers();
