@@ -423,6 +423,65 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 	);
     g_cache_sink->locked_backend()->forward_records(*g_file_log_sink);
 
+    // Try to delete all the old "latest" files
+    int last_int = -1;
+    for (auto& el : boost::filesystem::directory_iterator(log_folder)) {
+        namespace fs = boost::filesystem;
+        namespace ip = boost::interprocess;
+        if (!fs::is_regular_file(el) || !boost::starts_with(el.path().filename().string(), "latest"))
+            continue;
+        ip::file_lock lock = el.path().c_str();
+        if (auto lg = boost::unique_lock(lock, boost::try_to_lock)) {
+            // No other process is using the latest file, delete it
+            boost::system::error_code ec;
+            fs::remove(el.path(), ec);
+            if (ec) {
+                BOOST_LOG_TRIVIAL(debug) << "Failed to delete \"" << el.path().filename().string()
+                                           << "\": If multiple processes are running, this is normal";
+                std::string int_str = el.path().filename().stem().string().erase(0, 6 /*CHANGE IF LATEST FILE PREFIX CHANGES*/);
+                if (int_str.empty()) {
+                    // The first log has no number
+                    last_int = std::max(0, last_int);
+                    continue;
+                }
+                try {
+                    last_int = std::max(last_int, std::stoi(int_str));
+                } catch (...) {
+                    BOOST_LOG_TRIVIAL(error) << "Failed to parse latest log ID number. File name: " << el.path().filename().string();
+                }
+            }
+        }
+    }
+
+    // Find an unused name for the latest log
+    boost::filesystem::path latest_log;
+    if (last_int == -1) {
+        latest_log = log_folder / "latest.log";
+    } else {
+        for (int i = last_int + 1; i < last_int + 10; ++i) {
+            std::string log_name = "latest" + std::to_string(i) + ".log";
+            auto path = log_folder / log_name;
+            if (!boost::filesystem::exists(log_name)) {
+                latest_log = path;
+                break;
+            }
+        }
+    }
+
+    // Create hardlink to the regular file log
+    if (!latest_log.empty()) {
+        boost::system::error_code ec;
+        boost::filesystem::create_hard_link(g_file_log_sink->locked_backend()->get_current_file_name(), latest_log, ec);
+        if (ec) {
+            BOOST_LOG_TRIVIAL(warning) << "Failed to create hardlink for " << latest_log << " Error: " << ec.message();
+        } else {
+            // Open the hardlinked file to notify the OS that the file should be locked from deletion
+            // Unfortunatly, using boost::interprocess::file_lock is not sufficient
+            // This will be locked for the duration of the program and is automatically released at exit
+            open(latest_log.string().c_str(), std::ios::in);
+        }
+    }
+
     if (log_to_console) {
         g_console_log_sink = logging::add_console_log(std::cout, keywords::format = format, keywords::auto_flush = true);
         g_cache_sink->locked_backend()->forward_records(*g_console_log_sink);
