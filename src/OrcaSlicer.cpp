@@ -1315,6 +1315,7 @@ int CLI::run(int argc, char **argv)
     // Setup logging for CLI
     const ConfigOptionInt *opt_loglevel = m_config.opt<ConfigOptionInt>("debug");
 
+    auto_set_data_dir();
     std::time_t       t        = std::time(0);
     std::tm *         now_time = std::localtime(&t);
     std::stringstream buf;

@@ -14,18 +14,15 @@
 #include "libslic3r.h"
 #include "Logging/CacheSink.hpp"
 
-#include <boost/phoenix/bind/bind_function.hpp>
-#include <boost/phoenix/stl/algorithm/transformation.hpp>
 
 #ifdef __APPLE__
 #include "MacUtils.hpp"
-#endif
-
-#ifdef WIN32
+#elif defined(WIN32)
 	#include <windows.h>
 	#include <psapi.h>
 	#include <direct.h>  // for mkdir
 	#include <io.h>  // for _access
+    #include <shlobj_core.h>
 #else
 	#include <unistd.h>
 	#include <sys/types.h>
@@ -57,7 +54,9 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 #include <boost/log/support/date_time.hpp>
-#include <boost/phoenix/function/adapt_function.hpp>
+#include <boost/phoenix/bind/bind_function.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <boost/dll/runtime_symbol_info.hpp>
 
 #include <boost/locale.hpp>
 
@@ -306,6 +305,67 @@ void set_data_dir(const std::string &dir)
 const std::string& data_dir()
 {
     return g_data_dir;
+}
+
+void auto_set_data_dir()
+{
+    // Check for "data_dir" folder alongside the executable
+    auto program_folder = boost::dll::program_location().parent_path();
+    auto datadir_by_app = program_folder / "data_dir";
+    if (boost::filesystem::exists(datadir_by_app)) {
+        set_data_dir(datadir_by_app.string());
+        return;
+    }
+
+    // Get user config dir
+    // Source from wxWidgets wxStandardPaths::GetUserConfigDir, reimplemented using std strings
+#ifdef _WIN32
+    TCHAR buf[MAX_PATH];
+
+    HRESULT hr = E_FAIL;
+
+    // Query the system for the %APPDATA% folder
+    hr = ::SHGetFolderPath
+            (
+            NULL,               // parent window, not used
+            CSIDL_APPDATA,      // Get appdata folder
+            NULL,               // access token (current user)
+            SHGFP_TYPE_CURRENT, // current path, not just default value
+            buf
+            );
+
+    // somewhat incredibly, the error code in the Unicode version is
+    // different from the one in ASCII version for this function
+#if UNICODE
+    if ( hr == E_FAIL )
+#else
+    if ( hr == S_FALSE )
+#endif
+    {
+        // directory doesn't exist, maybe we can get its default value?
+        hr = ::SHGetFolderPath
+                (
+                NULL,
+                CSIDL_APPDATA,
+                NULL,
+                SHGFP_TYPE_DEFAULT,
+                buf
+                );
+    }
+
+    auto data_dir_path = boost::filesystem::path(buf) / SLIC3R_APP_NAME;
+    set_data_dir(data_dir_path.string());
+#elif defined(__APPLE__)
+    set_data_dir(boost::nowide::narrow(GetUserConfigDir()));
+#else
+    // Since version 2.3, config dir on Linux is in ${XDG_CONFIG_HOME}.
+    // https://github.com/prusa3d/PrusaSlicer/issues/2911
+    std::string config_home = std::getenv("XDG_CONFIG_HOME");
+    if (config_home.empty())
+        config_home = std::string(std::getenv("HOME")) + "/.config";
+    auto data_dir_path = boost::filesystem::path(config_home) / SLIC3R_APP_NAME;
+    set_data_dir(data_dir_path.string());
+#endif
 }
 
 std::string custom_shapes_dir()

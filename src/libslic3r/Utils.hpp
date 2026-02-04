@@ -182,6 +182,7 @@ const std::string& custom_gcodes_dir();
 void set_data_dir(const std::string &path);
 // Return a full path to the GUI resource files.
 const std::string& data_dir();
+void auto_set_data_dir();
 
 // BBL: true: succeed create or dir exists; false: fail to create
 bool makedir(const std::string path);
