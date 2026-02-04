@@ -442,7 +442,7 @@ logging::formatting_ostream& operator<< (logging::formatting_ostream& strm, logg
     return strm;
 }
 
-void init_log(const std::string& file, unsigned int level, bool log_to_console)
+void init_log(std::string source, unsigned int level, bool log_to_console)
 {
 #ifdef __APPLE__
 	//currently on old macos, the boost::log::add_file_log will crash
@@ -460,7 +460,7 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 	if (!boost::filesystem::exists(log_folder)) {
 		boost::filesystem::create_directory(log_folder);
 	}
-	auto full_path = (log_folder / file).make_preferred();
+	auto full_path = (log_folder / source).make_preferred();
 
     auto format = (
         expr::stream << boost::phoenix::bind(format_severity, boost::phoenix::placeholders::_1)
@@ -476,7 +476,10 @@ void init_log(const std::string& file, unsigned int level, bool log_to_console)
 
 
     g_file_log_sink = boost::log::add_file_log(
-		keywords::file_name = full_path.string() + "_%N.log",
+        keywords::file_name = log_folder / source
+                                                .append("_%m-%d-%Y_%H%M%S_")
+                                                .append(std::to_string(get_current_pid()))
+                                                .append("_%N.log"),
 		keywords::rotation_size = 100 * 1024 * 1024,
 		keywords::format = format,
 		keywords::auto_flush = true

@@ -192,7 +192,7 @@ bool makedir(const std::string path);
 // so the user knows where to search for the debugging output.
 std::string debug_out_path(const char *name, ...);
 // smaller level means less log. level=5 means saving all logs.
-void init_log(const std::string& file, unsigned int level, bool log_to_console);
+void init_log(std::string source, unsigned int level, bool log_to_console);
 void flush_logs();
 
 // A special type for strings encoded in the local Windows 8-bit code page.

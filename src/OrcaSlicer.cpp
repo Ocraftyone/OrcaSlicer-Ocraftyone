@@ -1316,13 +1316,8 @@ int CLI::run(int argc, char **argv)
     const ConfigOptionInt *opt_loglevel = m_config.opt<ConfigOptionInt>("debug");
 
     auto_set_data_dir();
-    std::time_t       t        = std::time(0);
-    std::tm *         now_time = std::localtime(&t);
-    std::stringstream buf;
-    buf << std::put_time(now_time, "cli_%a_%b_%d_%H_%M_%S_");
-    buf << get_current_pid();
-    std::string log_filename = buf.str();
-    init_log(log_filename, opt_loglevel ? opt_loglevel->value : 2, true);
+
+    init_log("CLI", opt_loglevel ? opt_loglevel->value : 2, true);
 
     global_begin_time = (long long)Slic3r::Utils::get_current_time_utc();
     BOOST_LOG_TRIVIAL(warning) << boost::format("cli mode, Current OrcaSlicer Version %1%")%SoftFever_VERSION;

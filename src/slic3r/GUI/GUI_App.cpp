@@ -2401,13 +2401,7 @@ void GUI_App::init_app_config()
 
     // Orca: start log here
     // Log messages from earlier were cached and will be replayed to the log sinks
-    std::time_t       t        = std::time(0);
-    std::tm *         now_time = std::localtime(&t);
-    std::stringstream buf;
-    buf << std::put_time(now_time, "debug_%a_%b_%d_%H_%M_%S_");
-    buf << get_current_pid();
-    std::string log_filename = buf.str();
-    init_log(log_filename, level_string_to_boost(app_config->get("log_severity_level")), true);
+    init_log("GUI", level_string_to_boost(app_config->get("log_severity_level")), true);
 }
 
 // returns true if found newer version and user agreed to use it
