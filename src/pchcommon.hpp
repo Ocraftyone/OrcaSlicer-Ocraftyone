@@ -2,6 +2,8 @@
 
 // This header is included in every build, even those with SLIC3R_PCH disabled
 
+#ifdef  __cplusplus
+
 #include <boost/log/trivial.hpp>
 #include <libslic3r/Logging/LoggingExtensions.hpp>
 
@@ -14,3 +16,4 @@ BOOST_LOG_STREAM_WITH_PARAMS(::Slic3r::trivial::logger::get(),\
 (::Slic3r::logging_keywords::file_name = __FILE__)\
 )
 
+#endif // __cplusplus

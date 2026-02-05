@@ -501,7 +501,7 @@ void init_log(std::string source, unsigned int level, bool log_to_console)
             if (ec) {
                 BOOST_LOG_TRIVIAL(debug) << "Failed to delete \"" << el.path().filename().string()
                                            << "\": If multiple processes are running, this is normal";
-                std::string int_str = el.path().filename().stem().string().erase(0, 6 /*CHANGE IF LATEST FILE PREFIX CHANGES*/);
+                std::string int_str = el.path().filename().stem().string().substr(7 /*CHANGE IF LATEST FILE PREFIX CHANGES*/);
                 if (int_str.empty()) {
                     // The first log has no number
                     last_int = std::max(0, last_int);
