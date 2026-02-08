@@ -28,6 +28,7 @@ call :add_arg build_debuginfo bool e debuginfo "build in RelWithDebInfo mode"
 call :add_arg print_help bool h help "print this help message"
 call :add_arg pack_deps bool p pack "bundle build deps into a zip file"
 call :add_arg build_slicer bool s slicer "build OrcaSlicer"
+call :add_arg kill_jobs bool x kill-jobs "Kills all MSBuild jobs"
 call :add_arg deps_args string "" deps-args "Add args to the deps configure command"
 call :add_arg slicer_args string "" slicer-args "Add args to the slicer configure command"
 call :add_arg install_deps bool u install-deps "download and install system dependencies using WinGet (build prerequisite)"
@@ -45,6 +46,11 @@ if "%debugscript%" == "ON" (
     for /L %%i in (0, 1, !range_end!) do (
         call :echo_var !argdefs[%%i].VARIABLE_NAME!
     )
+)
+
+if "%kill_jobs%" == "ON" (
+	taskkill /F /IM MSBuild.exe
+	exit /b 0
 )
 
 if "%*" == "" (
