@@ -49,7 +49,8 @@ if "%debugscript%" == "ON" (
 )
 
 if "%kill_jobs%" == "ON" (
-	taskkill /F /IM MSBuild.exe
+	call :print_and_run taskkill /F /IM MSBuild.exe
+	call :print_and_run taskkill /F /IM cl.exe
 	exit /b 0
 )
 
