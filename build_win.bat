@@ -385,13 +385,28 @@ exit /b 0
 	if "%use_vs2019%" == "ON" exit /b 0
 	if "%use_vs2022%" == "ON" exit /b 0
 
+	setlocal
+
+	"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo
+	if not !errorlevel! == 0 (
+		:: vswhere isn't in its default location. Try msbuild in the local env
+		goto :msbuild_check
+	)
+
+	echo Detecting Visual Studio version using vswhere...
+	for /f "tokens=*" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -products * -latest -property catalog_productLineVersion') do (
+		set "VS_MAJOR=%%i"
+		goto :version_found
+	)
+
+	:msbuild_check
 	where msbuild >nul 2>nul
 	if not !errorlevel! == 0 (
 		:: msbuild could not be found, use default
+		endlocal
 		exit /b 0
 	)
 
-	setlocal
 	:: Detect Visual Studio version using msbuild
 	echo Detecting Visual Studio version using msbuild...
 
@@ -413,7 +428,7 @@ exit /b 0
 	)
 
 	:version_found
-	echo Detected Visual Studio %VS_VERSION% (version %VS_MAJOR%)
+	echo Detected Visual Studio %VS_MAJOR%
 
 	if "%VS_MAJOR%"=="16" (
 		endlocal
