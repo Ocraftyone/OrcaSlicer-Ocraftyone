@@ -17,7 +17,9 @@
 
 #ifdef __APPLE__
 #include "MacUtils.hpp"
-#elif defined(WIN32)
+#endif
+
+#if defined(WIN32)
 	#include <windows.h>
 	#include <psapi.h>
 	#include <direct.h>  // for mkdir
