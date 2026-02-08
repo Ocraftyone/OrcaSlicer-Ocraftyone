@@ -1601,7 +1601,7 @@ namespace client
             out.it_range = opt.it_range;
         }
 
-        static void concat_vector(const MyContext *ctx, OptWithPos &opt, boost::optional<expr> &param1, expr &out)
+        static void join_vector(const MyContext *ctx, OptWithPos &opt, boost::optional<expr> &param1, expr &out)
         {
             if (! ctx->skipping()) {
                 if (opt.has_index() || ! opt.opt->is_vector())
@@ -2254,7 +2254,7 @@ namespace client
                 |   (kw["one_of"] > '(' > one_of(_r1) > ')')        [ _val = _1 ]
                 |   (kw["empty"] > '(' > variable_reference(_r1) > ')') [px::bind(&MyContext::is_vector_empty, _r1, _1, _val)]
                 |   (kw["size"] > '(' > variable_reference(_r1) > ')') [px::bind(&MyContext::vector_size, _r1, _1, _val)]
-                |   (kw["concat"] > '(' > variable_reference(_r1) > -(',' > conditional_expression(_r1)) > ')' ) [px::bind(&MyContext::concat_vector, _r1, _1, _2, _val)]
+                |   (kw["join"] > '(' > variable_reference(_r1) > -(',' > conditional_expression(_r1)) > ')' ) [px::bind(&MyContext::join_vector, _r1, _1, _2, _val)]
                 |   (kw["interpolate_table"] > '(' > interpolate_table(_r1) > ')') [ _val = _1 ]
                 |   (strict_double > iter_pos)                      [ px::bind(&FactorActions::double_, _r1, _1, _2, _val) ]
                 |   (int_      > iter_pos)                          [ px::bind(&FactorActions::int_,    _r1, _1, _2, _val) ]
@@ -2324,7 +2324,7 @@ namespace client
                 ("endif")
                 ("false")
                 ("global")
-                ("concat")
+                ("join")
                 ("interpolate_table")
                 ("min")
                 ("max")
