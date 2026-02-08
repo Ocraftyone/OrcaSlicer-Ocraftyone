@@ -192,7 +192,7 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
                 BOOST_LOG_TRIVIAL(error) << "Spoolman Websocket: Unknown resource type: " << resource;
         }
     } catch (std::exception& e) {
-        BOOST_LOG_TRIVIAL(error) << "Exception during parsing from Spoolman websocket: " << e.what();
+        BOOST_LOG_TRIVIAL(error) << "Exception during parsing from Spoolman websocket: " << e.what() << ", Received message: " << message;
     }
 
     // Queue another receive command
