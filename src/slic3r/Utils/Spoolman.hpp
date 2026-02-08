@@ -324,8 +324,6 @@ private:
 
     explicit SpoolmanFilament(const pt::ptree& json_data) : SpoolmanFilament()
     {
-        if (const auto vendor_id = json_data.get_optional<int>("vendor.id"); vendor_id.has_value())
-            vendor = m_spoolman->m_vendors[vendor_id.value()];
         update_from_json(json_data);
     };
 
@@ -364,7 +362,6 @@ private:
 
     explicit SpoolmanSpool(const pt::ptree& json_data) : SpoolmanSpool()
     {
-        filament = m_spoolman->m_filaments[json_data.get<int>("filament.id")];
         update_from_json(json_data);
     }
 
