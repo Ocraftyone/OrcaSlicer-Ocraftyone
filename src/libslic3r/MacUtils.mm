@@ -61,7 +61,7 @@ std::wstring CFAsString(CFStringRef ref)
     result = std::wstring( (const wchar_t*) buf , cStrLen/4);
 
     delete[] buf ;
-    return wxMacConvertNewlines10To13(result);
+    return convertMacNewLines10To13(result);
 }
 
 std::wstring GetFMDirectory(
