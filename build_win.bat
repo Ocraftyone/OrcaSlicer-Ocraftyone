@@ -19,6 +19,7 @@ set "repeat_error=if not ^!errorlevel^! == 0 exit /b ^!errorlevel^!"
 set "error_check=if not ^!errorlevel^! == 0 echo Exiting script with code ^!errorlevel^! & exit /b ^!errorlevel^!"
 
 :: Define arguments
+call :add_arg slicer_asan bool a asan "Build slicer with ASAN enabled"
 call :add_arg build_debug bool b debug "build in Debug mode"
 call :add_arg clean bool c clean "force a clean build"
 call :add_arg build_deps bool d deps "download and build dependencies in ./deps/ (build prerequisite)"
@@ -27,6 +28,8 @@ call :add_arg build_debuginfo bool e debuginfo "build in RelWithDebInfo mode"
 call :add_arg print_help bool h help "print this help message"
 call :add_arg pack_deps bool p pack "bundle build deps into a zip file"
 call :add_arg build_slicer bool s slicer "build OrcaSlicer"
+call :add_arg deps_args string "" deps-args "Add args to the deps configure command"
+call :add_arg slicer_args string "" slicer-args "Add args to the slicer configure command"
 call :add_arg install_deps bool u install-deps "download and install system dependencies using WinGet (build prerequisite)"
 call :add_arg use_vs2019 bool "" vs2019 "Use Visual Studio 16 2019 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
 call :add_arg use_vs2022 bool "" vs2022 "Use Visual Studio 17 2022 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
@@ -138,7 +141,7 @@ if "%build_deps%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" -A x64 -DCMAKE_BUILD_TYPE=%build_type%
+    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" -A x64 -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
     %error_check%
 
     call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target deps -- -m
@@ -165,7 +168,11 @@ if "%build_slicer%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake -B %build_dir% -G "%generator%" -A x64 -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type%
+    if "%slicer_asan%" == "ON" (
+    	set "slicer_args=!slicer_args! -DSLIC3R_ASAN=ON"
+    )
+
+    call :print_and_run cmake -B %build_dir% -G "%generator%" -A x64 -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type% !slicer_args!
     %error_check%
 
     call :print_and_run cmake --build %build_dir% --config %build_type% --target ALL_BUILD -- -m
@@ -193,7 +200,7 @@ exit /b 0
 ::get_str_len <string>
 :get_str_len
     setlocal
-    set in=%~1
+    set "in=%~1"
     for /L %%i in (0, 1, 100) do (
         if "!in:~%%i,1!" == "" (
             set out=%%i
