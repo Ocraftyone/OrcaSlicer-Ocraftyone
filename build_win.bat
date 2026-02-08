@@ -18,6 +18,10 @@ set argdefn=0
 set "repeat_error=if not ^!errorlevel^! == 0 exit /b ^!errorlevel^!"
 set "error_check=if not ^!errorlevel^! == 0 echo Exiting script with code ^!errorlevel^! & exit /b ^!errorlevel^!"
 
+:: Program locations
+set VSWHERE="%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set "CMAKE=cmake"
+
 :: Define arguments
 call :add_arg slicer_asan bool a asan "Build slicer with ASAN enabled"
 call :add_arg build_debug bool b debug "build in Debug mode"
@@ -32,6 +36,7 @@ call :add_arg kill_jobs bool x kill-jobs "Kills all MSBuild jobs"
 call :add_arg deps_args string "" deps-args "Add args to the deps configure command"
 call :add_arg slicer_args string "" slicer-args "Add args to the slicer configure command"
 call :add_arg install_deps bool u install-deps "download and install system dependencies using WinGet (build prerequisite)"
+call :add_arg use_ninja bool x ninja "Use Ninja Multi-Config as the generator"
 call :add_arg use_vs2019 bool "" vs2019 "Use Visual Studio 16 2019 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
 call :add_arg use_vs2022 bool "" vs2022 "Use Visual Studio 17 2022 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
 call :add_arg install_ide bool "" install-ide "Install the full Visual Studio IDE instead of only the build tools. Use with '-u'"
@@ -104,7 +109,24 @@ if "%install_deps%" == "ON" (
     exit /b 0
 )
 
-where cmake >nul 2>nul
+set "generator=Visual Studio 18 2026"
+if "%use_vs2019%" == "ON" (
+	set "generator=Visual Studio 16 2019"
+) else (
+	if "%use_vs2022%" == "ON" (
+		set "generator=Visual Studio 17 2022"
+	) else (
+		if "%use_ninja%" == "ON"  (
+			set "generator=Ninja Multi-Config"
+			call :setup_dev_env
+		)
+	)
+)
+if not "%use_ninja%" == "ON"  (
+	set "gen_arch=-A x64"
+)
+
+cmake --version >nul 2>nul
 if not !errorlevel! == 0 (
     echo CMake was not found. Have you installed the system dependencies?
     exit /b 1
@@ -124,15 +146,6 @@ if "%build_debug%"=="ON" (
 )
 echo build type set to %build_type%
 
-set "generator=Visual Studio 18 2026"
-if "%use_vs2019%" == "ON" (
-	set "generator=Visual Studio 16 2019"
-) else (
-	if "%use_vs2022%" == "ON" (
-		set "generator=Visual Studio 17 2022"
-	)
-)
-
 set "SIG_FLAG="
 if defined ORCA_UPDATER_SIG_KEY set "SIG_FLAG=-DORCA_UPDATER_SIG_KEY=%ORCA_UPDATER_SIG_KEY%"
 
@@ -148,7 +161,7 @@ if "%build_deps%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" -A x64 -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
+    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_arch% -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
     %error_check%
 
     call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target deps -- -m
@@ -179,7 +192,7 @@ if "%build_slicer%" == "ON" (
     	set "slicer_args=!slicer_args! -DSLIC3R_ASAN=ON"
     )
 
-    call :print_and_run cmake -B %build_dir% -G "%generator%" -A x64 -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type% !slicer_args!
+    call :print_and_run cmake -B %build_dir% -G "%generator%" %gen_arch% -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type% !slicer_args!
     %error_check%
 
     call :print_and_run cmake --build %build_dir% --config %build_type% --target ALL_BUILD -- -m
@@ -391,17 +404,18 @@ exit /b 0
 	:: skip autodetect if manual selection
 	if "%use_vs2019%" == "ON" exit /b 0
 	if "%use_vs2022%" == "ON" exit /b 0
+	if "%use_ninja%" == "ON" exit /b 0
 
 	setlocal
 
-	"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo
+	%VSWHERE% -nologo
 	if not !errorlevel! == 0 (
 		:: vswhere isn't in its default location. Try msbuild in the local env
 		goto :msbuild_check
 	)
 
 	echo Detecting Visual Studio version using vswhere...
-	for /f "tokens=*" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -nologo -products * -latest -property catalog_productLineVersion') do (
+	for /f "tokens=*" %%i in ('%VSWHERE% -nologo -products * -latest -property catalog_productLineVersion') do (
 		set "VS_MAJOR=%%i"
 		goto :version_found
 	)
@@ -452,6 +466,26 @@ exit /b 0
 		endlocal
 		exit /b 1
 	)
+
+	exit /b 0
+
+:: setup_dev_env
+:setup_dev_env
+	%VSWHERE% -nologo
+	if not !errorlevel! == 0 (
+		:: vswhere isn't in its default location. Exit and use current environment
+		exit /b 0
+	)
+
+	for /f "tokens=*" %%i in ('%VSWHERE% -nologo -products * -latest -property resolvedInstallationPath') do (
+		set "VS_PATH=%%i"
+		goto :vs_path_found
+	)
+	exit /b 0
+
+	:vs_path_found
+	call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" >nul 2>nul
+	set "VS_PATH="
 
 	exit /b 0
 
