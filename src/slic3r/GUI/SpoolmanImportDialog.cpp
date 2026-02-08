@@ -204,10 +204,7 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
         adjusting_width = true;
         m_svc->SetMinSize({colWidth, -1});
 
-        // Re-center the window
-        auto window_pos = this->GetPosition();
-        window_pos.x -= (colWidth - old_width) / 2;
-        this->SetPosition(window_pos);
+        this->CenterOnParent();
 
         this->Fit();
         this->CallAfter([&] {
