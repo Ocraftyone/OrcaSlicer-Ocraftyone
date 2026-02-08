@@ -3,6 +3,7 @@
 #include <boost/log/sinks/basic_sink_backend.hpp>
 #include <boost/log/sinks/basic_sink_frontend.hpp>
 #include <boost/log/sinks/frontend_requirements.hpp>
+#include <boost/phoenix/operator/comparison.hpp>
 
 namespace Slic3r {
 namespace logging = boost::log;
