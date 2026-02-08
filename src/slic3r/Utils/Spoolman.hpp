@@ -59,7 +59,7 @@ class Spoolman
 
 
     bool m_initialized{false};
-    bool m_first_initialization{true};
+    bool m_server_url_changed{true};
 
     std::map<unsigned int, double> m_use_undo_buffer{};
     std::string                    m_last_usage_type{};
@@ -135,6 +135,9 @@ class Spoolman
     /// \param ec The error generated during receiving the message
     void on_websocket_receive(const std::string& message, beast::error_code ec);
 
+    /// Called by pull_spoolman_spools if the URL has changed and is the first successful connection
+    void on_server_first_connect();
+
     /// get all the spools from the api and store them
     /// \returns if succeeded
     bool pull_spoolman_spools();
@@ -193,7 +196,7 @@ public:
     static void update_specific_spool_statistics(unsigned spool_id);
 
     /// Should be called whenever the Spoolman URL has been changed
-    void on_server_changed();
+    void server_changed();
 
     /// Check if Spoolman is enabled and the provided host is valid
     static bool is_server_valid(bool force_check = false);

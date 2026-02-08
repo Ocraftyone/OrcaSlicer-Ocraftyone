@@ -199,6 +199,17 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
     websocket_client.async_receive();
 }
 
+void Spoolman::on_server_first_connect()
+{
+    setup_websocket_connection();
+
+    // Add the extra field to filament to store preset data
+    pt::ptree pt;
+    pt.add("name", "OrcaSlicer Preset Data");
+    pt.add("field_type", "text");
+    post_spoolman_json("field/filament/orcaslicer_preset_data", pt);
+}
+
 bool Spoolman::pull_spoolman_spools()
 {
     pt::ptree tree;
@@ -227,9 +238,9 @@ bool Spoolman::pull_spoolman_spools()
         m_spools.emplace(item.second.get<int>("id"), make_shared<SpoolmanSpool>(SpoolmanSpool(item.second)));
 
     m_initialized = true;
-    if (m_first_initialization) {
-        on_server_changed();
-        m_first_initialization = false;
+    if (m_server_url_changed) {
+        on_server_first_connect();
+        m_server_url_changed = false;
     } else {
         setup_websocket_connection();
     }
@@ -640,37 +651,16 @@ void Spoolman::update_specific_spool_statistics(const unsigned spool_id)
     }
 }
 
-
-void Spoolman::on_server_changed()
+void Spoolman::server_changed()
 {
     // Close websocket to current server
     if (websocket_client.is_connected())
         websocket_client.async_close();
 
-    if (!is_server_valid()) {
-        if (m_initialized)
-            clear();
-        return;
-    }
+    if (m_initialized)
+        clear();
 
-    if (m_initialized) {
-        // This function is called by pull_spoolman_spools on the first server connection
-        // The spools have just been loaded and don't need to be cleared
-        if (!m_first_initialization)
-            clear();
-    } else if (m_first_initialization) {
-        // If this is being called before the first initialization, have pull_spoolman_spools handle it
-        pull_spoolman_spools();
-        return;
-    }
-
-    setup_websocket_connection();
-
-    // Add the extra field to filament to store preset data
-    pt::ptree pt;
-    pt.add("name", "OrcaSlicer Preset Data");
-    pt.add("field_type", "text");
-    post_spoolman_json("field/filament/orcaslicer_preset_data", pt);
+    pull_spoolman_spools();
 }
 
 bool Spoolman::is_server_valid(bool force_check)
