@@ -2,7 +2,12 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreFoundation/CoreFoundation.h>
-#import <CoreFoundation/CFData.h>
+
+#ifdef WORDS_BIGENDIAN
+    #define kCFStringEncodingUTF32Native kCFStringEncodingUTF32BE
+#else
+    #define kCFStringEncodingUTF32Native kCFStringEncodingUTF32LE
+#endif
 
 namespace Slic3r {
 
@@ -25,20 +30,14 @@ int is_mac_version_15()
 }
 
 // Source from wxWidgets wxStandardPaths::GetUserConfigDir, reimplemented using std strings
-std::wstring GetFMDirectory(
-                                   NSSearchPathDirectory directory,
-                                   NSSearchPathDomainMask domainMask)
+static std::wstring convertMacNewLines10To13(const std::wstring& str)
 {
-    NSURL* url = [[NSFileManager defaultManager] URLForDirectory:directory
-                                           inDomain:domainMask
-                                  appropriateForURL:nil
-                                             create:NO error:nil];
-    return CFAsString((CFStringRef)url.path);
-}
-
-std::wstring GetUserConfigDir()
-{
-    return GetFMDirectory(NSLibraryDirectory, NSUserDomainMask) + "/Preferences";
+    std::wstring data(str);
+    for (wchar_t& c : data) {
+        if (c == L'\n')
+            c = L'\r';
+    }
+    return data;
 }
 
 std::wstring CFAsString(CFStringRef ref)
@@ -65,13 +64,19 @@ std::wstring CFAsString(CFStringRef ref)
     return wxMacConvertNewlines10To13(result);
 }
 
-static std::wstring convertMacNewLines10To13(const std::wstring& str)
+std::wstring GetFMDirectory(
+                                   NSSearchPathDirectory directory,
+                                   NSSearchPathDomainMask domainMask)
 {
-    std::wstring data(str);
-    for (wchar_t& c : data) {
-        if (c == L'\n')
-            c = L'\r';
-    }
-    return data;
+    NSURL* url = [[NSFileManager defaultManager] URLForDirectory:directory
+                                           inDomain:domainMask
+                                  appropriateForURL:nil
+                                             create:NO error:nil];
+    return CFAsString((CFStringRef)url.path);
+}
+
+std::wstring GetUserConfigDir()
+{
+    return GetFMDirectory(NSLibraryDirectory, NSUserDomainMask) + L"/Preferences";
 }
 }; // namespace Slic3r
