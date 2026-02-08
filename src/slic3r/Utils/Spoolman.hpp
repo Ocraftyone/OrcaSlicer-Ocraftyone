@@ -127,7 +127,12 @@ class Spoolman
     /// \returns the json response
     static pt::ptree patch_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(PATCH, api_endpoint, data); }
 
+    /// Setup the websocket client and connect to Spoolman's general change pool
     void setup_websocket_connection();
+    /// Called upon a websocket message
+    /// Handles the change that was made and begins listening for the next change
+    /// \param message The websocket message that was received from the server
+    /// \param ec The error generated during receiving the message
     void on_websocket_receive(const std::string& message, beast::error_code ec);
 
     /// get all the spools from the api and store them
@@ -155,26 +160,39 @@ public:
     /// \param filament Spoolman filament
     /// \param base_preset preset to inherit settings from
     /// \param use_preset_data if the filament has preset data, it will be used instead of using the base preset
-    /// \param detach create profile without depending
+    /// \param detach create preset without depending
     /// \param force attempt to force past errors
     static SpoolmanResult create_filament_preset(const SpoolmanFilamentShrPtr& filament,
                                                             const Preset*              base_preset,
                                                             bool                       use_preset_data = false,
                                                             bool                       detach = false,
                                                             bool                       force = false);
+
+    /// Update the preset's config options from the preset's spool/filament
+    /// \param filament_preset preset to update
+    /// \param only_update_statistics only update the statistics, not the rest of the config options
+    /// \returns result
     static SpoolmanResult update_filament_preset(Preset* filament_preset, bool only_update_statistics = false);
 
+    /// Save the preset data to the Spoolman database in an extras field
+    /// \param filament_preset the preset to store
+    /// \returns result
     static SpoolmanResult save_preset_to_spoolman(const Preset* filament_preset);
 
+    /// Normalize the state of spoolman_filament_id and spoolman_spool_id
+    /// \param config config to normalize
+    /// \return if succeeded
     static bool           normalize_spoolman_ids(DynamicPrintConfig& config);
+    /// Normalize the Spoolman ids for all visible filament presets
     static void           normalize_visible_spoolman_ids();
 
-    /// Update the statistics values for the visible filament profiles with spoolman enabled
+    /// Update the statistics values for the visible filament presets with spoolman enabled
     static void update_visible_spool_statistics();
 
-    /// Update the statistics values for the filament profiles tied to the specified spool ID
+    /// Update the statistics values for the filament presets tied to the specified spool ID
     static void update_specific_spool_statistics(unsigned spool_id);
 
+    /// Should be called whenever the Spoolman URL has been changed
     void on_server_changed();
 
     /// Check if Spoolman is enabled and the provided host is valid
