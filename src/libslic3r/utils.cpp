@@ -442,7 +442,7 @@ logging::formatting_ostream& operator<< (logging::formatting_ostream& strm, logg
     return strm;
 }
 
-void init_log(std::string source, unsigned int level, bool log_to_console)
+void init_log(const std::string& source, unsigned int level, bool log_to_console)
 {
 #ifdef __APPLE__
 	//currently on old macos, the boost::log::add_file_log will crash
@@ -460,7 +460,19 @@ void init_log(std::string source, unsigned int level, bool log_to_console)
 	if (!boost::filesystem::exists(log_folder)) {
 		boost::filesystem::create_directory(log_folder);
 	}
-	auto full_path = (log_folder / source).make_preferred();
+
+	boost::filesystem::path log_file_path = log_folder;
+	{
+		using namespace std::chrono;
+		auto time = system_clock::to_time_t(system_clock::now());
+		std::ostringstream ss;
+		ss << source;
+		ss << std::put_time(std::localtime(&time), "_%F_%H%M%S_");
+		ss << get_current_pid();
+		ss << ".log";
+		log_file_path /= ss.str();
+	}
+
 
     auto format = (
         expr::stream << boost::phoenix::bind(format_severity, boost::phoenix::placeholders::_1)
@@ -476,10 +488,7 @@ void init_log(std::string source, unsigned int level, bool log_to_console)
 
 
     g_file_log_sink = boost::log::add_file_log(
-        keywords::file_name = log_folder / source
-                                                .append("_%m-%d-%Y_%H%M%S_")
-                                                .append(std::to_string(get_current_pid()))
-                                                .append("_%N.log"),
+        keywords::file_name = log_file_path,
 		keywords::rotation_size = 100 * 1024 * 1024,
 		keywords::format = format,
 		keywords::auto_flush = true
@@ -531,18 +540,21 @@ void init_log(std::string source, unsigned int level, bool log_to_console)
         }
     }
 
-    // Create hardlink to the regular file log
+	// Create hardlink to the regular file log
     if (!latest_log.empty()) {
-        boost::system::error_code ec;
-        boost::filesystem::create_hard_link(g_file_log_sink->locked_backend()->get_current_file_name(), latest_log, ec);
-        if (ec) {
-            BOOST_LOG_TRIVIAL(warning) << "Failed to create hardlink for " << latest_log << " Error: " << ec.message();
-        } else {
-            // Open the hardlinked file to notify the OS that the file should be locked from deletion
-            // Unfortunatly, using boost::interprocess::file_lock is not sufficient
-            // This will be locked for the duration of the program and is automatically released at exit
-            open(latest_log.string().c_str(), std::ios::in);
-        }
+        g_file_log_sink->locked_backend()->set_open_handler(
+            [log_file_path = std::move(log_file_path), latest_log = std::move(latest_log)](auto&) {
+            boost::system::error_code ec;
+            boost::filesystem::create_hard_link(log_file_path, latest_log, ec);
+            if (ec) {
+                BOOST_LOG_TRIVIAL(warning) << "Failed to create latest log hardlink to " << log_file_path << " Error: " << ec.message();
+            } else {
+                // Open the hardlinked file to notify the OS that the file should be locked from deletion
+                // Unfortunately, using boost::interprocess::file_lock is not sufficient
+                // This will be locked for the duration of the program and is automatically released at exit
+                open(latest_log.string().c_str(), std::ios::in);
+            }
+        });
     }
 
     if (log_to_console) {
