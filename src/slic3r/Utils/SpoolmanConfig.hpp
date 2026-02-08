@@ -6,11 +6,7 @@
 namespace Slic3r {
 class AppConfig;
 
-enum ConsumptionType
-{
-    ctWEIGHT,
-    ctLENGTH
-};
+enum ConsumptionType { ctWEIGHT, ctLENGTH };
 
 class SpoolmanConfigDef : public ConfigDef
 {
@@ -24,10 +20,7 @@ class SpoolmanDynamicConfig : public DynamicConfigWithDef
 {
 public:
     SpoolmanDynamicConfig() = default;
-    explicit SpoolmanDynamicConfig(const AppConfig* app_config)
-    {
-        load_from_appconfig(app_config);
-    }
+    explicit SpoolmanDynamicConfig(const AppConfig* app_config) { load_from_appconfig(app_config); }
     const ConfigDef* def() const override { return &spoolman_config_def; }
     // Clear config and load defaults
     void load_defaults();

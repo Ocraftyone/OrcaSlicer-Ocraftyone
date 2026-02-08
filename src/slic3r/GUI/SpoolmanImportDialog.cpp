@@ -16,7 +16,6 @@
 #define GET_COLUMN(dvc, idx) dvc->GetColumn(idx)
 #endif
 
-
 namespace Slic3r { namespace GUI {
 
 //-----------------------------------------
@@ -158,7 +157,7 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
 
     // Detach Checkbox
     auto checkbox_sizer = new wxBoxSizer(wxVERTICAL);
-    m_detach_checkbox = new wxCheckBox(this, wxID_ANY, _L("Save as Detached"));
+    m_detach_checkbox   = new wxCheckBox(this, wxID_ANY, _L("Save as Detached"));
     m_detach_checkbox->SetToolTip(_L("Save as a standalone preset"));
     checkbox_sizer->Add(m_detach_checkbox, 0, wxALIGN_CENTER_HORIZONTAL);
 
@@ -182,14 +181,15 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
     for (const auto& spoolman_filament : m_spoolman->get_spoolman_filaments())
         m_svc->get_model()->AddFilament(spoolman_filament.second);
 
-#ifdef  __LINUX__
+#ifdef __LINUX__
     // Column width is not updated until shown in wxGTK
     bool adjusting_width = false;
 
     m_svc->Bind(wxEVT_SIZE, [&](wxSizeEvent&) {
         // A column width of 0 means the view has not fully initialized yet. Ignore events while the view is uninitialized.
         // Ignore any events caused by the adjusting the width
-        if (GET_COLUMN(m_svc, 1)->GetWidth() == 0 || adjusting_width) return;
+        if (GET_COLUMN(m_svc, 1)->GetWidth() == 0 || adjusting_width)
+            return;
 
         int colWidth = 4 * EM; // 4 EM for checkbox (width isn't calculated right)
         for (int i = COL_ID; i < COL_COUNT; ++i)
@@ -198,7 +198,8 @@ SpoolmanImportDialog::SpoolmanImportDialog(wxWindow* parent)
         colWidth += EM / 2;
 
         int old_width = m_svc->GetSize().GetWidth();
-        if (old_width == colWidth) return;
+        if (old_width == colWidth)
+            return;
 
         // Start adjusting the width of the view. Ignore any size events caused by this
         adjusting_width = true;
@@ -247,26 +248,26 @@ void SpoolmanImportDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 void SpoolmanImportDialog::on_import()
 {
-    auto&       filament_collection       = wxGetApp().preset_bundle->filaments;
-    const auto  current_preset  = filament_collection.find_preset(m_preset_combobox->GetStringSelection().ToUTF8().data());
-    const auto& selected_filaments = m_svc->get_model()->GetSelectedFilaments();
+    auto&       filament_collection = wxGetApp().preset_bundle->filaments;
+    const auto  current_preset      = filament_collection.find_preset(m_preset_combobox->GetStringSelection().ToUTF8().data());
+    const auto& selected_filaments  = m_svc->get_model()->GetSelectedFilaments();
     if (selected_filaments.empty()) {
         show_error(this, _L("No filaments are selected"));
         return;
     }
 
-    const bool                                                  detach = m_detach_checkbox->GetValue();
-    const bool                                                  ignore_preset_data = m_ignore_preset_data_checkbox->GetValue();
+    const bool                                                     detach             = m_detach_checkbox->GetValue();
+    const bool                                                     ignore_preset_data = m_ignore_preset_data_checkbox->GetValue();
     std::vector<std::pair<SpoolmanFilamentShrPtr, SpoolmanResult>> failed_filaments;
 
     auto create_presets = [&](const vector<SpoolmanFilamentShrPtr>& filaments, bool force = false) {
         failed_filaments.clear();
         // Save selected preset
         const auto selected_preset_name = filament_collection.get_selected_preset_name();
-        auto edited_preset = filament_collection.get_edited_preset();
+        auto       edited_preset        = filament_collection.get_edited_preset();
 
         std::mutex failed_spools_mutex;
-        auto create_preset = [&](const SpoolmanFilamentShrPtr& filament) {
+        auto       create_preset = [&](const SpoolmanFilamentShrPtr& filament) {
             auto res = Spoolman::create_filament_preset(filament, current_preset, !ignore_preset_data, detach, force);
             if (res.has_failed()) {
                 std::lock_guard lock(failed_spools_mutex);

@@ -21,12 +21,12 @@ class SpoolmanNode
 public:
     explicit SpoolmanNode(const SpoolmanFilamentShrPtr& filament) : m_filament(filament) {}
 
-    int         get_id() const { return m_filament->id; };
-    wxColour    get_color() const { return { m_filament->color }; }
-    wxString    get_vendor_name() const { return m_filament->vendor ? wxString::FromUTF8(m_filament->vendor->name) : wxString(); }
-    wxString    get_filament_name() const { return wxString::FromUTF8(m_filament->name); }
-    wxString    get_material() const { return wxString::FromUTF8(m_filament->material); }
-    bool        get_has_preset_data() const { return !m_filament->preset_data.empty(); }
+    int      get_id() const { return m_filament->id; };
+    wxColour get_color() const { return {m_filament->color}; }
+    wxString get_vendor_name() const { return m_filament->vendor ? wxString::FromUTF8(m_filament->vendor->name) : wxString(); }
+    wxString get_filament_name() const { return wxString::FromUTF8(m_filament->name); }
+    wxString get_material() const { return wxString::FromUTF8(m_filament->material); }
+    bool     get_has_preset_data() const { return !m_filament->preset_data.empty(); }
 
     bool get_checked() { return m_checked; };
     // return if value has changed
@@ -105,7 +105,8 @@ class SpoolmanViewCtrl : public wxDataViewCtrl
 {
 public:
     SpoolmanViewCtrl(wxWindow* parent);
-    ~SpoolmanViewCtrl() {
+    ~SpoolmanViewCtrl()
+    {
         if (m_model)
             m_model->DecRef();
     }
@@ -132,11 +133,11 @@ protected:
 
     void on_import();
 
-    Spoolman*            m_spoolman{Spoolman::get_instance()};
-    SpoolmanViewCtrl*    m_svc;
-    TabPresetComboBox*   m_preset_combobox;
-    wxCheckBox*          m_detach_checkbox;
-    wxCheckBox*          m_ignore_preset_data_checkbox;
+    Spoolman*          m_spoolman{Spoolman::get_instance()};
+    SpoolmanViewCtrl*  m_svc;
+    TabPresetComboBox* m_preset_combobox;
+    wxCheckBox*        m_detach_checkbox;
+    wxCheckBox*        m_ignore_preset_data_checkbox;
 };
 }} // namespace Slic3r::GUI
 

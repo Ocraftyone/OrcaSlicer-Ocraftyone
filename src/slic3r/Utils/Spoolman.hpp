@@ -26,9 +26,11 @@ typedef std::shared_ptr<SpoolmanSpool>    SpoolmanSpoolShrPtr;
 struct SpoolmanResult
 {
     SpoolmanResult() = default;
-    bool                     has_failed() { return !messages.empty(); }
-    std::string build_error_dialog_message() {
-        if (!has_failed()) return {};
+    bool        has_failed() { return !messages.empty(); }
+    std::string build_error_dialog_message()
+    {
+        if (!has_failed())
+            return {};
         std::string message = messages.size() > 1 ? "Multiple errors:\n" : "Error:\n";
 
         for (const auto& error : messages) {
@@ -37,8 +39,10 @@ struct SpoolmanResult
 
         return message;
     }
-    std::string  build_single_line_message() {
-        if (!has_failed()) return {};
+    std::string build_single_line_message()
+    {
+        if (!has_failed())
+            return {};
         std::string message = messages.size() > 1 ? "Multiple errors: " : "Error: ";
 
         for (const auto& error : messages) {
@@ -56,7 +60,6 @@ struct SpoolmanResult
 class Spoolman
 {
     inline static Spoolman* m_instance{nullptr};
-
 
     bool m_initialized{false};
     bool m_server_url_changed{true};
@@ -81,13 +84,13 @@ class Spoolman
             BOOST_LOG_TRIVIAL(info) << "Websocket client connected to Spoolman server. Listening for changes...";
             websocket_client.async_receive();
         });
-        websocket_client.set_on_receive_fn([&](const std::string& message, const beast::error_code& ec, size_t) {
-            this->on_websocket_receive(message, ec);
-        });
+        websocket_client.set_on_receive_fn(
+            [&](const std::string& message, const beast::error_code& ec, size_t) { this->on_websocket_receive(message, ec); });
         websocket_client.set_on_close_fn([&](const websocket::close_reason& reason, const bool client_requested_disconnect) {
             BOOST_LOG_TRIVIAL(info) << "Spoolman Websocket client closed. Reason: "
-            << (client_requested_disconnect ? "Requested by client" :
-                reason.reason.empty() ? "Normal" : reason.reason);
+                                    << (client_requested_disconnect ? "Requested by client" :
+                                        reason.reason.empty()       ? "Normal" :
+                                                                      reason.reason);
 
             // The client only requests a disconnect when changing servers
             // Clearing the instance will be handled by the code closing the server
@@ -95,15 +98,12 @@ class Spoolman
                 this->clear();
         });
 
-        m_instance    = this;
+        m_instance = this;
         if (is_server_valid())
             pull_spoolman_spools();
     };
 
-    enum HTTPAction
-    {
-        GET, PUT, POST, PATCH
-    };
+    enum HTTPAction { GET, PUT, POST, PATCH };
 
     /// get an Http instance for the specified HTTPAction
     static Http get_http_instance(HTTPAction action, const std::string& url);
@@ -117,15 +117,18 @@ class Spoolman
 
     /// puts the provided data to the specified API endpoint
     /// \returns the json response
-    static pt::ptree put_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(PUT, api_endpoint, data); }
+    static pt::ptree put_spoolman_json(const std::string& api_endpoint, const pt::ptree& data)
+    { return spoolman_api_call(PUT, api_endpoint, data); }
 
     /// posts the provided data to the specified API endpoint
     /// \returns the json response
-    static pt::ptree post_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(POST, api_endpoint, data); }
+    static pt::ptree post_spoolman_json(const std::string& api_endpoint, const pt::ptree& data)
+    { return spoolman_api_call(POST, api_endpoint, data); }
 
     /// patches the provided data to the specified API endpoint
     /// \returns the json response
-    static pt::ptree patch_spoolman_json(const std::string& api_endpoint, const pt::ptree& data) { return spoolman_api_call(PATCH, api_endpoint, data); }
+    static pt::ptree patch_spoolman_json(const std::string& api_endpoint, const pt::ptree& data)
+    { return spoolman_api_call(PATCH, api_endpoint, data); }
 
     /// Setup the websocket client and connect to Spoolman's general change pool
     void setup_websocket_connection();
@@ -146,6 +149,7 @@ class Spoolman
     /// \param usage_type The consumption metric to be used. Should be "length" or "weight". This will NOT be checked.
     /// \returns if succeeded
     bool use_spoolman_spool(const unsigned int& spool_id, const double& usage, const std::string& usage_type);
+
 public:
     static constexpr auto DEFAULT_PORT = "7912";
 
@@ -166,10 +170,10 @@ public:
     /// \param detach create preset without depending
     /// \param force attempt to force past errors
     static SpoolmanResult create_filament_preset(const SpoolmanFilamentShrPtr& filament,
-                                                            const Preset*              base_preset,
-                                                            bool                       use_preset_data = false,
-                                                            bool                       detach = false,
-                                                            bool                       force = false);
+                                                 const Preset*                 base_preset,
+                                                 bool                          use_preset_data = false,
+                                                 bool                          detach          = false,
+                                                 bool                          force           = false);
 
     /// Update the preset's config options from the preset's spool/filament
     /// \param filament_preset preset to update
@@ -185,9 +189,9 @@ public:
     /// Normalize the state of spoolman_filament_id and spoolman_spool_id
     /// \param config config to normalize
     /// \return if succeeded
-    static bool           normalize_spoolman_ids(DynamicPrintConfig& config);
+    static bool normalize_spoolman_ids(DynamicPrintConfig& config);
     /// Normalize the Spoolman ids for all visible filament presets
-    static void           normalize_visible_spoolman_ids();
+    static void normalize_visible_spoolman_ids();
 
     /// Update the statistics values for the visible filament presets with spoolman enabled
     static void update_visible_spool_statistics();
@@ -315,17 +319,14 @@ public:
     std::optional<SpoolmanSpoolShrPtr> get_most_used_spool() const;
 
     /// builds a preset name based on filament data
-    std::string         get_preset_name() const;
+    std::string get_preset_name() const;
 
 private:
     Spoolman* m_spoolman;
 
     SpoolmanFilament() : m_spoolman(Spoolman::m_instance) {}
 
-    explicit SpoolmanFilament(const pt::ptree& json_data) : SpoolmanFilament()
-    {
-        update_from_json(json_data);
-    };
+    explicit SpoolmanFilament(const pt::ptree& json_data) : SpoolmanFilament() { update_from_json(json_data); };
 
     void update_from_json(const pt::ptree& json_data);
     void apply_to_config(DynamicConfig& config) const;
@@ -360,10 +361,7 @@ private:
 
     SpoolmanSpool() : m_spoolman(Spoolman::m_instance) {}
 
-    explicit SpoolmanSpool(const pt::ptree& json_data) : SpoolmanSpool()
-    {
-        update_from_json(json_data);
-    }
+    explicit SpoolmanSpool(const pt::ptree& json_data) : SpoolmanSpool() { update_from_json(json_data); }
 
     void update_from_json(const pt::ptree& json_data);
 

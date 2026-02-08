@@ -20,7 +20,11 @@ public:
 
     [[nodiscard]] const std::string& get_preset_name() const { return m_preset->name; }
 
-    void set_combobox_selection(int idx) { if (m_combobox) m_combobox->SetSelection(idx); }
+    void set_combobox_selection(int idx)
+    {
+        if (m_combobox)
+            m_combobox->SetSelection(idx);
+    }
 
 private:
     wxStaticBitmap* m_spool_bitmap;
@@ -60,6 +64,7 @@ protected:
 
     std::map<std::string, int> m_spool_id_updates;
 };
-}} // namespace Slic3r::GUI
+} // namespace GUI
+} // namespace Slic3r
 
 #endif // ORCASLICER_SPOOLMANDIALOG_HPP

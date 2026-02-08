@@ -36,8 +36,8 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
 
     wxWindow* control;
     if (preset->spoolman_enabled()) {
-        m_combobox           = new ComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
-        control               = m_combobox;
+        m_combobox = new ComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
+        control    = m_combobox;
 
         const auto spoolman   = Spoolman::get_instance();
         const auto curr_spool = spoolman->get_spoolman_spool_by_id(preset->config.opt_int("spoolman_spool_id", 0));
@@ -54,7 +54,7 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
             m_combobox->GetDropDown().SetUseContentWidth(true);
             m_combobox->Bind(wxEVT_COMBOBOX, [&](wxCommandEvent& e) {
                 auto current_sel = e.GetInt();
-                auto evt = new wxCommandEvent(EVT_SPOOL_WIDGET_SELECTION);
+                auto evt         = new wxCommandEvent(EVT_SPOOL_WIDGET_SELECTION);
                 evt->SetString(m_preset->name);
                 evt->SetInt(current_sel);
                 evt->SetClientData(m_combobox->GetClientData(current_sel));
@@ -67,14 +67,14 @@ SpoolInfoWidget::SpoolInfoWidget(wxWindow* parent, const Preset* preset) : wxPan
             m_combobox = nullptr;
 
             auto label = new Label(this);
-            control = label;
+            control    = label;
             label->SetLabelText(_L("Failed to get spool data"));
             label->SetForegroundColour(*wxRED);
             control->SetFont(Label::Body_12);
         }
     } else {
-        auto label = new Label(this);
-        control = label;
+        auto label                 = new Label(this);
+        control                    = label;
         const bool has_filament_id = preset->config.opt_int("spoolman_filament_id", 0) > 0;
         label->SetLabelText(has_filament_id ? _L("No spools for this filament") : _L("Not Spoolman enabled"));
         label->SetForegroundColour(*wxRED);
@@ -110,7 +110,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     auto main_panel_sizer = new wxBoxSizer(wxVERTICAL);
     m_main_panel->SetSizer(main_panel_sizer);
 
-    m_config = new SpoolmanDynamicConfig(wxGetApp().app_config);
+    m_config   = new SpoolmanDynamicConfig(wxGetApp().app_config);
     m_optgroup = new ConfigOptionsGroup(m_main_panel, _L("Spoolman Options"), wxEmptyString, m_config);
     build_options_group();
     m_optgroup->m_on_change = [&](const std::string& key, const boost::any& value) {
@@ -132,7 +132,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     main_panel_sizer->Add(m_spoolman_error_label_sizer, 1, wxALL | wxALIGN_CENTER | wxEXPAND, EM);
 
     m_info_widgets_parent_sizer = new wxBoxSizer(wxVERTICAL);
-    m_info_widgets_grid_sizer = new wxGridSizer(2, EM, EM);
+    m_info_widgets_grid_sizer   = new wxGridSizer(2, EM, EM);
     m_info_widgets_parent_sizer->Add(m_info_widgets_grid_sizer, 0, wxALIGN_CENTER);
     m_info_widgets_parent_sizer->AddStretchSpacer();
     main_panel_sizer->Add(m_info_widgets_parent_sizer, 1, wxALL | wxALIGN_CENTER, EM);
@@ -172,10 +172,7 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     this->ShowModal();
 }
 
-SpoolmanDialog::~SpoolmanDialog()
-{
-    delete m_config;
-}
+SpoolmanDialog::~SpoolmanDialog() { delete m_config; }
 
 void SpoolmanDialog::build_options_group() const
 {
@@ -211,7 +208,9 @@ void SpoolmanDialog::build_spool_info()
                 m_info_widgets_parent_sizer->Show(true);
                 auto preset_bundle = wxGetApp().preset_bundle;
                 for (auto& filament_preset_name : preset_bundle->filament_presets) {
-                    m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel, preset_bundle->filaments.find_preset(filament_preset_name)), 0, wxEXPAND);
+                    m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel,
+                                                                       preset_bundle->filaments.find_preset(filament_preset_name)),
+                                                   0, wxEXPAND);
                 }
             }
             show_loading(false);
@@ -255,7 +254,7 @@ void SpoolmanDialog::save_spoolman_settings()
     if (m_dirty_host)
         Spoolman::get_instance()->server_changed();
     m_dirty_settings = false;
-    m_dirty_host = false;
+    m_dirty_host     = false;
 }
 
 void SpoolmanDialog::OnRefresh(wxCommandEvent& e)
@@ -283,7 +282,7 @@ void SpoolmanDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 void SpoolmanDialog::OnSpoolWidgetSelection(wxCommandEvent& e)
 {
-    const auto preset_name = e.GetString().ToStdString();
+    const auto preset_name  = e.GetString().ToStdString();
     const auto new_spool_id = *static_cast<int*>(e.GetClientData());
     for (const auto item : m_info_widgets_grid_sizer->GetChildren())
         if (const auto info_widget = dynamic_cast<SpoolInfoWidget*>(item->GetWindow()); info_widget->get_preset_name() == preset_name)

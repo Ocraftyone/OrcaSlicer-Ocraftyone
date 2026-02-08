@@ -8,10 +8,7 @@
 namespace Slic3r {
 const static std::regex spoolman_regex("^spoolman_");
 
-static const t_config_enum_values s_keys_map_ConsumptionType = {
-    {"weight", ctWEIGHT},
-    {"length", ctLENGTH}
-};
+static const t_config_enum_values s_keys_map_ConsumptionType = {{"weight", ctWEIGHT}, {"length", ctLENGTH}};
 
 SpoolmanConfigDef::SpoolmanConfigDef()
 {
@@ -29,8 +26,8 @@ SpoolmanConfigDef::SpoolmanConfigDef()
                    Spoolman::DEFAULT_PORT;
     def->set_default_value(new ConfigOptionString());
 
-    def = this->add("spoolman_consumption_type", coEnum);
-    def->label = _u8L("Consumption Type");
+    def          = this->add("spoolman_consumption_type", coEnum);
+    def->label   = _u8L("Consumption Type");
     def->tooltip = _u8L("The unit of measurement that sent to Spoolman for consumption");
     def->set_default_value(new ConfigOptionEnumGeneric(&s_keys_map_ConsumptionType, ctWEIGHT));
     def->enum_keys_map = &s_keys_map_ConsumptionType;
@@ -57,7 +54,7 @@ void SpoolmanDynamicConfig::load_from_appconfig(const AppConfig* app_config)
     this->load_defaults();
     for (const auto& [opt_key, opt_def] : this->def()->options) {
         auto app_config_key = regex_replace(opt_key, spoolman_regex, "");
-        auto val = app_config->get("spoolman", app_config_key);
+        auto val            = app_config->get("spoolman", app_config_key);
         if (val.empty())
             continue;
         auto opt = this->option(opt_key, true);
@@ -71,7 +68,7 @@ void SpoolmanDynamicConfig::save_to_appconfig(AppConfig* app_config) const
         const auto opt = this->option(key);
         if (opt == this->def()->get(key)->default_value.get())
             continue;
-        auto val = opt->serialize();
+        auto val            = opt->serialize();
         auto app_config_key = regex_replace(key, spoolman_regex, "");
         app_config->set("spoolman", app_config_key, val);
     }

@@ -10,20 +10,20 @@
 #include <string>
 #include <chrono>
 #include <utility>
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
+namespace beast     = boost::beast;     // from <boost/beast.hpp>
+namespace http      = beast::http;      // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
-namespace net = boost::asio;            // from <boost/asio.hpp>
-using tcp = net::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
+namespace net       = boost::asio;      // from <boost/asio.hpp>
+using tcp           = net::ip::tcp;     // from <boost/asio/ip/tcp.hpp>
 
-class WebSocketClient {
+class WebSocketClient
+{
 public:
-    WebSocketClient() : m_resolver(m_ioctx), m_ws(m_ioctx)
-    {}
+    WebSocketClient() : m_resolver(m_ioctx), m_ws(m_ioctx) {}
 
     virtual ~WebSocketClient()
     {
-        if(!m_ws.is_open())
+        if (!m_ws.is_open())
             return;
         try {
             // Close the WebSocket connection
@@ -57,10 +57,7 @@ public:
         m_ws.handshake(host, path);
     }
 
-    void close()
-    {
-        m_ws.close(websocket::close_code::normal);
-    }
+    void close() { m_ws.close(websocket::close_code::normal); }
 
     void send(const std::string& message)
     {
@@ -83,15 +80,15 @@ public:
     [[nodiscard]] bool is_connected() const { return m_ws.is_open(); }
 
 protected:
-    net::io_context m_ioctx;
-    tcp::resolver m_resolver;
+    net::io_context                      m_ioctx;
+    tcp::resolver                        m_resolver;
     websocket::stream<beast::tcp_stream> m_ws;
 };
 
 class AsyncWebSocketClient : public WebSocketClient
 {
 public:
-    typedef std::function<void(const beast::error_code& /*ec*/)> WSOnConnectFn;
+    typedef std::function<void(const beast::error_code& /*ec*/)>                                WSOnConnectFn;
     typedef std::function<void(const beast::error_code& /*ec*/, std::size_t /*bytes_written*/)> WSOnSendFn;
     typedef std::function<void(const std::string& /*message*/, const beast::error_code& /*ec*/, std::size_t /*bytes_written*/)> WSOnReceiveFn;
     typedef std::function<void(const websocket::close_reason& /*reason*/, const bool /*client_initiated_disconnect*/)> WSOnCloseFn;
@@ -151,14 +148,9 @@ public:
     }
 
     void async_send(const std::string& message)
-    {
-        m_ws.async_write(net::buffer(message), beast::bind_front_handler(&AsyncWebSocketClient::on_send, this));
-    }
+    { m_ws.async_write(net::buffer(message), beast::bind_front_handler(&AsyncWebSocketClient::on_send, this)); }
 
-    void async_receive()
-    {
-        m_ws.async_read(m_receive_buffer, beast::bind_front_handler(&AsyncWebSocketClient::on_receive, this));
-    }
+    void async_receive() { m_ws.async_read(m_receive_buffer, beast::bind_front_handler(&AsyncWebSocketClient::on_receive, this)); }
 
     void set_on_connect_fn(const WSOnConnectFn& fn) { m_on_connect_fn = fn; }
     void set_on_close_fn(const WSOnCloseFn& fn) { m_on_close_fn = fn; }
@@ -167,8 +159,8 @@ public:
 
     [[nodiscard]] bool is_connecting() const { return m_connecting; }
     [[nodiscard]] bool ready_to_connect() const { return !m_connecting && !is_connected(); }
-protected:
 
+protected:
     void on_connect(const beast::error_code& ec)
     {
         m_connecting = false;
@@ -184,7 +176,7 @@ protected:
         if (m_on_close_fn)
             m_on_close_fn(m_ws.reason(), m_client_requested_disconnect);
         m_client_requested_disconnect = false;
-        m_disconnect_handled = true;
+        m_disconnect_handled          = true;
     }
 
     void on_send(const beast::error_code& ec, const std::size_t bytes_transferred)
@@ -234,13 +226,14 @@ protected:
     // Handle the async connection process
     struct ConnectionManager : std::enable_shared_from_this<ConnectionManager>
     {
-        ConnectionManager(AsyncWebSocketClient* client, std::string host, std::string  port, std::string path)
+        ConnectionManager(AsyncWebSocketClient* client, std::string host, std::string port, std::string path)
             : m_client(client), m_host(std::move(host)), m_port(std::move(port)), m_path(std::move(path))
         {}
 
         void start()
         {
-            m_client->m_resolver.async_resolve(m_host, m_port, beast::bind_front_handler(&ConnectionManager::on_resolve, shared_from_this()));
+            m_client->m_resolver.async_resolve(m_host, m_port,
+                                               beast::bind_front_handler(&ConnectionManager::on_resolve, shared_from_this()));
         }
 
         void on_resolve(const beast::error_code& ec, const tcp::resolver::results_type& result)

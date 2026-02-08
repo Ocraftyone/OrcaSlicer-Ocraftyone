@@ -9,7 +9,8 @@
 namespace Slic3r {
 
 namespace {
-template<class Type> Type get_opt(const pt::ptree& data, const string& path, Type default_val = {}) { return data.get_optional<Type>(path).value_or(default_val); }
+template<class Type> Type get_opt(const pt::ptree& data, const string& path, Type default_val = {})
+{ return data.get_optional<Type>(path).value_or(default_val); }
 
 void update_note(std::string& config_note, const std::string& type, const std::string& value)
 {
@@ -37,7 +38,7 @@ void update_note(std::string& config_note, const std::string& type, const std::s
 }
 } // namespace
 
-// Max timout in seconds for Spoolman HTTP requests
+// Max timeout in seconds for Spoolman HTTP requests
 static constexpr long MAX_TIMEOUT = 5;
 
 //---------------------------------
@@ -55,7 +56,7 @@ static std::pair<std::string, std::string> get_spoolman_url_components()
     // If the host contains a port, use that rather than the default
     if (host.find_last_of(':') != string::npos) {
         static const boost::regex pattern(R"((?<host>[a-z0-9.\-_]+):(?<port>[0-9]+))", boost::regex_constants::icase);
-        boost::smatch result;
+        boost::smatch             result;
         if (boost::regex_match(host, result, pattern)) {
             port = result["port"]; // get port value first since it is overwritten when setting the host value in the next line
             host = result["host"];
@@ -85,18 +86,19 @@ Http Spoolman::get_http_instance(const HTTPAction action, const std::string& url
     throw RuntimeError("Invalid HTTP action");
 }
 
-
 pt::ptree Spoolman::spoolman_api_call(const HTTPAction http_action, const std::string& api_endpoint, const pt::ptree& data)
 {
     const auto url  = get_spoolman_api_url() + api_endpoint;
-    auto http = get_http_instance(http_action, url);
+    auto       http = get_http_instance(http_action, url);
 
     bool        res;
     std::string res_body;
 
     http.header("Content-Type", "application/json")
         .on_error([&](const std::string& body, std::string error, unsigned status) {
-            BOOST_LOG_TRIVIAL(error) << "Failed to put data to the Spoolman server. Make sure that the port is correct and the server is running." << boost::format(" HTTP Error: %1%, HTTP status code: %2%, Response body: %3%") % error % status % body;
+            BOOST_LOG_TRIVIAL(error)
+                << "Failed to put data to the Spoolman server. Make sure that the port is correct and the server is running."
+                << boost::format(" HTTP Error: %1%, HTTP status code: %2%, Response body: %3%") % error % status % body;
             res = false;
         })
         .on_complete([&](std::string body, unsigned) {
@@ -152,7 +154,7 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
 
     try {
         // Parse the message
-        pt::ptree tree;
+        pt::ptree          tree;
         std::istringstream ss(message);
         boost::property_tree::read_json(ss, tree);
 
@@ -257,7 +259,7 @@ bool Spoolman::use_spoolman_spool(const unsigned int& spool_id, const double& us
     tree.put("use_" + usage_type, usage);
 
     std::string endpoint = (boost::format("spool/%1%/use") % spool_id).str();
-    tree = put_spoolman_json(endpoint, tree);
+    tree                 = put_spoolman_json(endpoint, tree);
     if (tree.empty())
         return false;
     return true;
@@ -269,8 +271,8 @@ bool Spoolman::use_spoolman_spools(const std::map<unsigned int, double>& data, c
         return false;
 
     std::vector<unsigned int> spool_ids;
-    std::vector<double> usages;
-    bool failed = false;
+    std::vector<double>       usages;
+    bool                      failed = false;
 
     for (auto& [spool_id, usage] : data) {
         if (!use_spoolman_spool(spool_id, usage, usage_type)) {
@@ -312,16 +314,13 @@ bool Spoolman::undo_use_spoolman_spools()
     return true;
 }
 
-SpoolmanResult Spoolman::create_filament_preset(const SpoolmanFilamentShrPtr& filament,
-                                                const Preset*                 base_preset,
-                                                bool                          use_preset_data,
-                                                bool                          detach,
-                                                bool                          force)
+SpoolmanResult Spoolman::create_filament_preset(
+    const SpoolmanFilamentShrPtr& filament, const Preset* base_preset, bool use_preset_data, bool detach, bool force)
 {
     PresetCollection& filaments = wxGetApp().preset_bundle->filaments;
     SpoolmanResult    result;
 
-    DynamicPrintConfig preset_data_config;
+    DynamicPrintConfig                 preset_data_config;
     std::map<std::string, std::string> additional_preset_data;
     if (use_preset_data) {
         // If the preset data is empty, use the base_preset
@@ -472,7 +471,7 @@ SpoolmanResult Spoolman::update_filament_preset(Preset* filament_preset, bool on
 
     // Attempt to use the spool to update the preset first.
     // The spool data is only absolutely required if only the statistics are being updated
-    const int&     spool_id = filament_preset->config.opt_int("spoolman_spool_id", 0);
+    const int& spool_id = filament_preset->config.opt_int("spoolman_spool_id", 0);
     if (auto spool_opt = get_instance()->get_spoolman_spool_by_id(spool_id); spool_opt.has_value()) {
         SpoolmanSpoolShrPtr spool = spool_opt.value();
         spool->apply_to_preset(filament_preset, only_update_statistics);
@@ -487,8 +486,8 @@ SpoolmanResult Spoolman::update_filament_preset(Preset* filament_preset, bool on
     }
 
     // If the spool is not available, attempt to apply the data from the filament
-    const int& filament_id = filament_preset->config.opt_int("spoolman_filament_id", 0);
-    auto filament_opt = get_instance()->get_spoolman_filament_by_id(filament_id);
+    const int& filament_id  = filament_preset->config.opt_int("spoolman_filament_id", 0);
+    auto       filament_opt = get_instance()->get_spoolman_filament_by_id(filament_id);
     if (!filament_opt.has_value()) {
         if (filament_id < 1) { // IDs below 1 are not used by spoolman and should be ignored
             result.messages.emplace_back("Preset provided does not have a valid Spoolman filament ID");
@@ -510,7 +509,7 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
         result.messages.emplace_back("Preset is not a filament preset");
         return result;
     }
-    const int&     filament_id = filament_preset->config.opt_int("spoolman_filament_id", 0);
+    const int& filament_id = filament_preset->config.opt_int("spoolman_filament_id", 0);
     if (filament_id < 1) {
         result.messages.emplace_back(
             "Preset provided does not have a valid Spoolman filament ID"); // IDs below 1 are not used by spoolman and should be ignored
@@ -559,7 +558,7 @@ SpoolmanResult Spoolman::save_preset_to_spoolman(const Preset* filament_preset)
 bool Spoolman::normalize_spoolman_ids(DynamicPrintConfig& config)
 {
     auto& filament_id = config.opt_int("spoolman_filament_id", 0u);
-    auto& spool_id = config.opt_int("spoolman_spool_id", 0u);
+    auto& spool_id    = config.opt_int("spoolman_spool_id", 0u);
 
     // If there is a spool ID, but no filament ID, get the filament ID from the spool
     if (filament_id < 1 && spool_id > 0) {
@@ -576,7 +575,7 @@ bool Spoolman::normalize_spoolman_ids(DynamicPrintConfig& config)
         if (!filament_opt.has_value())
             return false;
         auto most_used_opt = filament_opt.value()->get_most_used_spool();
-        spool_id       = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
+        spool_id           = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
         return true;
     }
 
@@ -589,7 +588,7 @@ bool Spoolman::normalize_spoolman_ids(DynamicPrintConfig& config)
         if (!spool->archived)
             return false;
         auto most_used_opt = spool->filament->get_most_used_spool();
-        spool_id       = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
+        spool_id           = most_used_opt.has_value() ? most_used_opt.value()->id : 0;
         return true;
     }
 
@@ -614,8 +613,8 @@ void Spoolman::normalize_visible_spoolman_ids()
 
 void Spoolman::update_visible_spool_statistics()
 {
-    PresetBundle* preset_bundle = GUI::wxGetApp().preset_bundle;
-    PresetCollection& filaments    = preset_bundle->filaments;
+    PresetBundle*     preset_bundle = GUI::wxGetApp().preset_bundle;
+    PresetCollection& filaments     = preset_bundle->filaments;
 
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
@@ -632,8 +631,8 @@ void Spoolman::update_visible_spool_statistics()
 
 void Spoolman::update_specific_spool_statistics(const unsigned spool_id)
 {
-    PresetBundle* preset_bundle = GUI::wxGetApp().preset_bundle;
-    PresetCollection& filaments    = preset_bundle->filaments;
+    PresetBundle*     preset_bundle = GUI::wxGetApp().preset_bundle;
+    PresetCollection& filaments     = preset_bundle->filaments;
 
     if (spool_id < 1)
         return;
@@ -680,17 +679,18 @@ bool Spoolman::is_server_valid(bool force_check)
             return last_res;
     }
 
-    bool res = false;
+    bool res          = false;
     auto [host, port] = get_spoolman_url_components();
-    Http::head(host + ":" + port + "/api/v1").on_complete([&res](std::string, unsigned http_status) {
-        if (http_status == 200)
-            res = true;
-    })
-    .timeout_max(MAX_TIMEOUT)
-    .perform_sync();
+    Http::head(host + ":" + port + "/api/v1")
+        .on_complete([&res](std::string, unsigned http_status) {
+            if (http_status == 200)
+                res = true;
+        })
+        .timeout_max(MAX_TIMEOUT)
+        .perform_sync();
 
     last_validity_check = steady_clock::now();
-    last_res = res;
+    last_res            = res;
 
     return res;
 }
@@ -775,11 +775,11 @@ bool SpoolmanFilament::get_config_from_preset_data(DynamicPrintConfig& config, s
 {
     if (preset_data.empty())
         return false;
-    json        j = json::parse(preset_data);
-    ConfigSubstitutionContext context(Enable);
+    json                               j = json::parse(preset_data);
+    ConfigSubstitutionContext          context(Enable);
     std::map<std::string, std::string> key_values;
-    std::string reason;
-    DynamicPrintConfig new_config;
+    std::string                        reason;
+    DynamicPrintConfig                 new_config;
     new_config.load_from_json(j, context, true, key_values, reason);
     if (!reason.empty())
         return false;
@@ -802,8 +802,10 @@ std::optional<SpoolmanSpoolShrPtr> SpoolmanFilament::get_most_used_spool() const
     SpoolmanSpoolShrPtr most_used = nullptr;
 
     for (const auto& [_, spool] : m_spoolman->m_spools) {
-        if (spool->archived) continue;
-        if (this != spool->filament.get()) continue;
+        if (spool->archived)
+            continue;
+        if (this != spool->filament.get())
+            continue;
         if (most_used) {
             if (spool->used_length > most_used->used_length)
                 most_used = spool;
@@ -843,12 +845,12 @@ void SpoolmanSpool::apply_to_config(Slic3r::DynamicConfig& config) const
 
 void SpoolmanSpool::apply_to_preset(Preset* preset, bool only_update_statistics) const
 {
-    auto spoolman_stats = preset->spoolman_statistics;
+    auto spoolman_stats              = preset->spoolman_statistics;
     spoolman_stats->remaining_weight = remaining_weight;
-    spoolman_stats->used_weight = used_weight;
+    spoolman_stats->used_weight      = used_weight;
     spoolman_stats->remaining_length = remaining_length;
-    spoolman_stats->used_length = used_length;
-    spoolman_stats->archived = archived;
+    spoolman_stats->used_length      = used_length;
+    spoolman_stats->archived         = archived;
     if (only_update_statistics)
         return;
     this->apply_to_config(preset->config);
