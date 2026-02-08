@@ -146,6 +146,11 @@ void Spoolman::setup_websocket_connection()
 
 void Spoolman::on_websocket_receive(const std::string& message, beast::error_code ec)
 {
+    // Queue another receive command
+    // This command will begin to execute on the async thread when it is done processing this current one,
+    // so it should not cause any thread safety issues
+    websocket_client.async_receive();
+
     // If there is an error, log it and continue. If the server is closed, this function will not be called
     if (ec) {
         BOOST_LOG_TRIVIAL(error) << ": " << "Failure on Spoolman websocket receive: " << ec.message();
@@ -158,10 +163,22 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
         std::istringstream ss(message);
         boost::property_tree::read_json(ss, tree);
 
-        const auto  type        = tree.get<string>("type");     // Enum: "added", "updated", "deleted"
-        const auto  resource    = tree.get<string>("resource"); // Enum: "spool", "filament", "vendor"
-        const auto& payload     = tree.get_child("payload");    // data of resource
-        const int   resource_id = payload.get<int>("id");
+        const auto resource = tree.get<string>("resource"); // Enum: "spool", "filament", "vendor"
+
+        static std::vector valid_resource_values = {"spool", "filament", "vendor"};
+        if (!contains(valid_resource_values, resource)) {
+            BOOST_LOG_TRIVIAL(info) << "Spoolman Websocket: Unknown resource type: " << resource;
+            return;
+        }
+
+        const auto  type            = tree.get<string>("type");  // Enum: "added", "updated", "deleted"
+        const auto& payload         = tree.get_child("payload"); // data of resource
+        const auto& resource_id_opt = payload.get_optional<int>("id");
+        if (!resource_id_opt.has_value()) {
+            BOOST_LOG_TRIVIAL(warning) << "Spoolman Websocket: No ID provided. Likely caused by an unknown resource type: " << resource;
+            return;
+        }
+        const int resource_id = resource_id_opt.value();
 
         if (type == "deleted") {
             if (resource == "spool")
@@ -171,7 +188,7 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
             else if (resource == "vendor")
                 m_vendors.erase(resource_id);
             else
-                BOOST_LOG_TRIVIAL(error) << "Spoolman Websocket: Unknown resource type: " << resource;
+                BOOST_LOG_TRIVIAL(warning) << "Spoolman Websocket: Unknown resource type: " << resource;
         } else {
             // "added" or "updated"
             if (resource == "spool") {
@@ -191,14 +208,11 @@ void Spoolman::on_websocket_receive(const std::string& message, beast::error_cod
                     vendor = std::make_shared<SpoolmanVendor>(SpoolmanVendor());
                 vendor->update_from_json(payload);
             } else
-                BOOST_LOG_TRIVIAL(error) << "Spoolman Websocket: Unknown resource type: " << resource;
+                BOOST_LOG_TRIVIAL(warning) << "Spoolman Websocket: Unknown resource type: " << resource;
         }
     } catch (std::exception& e) {
         BOOST_LOG_TRIVIAL(error) << "Exception during parsing from Spoolman websocket: " << e.what() << ", Received message: " << message;
     }
-
-    // Queue another receive command
-    websocket_client.async_receive();
 }
 
 void Spoolman::on_server_first_connect()
