@@ -408,14 +408,14 @@ exit /b 0
 
 	setlocal
 
-	%VSWHERE% -nologo
+	%VSWHERE% -nologo >nul 2>nul
 	if not !errorlevel! == 0 (
 		:: vswhere isn't in its default location. Try msbuild in the local env
 		goto :msbuild_check
 	)
 
 	echo Detecting Visual Studio version using vswhere...
-	for /f "tokens=*" %%i in ('%VSWHERE% -nologo -products * -latest -property catalog_productLineVersion') do (
+	for /f "tokens=1 delims=." %%i in ('%VSWHERE% -nologo -products * -latest -property catalog_productDisplayVersion') do (
 		set "VS_MAJOR=%%i"
 		goto :version_found
 	)
@@ -471,7 +471,7 @@ exit /b 0
 
 :: setup_dev_env
 :setup_dev_env
-	%VSWHERE% -nologo
+	%VSWHERE% -nologo >nul 2>nul
 	if not !errorlevel! == 0 (
 		:: vswhere isn't in its default location. Exit and use current environment
 		exit /b 0
