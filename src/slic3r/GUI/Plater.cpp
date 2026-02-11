@@ -7865,6 +7865,8 @@ bool Plater::priv::restart_background_process(unsigned int state)
            (state & UPDATE_BACKGROUND_PROCESS_RESTART) != 0 ) ) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", Line %1%: print is valid, try to start it now")%__LINE__;
         // The print is valid and it can be started.
+        if (this->background_process.current_printer_technology() == ptFFF)
+            this->background_process.m_fff_print->set_spoolman_enabled(Spoolman::is_enabled());
         if (this->background_process.start()) {
             if (!show_warning_dialog)
                 on_slicing_began();
@@ -7875,6 +7877,8 @@ bool Plater::priv::restart_background_process(unsigned int state)
     else if (this->background_process.empty()) {
         PartPlate* cur_plate = background_process.get_current_plate();
         if (cur_plate->is_slice_result_valid() && ((state & UPDATE_BACKGROUND_PROCESS_FORCE_RESTART) != 0)) {
+            if (this->background_process.current_printer_technology() == ptFFF)
+                this->background_process.m_fff_print->set_spoolman_enabled(Spoolman::is_enabled());
             if (this->background_process.start()) {
                 if (!show_warning_dialog)
                     on_slicing_began();

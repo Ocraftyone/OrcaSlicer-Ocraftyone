@@ -1102,6 +1102,8 @@ public:
     void set_check_multi_filaments_compatibility(bool check) { m_need_check_multi_filaments_compatibility = check; }
     bool need_check_multi_filaments_compatibility() const { return m_need_check_multi_filaments_compatibility; }
 
+    void set_spoolman_enabled(bool enabled) { m_spoolman_enabled = enabled; }
+
     // scaled point
     Vec2d translate_to_print_space(const Point &point) const;
     static FilamentTempType get_filament_temp_type(const std::string& filament_type);
@@ -1202,6 +1204,8 @@ private:
     Calib_Params m_calib_params;
 
     bool m_need_check_multi_filaments_compatibility{true};
+
+    bool m_spoolman_enabled{false};
 
     // To allow GCode to set the Print's GCodeExport step status.
     friend class GCode;

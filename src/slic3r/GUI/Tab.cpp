@@ -4530,6 +4530,8 @@ void TabPrinter::build_fff()
         optgroup->append_single_option_line("printer_structure", "printer_basic_information_advanced#printer-structure");
         optgroup->append_single_option_line("gcode_flavor", "printer_basic_information_advanced#g-code-flavor");
         optgroup->append_single_option_line("handles_spoolman_consumption");
+        optgroup->append_single_option_line("spoolman_clear_spool_macro");
+        optgroup->append_single_option_line("spoolman_set_spool_macro");
         optgroup->append_single_option_line("pellet_modded_printer", "printer_basic_information_advanced#pellet-modded-printer");
         optgroup->append_single_option_line("bbl_use_printhost", "printer_basic_information_advanced#use-3rd-party-print-host");
         optgroup->append_single_option_line("scan_first_layer" , "printer_basic_information_advanced#scan-first-layer");
@@ -4542,8 +4544,8 @@ void TabPrinter::build_fff()
         option.opt.full_width = true;
         optgroup->append_single_option_line(option, "printer_basic_information_advanced#g-code-thumbnails");
         // optgroup->append_single_option_line("thumbnails_format");
-        optgroup->m_on_change = [this](t_config_option_key opt_key, boost::any value) {
-            wxTheApp->CallAfter([this, opt_key, value]() {
+        optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value) {
+            wxTheApp->CallAfter([this, opt_key, value, optgroup]() {
                 if (opt_key == "thumbnails" && m_config->has("thumbnails_format")) {
                     // to backward compatibility we need to update "thumbnails_format" from new "thumbnails"
                     const std::string val = boost::any_cast<std::string>(value);
@@ -4570,6 +4572,11 @@ void TabPrinter::build_fff()
                                 load_config(new_conf);
                             }
                         }
+                    }
+                } else if (opt_key == "spoolman_set_spool_macro") {
+                    auto val = boost::any_cast<std::string>(value);
+                    if (val.find("%id%") == std::string::npos) {
+                        show_error(parent(), "The value does not contain the '%id%' identifier");
                     }
                 }
 
@@ -5380,9 +5387,15 @@ void TabPrinter::toggle_options()
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})
           toggle_line(el, !is_BBL_printer);
 
-        toggle_line("handles_spoolman_consumption", Spoolman::is_enabled());
-
         auto gcf = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
+        bool spoolman_enabled = Spoolman::is_enabled();
+
+        toggle_line("handles_spoolman_consumption", spoolman_enabled);
+
+        bool enable_spoolman_macros = spoolman_enabled && m_config->opt_bool("handles_spoolman_consumption") && gcf == gcfKlipper;
+        toggle_line("spoolman_clear_spool_macro", enable_spoolman_macros);
+        toggle_line("spoolman_set_spool_macro", enable_spoolman_macros);
+
         toggle_line("enable_power_loss_recovery", is_BBL_printer || gcf == gcfMarlinFirmware);
     }
 

@@ -1396,6 +1396,9 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInts,                spoolman_spool_id))
     ((ConfigOptionFloats,              filament_remaining_weight))
     ((ConfigOptionFloats,              filament_remaining_length))
+    ((ConfigOptionBool,                handles_spoolman_consumption))
+    ((ConfigOptionString,              spoolman_clear_spool_macro))
+    ((ConfigOptionString,              spoolman_set_spool_macro))
 )
 
 // This object is mapped to Perl as Slic3r::Config::Print.

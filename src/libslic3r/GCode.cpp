@@ -7219,6 +7219,30 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     if (!m_writer.need_toolchange(new_filament_id))
         return "";
 
+    auto select_spoolman_spool = [&]() -> std::string {
+        std::string gcode;
+        if (m_config.gcode_flavor != gcfKlipper
+            || !m_print->m_spoolman_enabled
+            || !m_config.handles_spoolman_consumption)
+            return {};
+
+        // Only use the macros if both are valid
+        if (m_config.spoolman_clear_spool_macro.empty() || m_config.spoolman_set_spool_macro.empty())
+            return {};
+
+        // Add macros
+        gcode += m_config.spoolman_clear_spool_macro.value + '\n';
+
+        const auto& set_macro = m_config.spoolman_set_spool_macro.value;
+        if (set_macro.find("%id%") == std::string::npos)
+            throw SlicingError("The option 'spoolman_set_spool_macro' is not empty and does not contain a '%id%' identifier to replace.");
+        auto spool_id = m_config.spoolman_spool_id.get_at(new_filament_id);
+        if (spool_id > 0)
+            gcode += boost::replace_all_copy(set_macro, "%id%", std::to_string(spool_id)) + '\n';
+
+        return gcode;
+    };
+
     // if we are running a single-extruder setup, just set the extruder and return nothing
     if (!m_writer.multiple_extruders) {
         this->placeholder_parser().set("current_extruder", new_filament_id);
@@ -7249,6 +7273,8 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
             m_pa_processor->resetPreviousPA(m_config.pressure_advance.get_at(new_filament_id));
         }
 
+        // Orca: add Spoolman macros
+        gcode += select_spoolman_spool();
         gcode += m_writer.toolchange(new_filament_id);
         return gcode;
     }
@@ -7453,6 +7479,9 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
             }
         }
     }
+
+    // Orca: add Spoolman macros
+    gcode += select_spoolman_spool();
 
     // BBS. Reset old extruder E-value.
     // Keep retract length because Custom GCode will guarantee retract length be the same as toolchange

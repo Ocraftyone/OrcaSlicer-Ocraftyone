@@ -3620,6 +3620,23 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("spoolman_clear_spool_macro", coString);
+    def->label = L("Clear spool macro");
+    def->tooltip = L("Set the klipper macro that will be used to clear the active Spoolman spool.\n"
+                     "If you use the moonraker macro, this option's should be set to 'CLEAR_ACTIVE_SPOOL'.");
+    def->mode = comSimple;
+    def->full_width = true;
+    def->set_default_value(new ConfigOptionString(""));
+
+    def = this->add("spoolman_set_spool_macro", coString);
+    def->label = L("Set spool macro");
+    def->tooltip = L("Set the klipper macro that will be used to set the active Spoolman spool.\n"
+                     "This option will be parsed and replace '%id%' in the value with the spool ID to be set active."
+                     "If you use the moonraker provided macro, this option should be set to 'SET_ACTIVE_SPOOL ID=%id%'.");
+    def->mode = comSimple;
+    def->full_width = true;
+    def->set_default_value(new ConfigOptionString(""));
+
     def = this->add("gcode_label_objects", coBool);
     def->label = L("Label objects");
     def->tooltip = L("Enable this to add comments into the G-code labeling print moves with what object they belong to,"
