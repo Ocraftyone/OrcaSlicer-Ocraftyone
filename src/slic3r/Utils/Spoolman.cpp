@@ -616,9 +616,11 @@ void Spoolman::normalize_visible_spoolman_ids()
 
     if (is_server_valid()) {
         for (const auto item : filaments.get_compatible()) {
-            if (item->is_user() && normalize_spoolman_ids(item->config))
+            if (item->is_user() && normalize_spoolman_ids(item->config)) {
+                auto parent_preset = filaments.get_preset_parent(*item);
                 // Save the preset to file if the normalization changes a value
-                item->save(&filaments.get_preset_parent(*item)->config);
+                item->save(parent_preset ? &parent_preset->config : nullptr);
+            }
         }
         // Normalize the edited preset so the IDs aren't different if the selected preset is updated
         normalize_spoolman_ids(filaments.get_edited_preset().config);
