@@ -272,6 +272,8 @@ UpdateVersionDialog::UpdateVersionDialog(wxWindow *parent)
     m_vebview_release_note->SetSize(wxSize(FromDIP(560), FromDIP(430)));
     m_vebview_release_note->SetMinSize(wxSize(FromDIP(560), FromDIP(430)));
     //m_vebview_release_note->SetMaxSize(wxSize(FromDIP(560), FromDIP(430)));
+    if (wxGetApp().app_config->get_bool("developer_mode"))
+        m_vebview_release_note->EnableAccessToDevTools();
 
     m_vebview_release_note->Bind(wxEVT_WEBVIEW_NAVIGATING,[=, count = 0](wxWebViewEvent& event) mutable {
         count++;
@@ -483,7 +485,7 @@ void UpdateVersionDialog::update_version_info(wxString release_note, wxString ve
     auto data_buf_in = release_note.utf8_str();
     auto bg_color = StateColor::darkModeColorFor(*wxWHITE).GetAsString();
     auto fg_color = StateColor::darkModeColorFor(*wxBLACK).GetAsString();
-    html_source = (boost::format("<html><head><style>body { color: %1%; background-color: %2%; } a { color: #1E90FF }</style></head><body>")
+    html_source = (boost::format("<html><head><style>body { color: %1%; background-color: %2%; font-family: sans-serif; } a { color: #1E90FF }</style></head><body>")
         % fg_color % bg_color).str();
     md_html(data_buf_in.data(), data_buf_in.length(), [](const MD_CHAR* text, MD_SIZE size, void* userdata) {
         std::string* out_buf = (std::string*)userdata;

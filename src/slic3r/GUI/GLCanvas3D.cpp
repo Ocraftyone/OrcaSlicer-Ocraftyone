@@ -1254,7 +1254,7 @@ bool GLCanvas3D::init()
     // Controls the display of object names directly over the object
     m_labels.show(wxGetApp().app_config->get_bool("show_labels"));
     // Controls the color coding of overhang surfaces
-    m_slope.globalUse(wxGetApp().app_config->get_bool("show_labels"));
+    m_slope.globalUse(wxGetApp().app_config->get_bool("show_overhang"));
 
     BOOST_LOG_TRIVIAL(info) <<__FUNCTION__<< " enter";
     glsafe(::glClearColor(1.0f, 1.0f, 1.0f, 1.0f));
@@ -3273,7 +3273,7 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
         case WXK_CONTROL_A:
 #endif /* __APPLE__ */
             if (!is_in_painting_mode && !m_layers_editing.is_enabled())
-                post_event(SimpleEvent(EVT_GLCANVAS_SELECT_ALL));
+                post_event(SimpleEvent(EVT_GLCANVAS_SELECT_CURR_PLATE_ALL));
         break;
 #ifdef __APPLE__
         case 'c':
@@ -7308,6 +7308,7 @@ void GLCanvas3D::_rectangular_selection_picking_pass()
                 rect_near_top = rect_near_bottom + ratio_y;
 
             framebuffer_camera.look_at(camera->get_position(), camera->get_target(), camera->get_dir_up());
+            framebuffer_camera.set_type(camera->get_type());
             framebuffer_camera.apply_projection(rect_near_left, rect_near_right, rect_near_bottom, rect_near_top, camera->get_near_z(), camera->get_far_z());
             framebuffer_camera.set_viewport(0, 0, width, height);
             framebuffer_camera.apply_viewport();
