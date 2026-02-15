@@ -3898,7 +3898,7 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::load_vendor_configs_
                         }
                     } else {
                         ++m_errors;
-                        BOOST_LOG_TRIVIAL(error)<< __FUNCTION__ << boost::format(": invalid nozzle_diameters %1% for Vendor %1%") % nozzle_diameters % vendor_name;
+                        BOOST_LOG_TRIVIAL(error)<< boost::format(": invalid nozzle_diameters %1% for Vendor %1%") % nozzle_diameters % vendor_name;
                     }
                 }
                 else if (boost::iequals(it.key(), BBL_JSON_KEY_PRINTER_TECH)) {

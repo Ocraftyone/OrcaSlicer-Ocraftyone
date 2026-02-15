@@ -864,10 +864,10 @@ bool GuideFrame::apply_config(AppConfig *app_config, PresetBundle *preset_bundle
             std::string short_name = name.substr(0, name.size() - system_suffix.size());
             if (has_vendor_printer && has_filament_profiles && m_ProfileJson["filament"].contains(short_name)) {
                 supplemented_filaments[short_name] = value;
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Replacing @System filament: '" << name << "' -> '" << short_name << "'";
+                BOOST_LOG_TRIVIAL(info) << " Replacing @System filament: '" << name << "' -> '" << short_name << "'";
                 if (has_default_bundle_printer) {
                     supplemented_filaments[name] = value;
-                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Also keeping '" << name << "' for default bundle printers";
+                    BOOST_LOG_TRIVIAL(info) << " Also keeping '" << name << "' for default bundle printers";
                 }
                 continue;
             }

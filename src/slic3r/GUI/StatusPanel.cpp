@@ -2580,7 +2580,7 @@ void StatusPanel::on_market_retry(wxCommandEvent &event)
     if (obj) {
     obj->get_model_mall_result_need_retry = true;
     } else {
-        BOOST_LOG_TRIVIAL(info)<< __FUNCTION__ << "retury failed";
+        BOOST_LOG_TRIVIAL(info)<< "retury failed";
     }
 }
 

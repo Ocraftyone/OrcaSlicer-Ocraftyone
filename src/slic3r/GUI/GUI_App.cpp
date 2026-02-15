@@ -3452,7 +3452,7 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
 void GUI_App::switch_printer_agent()
 {
     if (!m_agent) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no agent exists";
+        BOOST_LOG_TRIVIAL(warning) << ": no agent exists";
         return;
     }
 
@@ -3471,7 +3471,7 @@ void GUI_App::switch_printer_agent()
 
     // Check if agent is registered
     if (!NetworkAgentFactory::is_printer_agent_registered(effective_agent_id)) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": unregistered agent ID '" << effective_agent_id
+        BOOST_LOG_TRIVIAL(warning) << ": unregistered agent ID '" << effective_agent_id
                                    << "', keeping current agent";
         // Keep current agent, don't switch
         return;
@@ -3490,7 +3490,7 @@ void GUI_App::switch_printer_agent()
             NetworkAgentFactory::create_printer_agent_by_id(effective_agent_id, cloud_agent, log_dir);
 
         if (!new_printer_agent) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create agent '" << effective_agent_id << "', keeping current agent";
+            BOOST_LOG_TRIVIAL(warning) << ": failed to create agent '" << effective_agent_id << "', keeping current agent";
             return;
         }
 
@@ -3498,7 +3498,7 @@ void GUI_App::switch_printer_agent()
         m_agent->set_printer_agent(new_printer_agent);
         sidebar().update_all_preset_comboboxes();
 
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": printer agent switched to " << effective_agent_id;
+        BOOST_LOG_TRIVIAL(info) << ": printer agent switched to " << effective_agent_id;
 
         // Auto-switch MachineObject
         select_machine(effective_agent_id);
@@ -3514,7 +3514,7 @@ void GUI_App::select_machine(const std::string& agent_id)
     }
 
     if (!m_device_manager || !preset_bundle) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no device manager or preset bundle";
+        BOOST_LOG_TRIVIAL(warning) << ": no device manager or preset bundle";
         return;
     }
 
@@ -3563,10 +3563,10 @@ void GUI_App::select_machine(const std::string& agent_id)
             machine, "lan", "free", "", access_code);
 
         if (!existing) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to create machine dev_id=" << dev_id;
+            BOOST_LOG_TRIVIAL(error) << ": failed to create machine dev_id=" << dev_id;
             return;
         }
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": created new machine dev_id=" << dev_id;
+        BOOST_LOG_TRIVIAL(info) << ": created new machine dev_id=" << dev_id;
     }
     existing->local_use_ssl = boost::istarts_with(print_host, "https://");
 
@@ -3574,11 +3574,11 @@ void GUI_App::select_machine(const std::string& agent_id)
     // This reuses existing logic for machine switching (UI updates, callbacks, etc.)
     if (mainframe && mainframe->m_monitor) {
         mainframe->m_monitor->select_machine(dev_id);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": triggered select_machine for dev_id=" << dev_id;
+        BOOST_LOG_TRIVIAL(info) << ": triggered select_machine for dev_id=" << dev_id;
     } else {
         // Fallback if MonitorPanel not available
         m_device_manager->set_selected_machine(dev_id);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": fallback set_selected_machine dev_id=" << dev_id;
+        BOOST_LOG_TRIVIAL(info) << ": fallback set_selected_machine dev_id=" << dev_id;
     }
 }
 
