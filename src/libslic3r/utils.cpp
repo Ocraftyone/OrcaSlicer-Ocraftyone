@@ -1118,7 +1118,7 @@ bool copy_framework(const std::string &from, const std::string &to)
     boost::filesystem::path src(from), dst(to);
     try {
         if (!boost::filesystem::is_directory(src)) {
-            std::cerr << "Error: Source is not a directory: " << src << std::endl;
+            BOOST_LOG_TRIVIAL(error) << "Error: Source is not a directory: " << src << std::endl;
             return false;
         }
         boost::filesystem::create_directories(dst);

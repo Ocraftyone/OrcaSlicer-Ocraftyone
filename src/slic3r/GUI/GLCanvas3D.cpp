@@ -1276,7 +1276,7 @@ bool GLCanvas3D::init()
 
     BOOST_LOG_TRIVIAL(info) << ": before gizmo init";
     if (m_gizmos.is_enabled() && !m_gizmos.init())
-        std::cout << "Unable to initialize gizmos: please, check that all the required textures are available" << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Unable to initialize gizmos: please, check that all the required textures are available";
 
     BOOST_LOG_TRIVIAL(info) << ": before _init_toolbars";
     if (!_init_toolbars())

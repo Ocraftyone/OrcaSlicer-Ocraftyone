@@ -3006,8 +3006,6 @@ bool Model::obj_import_vertex_color_deal(const std::vector<unsigned char> &verte
                                              unsigned char &iso_index) {
                 if (c0 == c1 && c1 == c2) {
                     vertex_color_case = VertexColorCase::_3_SAME_COLOR;
-                } else if (c0 != c1 && c1 != c2 && c0 != c2) {
-                    vertex_color_case = VertexColorCase::_3_DIFF_COLOR;
                 } else if (c0 == c1) {
                     vertex_color_case = _2_SAME_1_DIFF_COLOR;
                     iso_index         = 2;
@@ -3018,7 +3016,7 @@ bool Model::obj_import_vertex_color_deal(const std::vector<unsigned char> &verte
                     vertex_color_case = _2_SAME_1_DIFF_COLOR;
                     iso_index         = 1;
                 } else {
-                    std::cout << "error";
+                    vertex_color_case = VertexColorCase::_3_DIFF_COLOR;
                 }
             };
             auto calc_tri_area = [](const Vec3f &v0, const Vec3f &v1, const Vec3f &v2) {

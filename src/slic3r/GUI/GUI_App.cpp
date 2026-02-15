@@ -2698,7 +2698,7 @@ bool GUI_App::on_init_inner()
 
 #ifdef __linux__
     if (! check_old_linux_datadir(GetAppName())) {
-        std::cerr << "Quitting, user chose to move their data to new location." << std::endl;
+        BOOST_LOG_TRIVIAL(error) << "Quitting, user chose to move their data to new location.";
         return false;
     }
 #endif
