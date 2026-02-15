@@ -122,7 +122,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
 
     wxString TargetUrl = SetStartPage(BBL_WELCOME, false);
-    BOOST_LOG_TRIVIAL(info) << boost::format(",  set start page to welcome ");
+    BOOST_LOG_TRIVIAL(info) << ",  set start page to welcome ";
 
     // Create the webview
     m_browser = WebView::CreateWebView(this, TargetUrl);
@@ -181,7 +181,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     // UI
     SetStartPage(BBL_REGION);
 
-    BOOST_LOG_TRIVIAL(info) << boost::format(",  finished");
+    BOOST_LOG_TRIVIAL(info) << ",  finished";
     wxGetApp().UpdateDlgDarkUI(this);
 }
 
@@ -206,7 +206,7 @@ void GuideFrame::load_url(wxString &url)
     m_browser->SetFocus();
     UpdateState();
 
-    BOOST_LOG_TRIVIAL(info)<< " exit";
+    BOOST_LOG_TRIVIAL(trace)<< " exit";
 }
 
 wxString GuideFrame::SetStartPage(GuidePage startpage, bool load)
@@ -977,10 +977,9 @@ int GuideFrame::GetFilamentInfo( std::string VendorDirectory, json & pFilaList, 
     //GetStardardFilePath(filepath);
     BOOST_LOG_TRIVIAL(info) << " GetFilamentInfo:VendorDirectory - " << VendorDirectory << ", Filepath - "<<filepath;
 
+    std::string contents;
     try {
-        std::string contents;
         LoadFile(filepath, contents);
-        BOOST_LOG_TRIVIAL(info) << ": Json Contents: " << contents;
         json jLocal = json::parse(contents);
 
         if (sVendor == "") {
@@ -1039,6 +1038,7 @@ int GuideFrame::GetFilamentInfo( std::string VendorDirectory, json & pFilaList, 
     }
     catch(nlohmann::detail::parse_error &err) {
         BOOST_LOG_TRIVIAL(error)<< ": parse "<<filepath <<" got a nlohmann::detail::parse_error, reason = " << err.what();
+        BOOST_LOG_TRIVIAL(trace) << ": Json Contents: " << contents;
         return -1;
     }
     catch (std::exception &e)
@@ -1046,6 +1046,7 @@ int GuideFrame::GetFilamentInfo( std::string VendorDirectory, json & pFilaList, 
         // wxLogMessage("GUIDE: load_profile_error  %s ", e.what());
         // wxMessageBox(e.what(), "", MB_OK);
         BOOST_LOG_TRIVIAL(error)<< ": parse " << filepath <<" got exception: "<<e.what();
+        BOOST_LOG_TRIVIAL(trace) << ": Json Contents: " << contents;
         return -1;
     }
 
