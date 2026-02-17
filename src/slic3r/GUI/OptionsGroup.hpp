@@ -57,6 +57,7 @@ public:
 	std::string	label_path;
     bool        undo_to_sys{false}; // BBS: object config
     bool        toggle_visible{true}; // BBS: hide some line
+    std::vector<std::string> hidden_reasons; // Why was the visibility toggled
 
     size_t		full_width {0};
     widget_t	widget {nullptr};
