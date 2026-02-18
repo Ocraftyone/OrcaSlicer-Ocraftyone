@@ -182,19 +182,40 @@ void Field::PostInitialize()
 	    }, getWindow()->GetId());
 
         // Show tooltip on click
-        getWindow()->GetParent()->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& evt) {
+        getWindow()->GetParent()->Bind(wxEVT_MOTION, [this](wxMouseEvent& evt) mutable  {
             evt.Skip();
-            if (!getWindow()->IsShown()) return;
-            bool hit = getWindow()->GetRect().Contains(evt.GetPosition());
-            // Hit check and sanity check that this is disabled
-            if (!hit) return;
+            if (!getWindow())
+                return;
+            auto parent = getWindow()->GetParent();
+            if (!parent)
+                return;
+            wxString tip = this->getWindow()->GetToolTipText();
+            tip += "\n\n" + ToggleExpr::build_reasons_string("Option is disabled.", this->disabled_reasons);
+            tip.Trim(true);
+            wxRect win_rect = this->getWindow()->GetRect();
 
-            if (!getWindow()->IsEnabled() && !this->disabled_reasons.empty()) {
-                auto tooltip = wxRichToolTip("This option is disabled",
-                                             ToggleExpr::build_reasons_string("", this->disabled_reasons));
-                tooltip.ShowFor(getWindow());
+            if (!tip.IsEmpty() && !this->getWindow()->IsEnabled() && win_rect.Contains(evt.GetPosition())) {
+                if (!m_tooltip && !m_tooltip_timer.IsRunning()) {
+                    m_tooltip_timer.Bind(wxEVT_TIMER, [=](wxTimerEvent& evt) {
+                        if (!m_tooltip) {
+                            m_tooltip = new wxTipWindow(this->getWindow(), tip, 300);
+                            // Hacky way to get the underlying wxTipWindowView
+                            auto tw_view = m_tooltip->GetChildren().front();
+                            tw_view->SetBackgroundColour(*wxWHITE);
+                            m_tooltip->Refresh();
+                            m_tooltip->Disable();
+                        }
+                    });
+                    m_tooltip_timer.StartOnce(300);
+                }
+
+            } else {
+                m_tooltip_timer.Stop();
+                if (m_tooltip) {
+                    m_tooltip->Close();
+                    m_tooltip = nullptr;
+                }
             }
-            evt.Skip(false);
         });
     }
 }

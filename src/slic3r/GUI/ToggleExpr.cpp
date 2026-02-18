@@ -101,6 +101,7 @@ ToggleExpr ToggleExpr::FromConfigFloat(
 
 std::string ToggleExpr::build_reasons_string(std::string beginning_message, const std::vector<std::string>& reasons)
 {
+    if (reasons.empty()) return "";
     auto message = std::move(beginning_message);
     if (!message.empty()) {
         boost::trim(message);

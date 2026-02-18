@@ -5,6 +5,7 @@
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
 #endif
+#include <wx/tipwin.h>
 
 #include <memory>
 #include <cstdint>
@@ -289,7 +290,12 @@ protected:
     bool    bEnterPressed = false;
 
     wxString m_na_value = _(L("N/A"));
-    
+
+    // When the field is disabled, so are tooltips.
+    // Tooltips are manually created while the window is disabled
+    wxTipWindow* m_tooltip{nullptr};
+    wxTimer m_tooltip_timer;
+
 	friend class OptionsGroup;
 };
 
