@@ -2038,6 +2038,16 @@ void Tab::activate_option(const std::string& opt_key, const wxString& category)
             evt.SetEventObject(field->getWindow());
             wxPostEvent(m_page_view, evt);
         }
+        if (!field->getWindow()->IsShown()) {
+            Line* line = get_line(opt_key);
+            if (!line) return;
+            if (line->toggle_visible) {
+                show_error(this, std::string("The selected option is hidden by the config mode. ")
+                    .append(line->get_options()[0].opt.mode == comAdvanced ? "Enable advanced mode to use this option" : "Enable developer mode to use this option"));
+            } else {
+                show_error(this, ToggleExpr::build_reasons_string("The selected option is hidden.", line->hidden_reasons));
+            }
+        }
     }
     else if (category == "Single extruder MM setup") {
        // When we show and hide "Single extruder MM setup" page,

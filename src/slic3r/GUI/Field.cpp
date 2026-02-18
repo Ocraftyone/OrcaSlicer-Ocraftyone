@@ -23,6 +23,7 @@
 
 // BBS
 #include "Notebook.hpp"
+#include "ToggleExpr.hpp"
 #include "Widgets/CheckBox.hpp"
 #include "Widgets/TextInput.hpp"
 #include "Widgets/SpinInput.hpp"
@@ -30,6 +31,8 @@
 #include "Widgets/TextCtrl.h"
 
 #include "../Utils/ColorSpaceConvert.hpp"
+
+#include <wx/richtooltip.h>
 #ifdef __WXOSX__
 #define wxOSX true
 #else
@@ -177,6 +180,22 @@ void Field::PostInitialize()
 
 		    evt.Skip();
 	    }, getWindow()->GetId());
+
+        // Show tooltip on click
+        getWindow()->GetParent()->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& evt) {
+            evt.Skip();
+            if (!getWindow()->IsShown()) return;
+            bool hit = getWindow()->GetRect().Contains(evt.GetPosition());
+            // Hit check and sanity check that this is disabled
+            if (!hit) return;
+
+            if (!getWindow()->IsEnabled() && !this->disabled_reasons.empty()) {
+                auto tooltip = wxRichToolTip("This option is disabled",
+                                             ToggleExpr::build_reasons_string("", this->disabled_reasons));
+                tooltip.ShowFor(getWindow());
+            }
+            evt.Skip(false);
+        });
     }
 }
 

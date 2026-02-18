@@ -98,4 +98,21 @@ ToggleExpr ToggleExpr::FromConfigFloat(
     auto val = opt_idx == -1 ? config->opt_float(opt_key) : config->opt_float(opt_key, opt_idx);
     return ToggleExpr(compare(val, comp_type, comp_val), opt_key).set_comparison(comp_type, std::to_string(comp_val));
 }
+
+std::string ToggleExpr::build_reasons_string(std::string beginning_message, const std::vector<std::string>& reasons)
+{
+    auto message = std::move(beginning_message);
+    if (!message.empty()) {
+        boost::trim(message);
+        message += " ";
+    }
+    message += "Reasons:\n";
+
+    for (auto& reason : reasons) {
+        message += reason;
+        message += "\n";
+    }
+
+    return message;
+}
 }} // namespace Slic3r::GUI
