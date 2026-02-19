@@ -32,7 +32,7 @@ std::string ToggleExpr::get_postfix() const
 {
     if (m_disable_postfix)
         return "";
-    if (m_comparison_val.empty() && m_comp_type != CompareType::NO_CT) {
+    if (!m_comparison_val.empty() && m_comp_type != CompareType::NO_CT) {
         return " " + comparison_type_to_string(m_comp_type, !m_is_not) + " " + m_comparison_val;
     }
     std::string p = m_is_not ? m_inverted_postfix : m_standard_postfix;
