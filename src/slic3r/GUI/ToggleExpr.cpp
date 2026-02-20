@@ -41,20 +41,6 @@ std::string ToggleExpr::get_postfix() const
     return p;
 }
 
-template<typename T> bool ToggleExpr::compare(T value, CompareType comp_type, T comp_value)
-{
-    switch (comp_type) {
-    case CompareType::NO_CT: throw std::invalid_argument("ToggleExpr::FromConfig cannot accept a condition type of NO_CT");
-    case CompareType::GT: return value > comp_value;
-    case CompareType::LT: return value < comp_value;
-    case CompareType::GTE: return value >= comp_value;
-    case CompareType::LTE: return value <= comp_value;
-    case CompareType::EQ: return value == comp_value;
-    case CompareType::NEQ: return value != comp_value;
-    }
-    return false;
-}
-
 std::string ToggleExpr::comparison_type_to_string(CompareType type, bool inverted)
 {
     if (!inverted) {
@@ -92,11 +78,33 @@ ToggleExpr ToggleExpr::FromConfigInt(
     return ToggleExpr(compare(val, comp_type, comp_val), opt_key).set_comparison(comp_type, std::to_string(comp_val));
 }
 
+ToggleExprFragment<int> ToggleExpr::FromConfigInt(const DynamicPrintConfig* config, const std::string& opt_key, unsigned opt_idx)
+{
+    return {config, opt_key, opt_idx};
+}
+
 ToggleExpr ToggleExpr::FromConfigFloat(
     const DynamicPrintConfig* config, const std::string& opt_key, CompareType comp_type, double comp_val, unsigned opt_idx)
 {
     auto val = opt_idx == -1 ? config->opt_float(opt_key) : config->opt_float(opt_key, opt_idx);
     return ToggleExpr(compare(val, comp_type, comp_val), opt_key).set_comparison(comp_type, std::to_string(comp_val));
+}
+
+ToggleExprFragment<double> ToggleExpr::FromConfigFloat(const DynamicPrintConfig* config, const std::string& opt_key, unsigned opt_idx)
+{
+    return {config, opt_key, opt_idx};
+}
+
+ToggleExpr ToggleExpr::FromConfigString(
+    const DynamicPrintConfig* config, const std::string& opt_key, CompareType comp_type, const std::string& comp_val, unsigned opt_idx)
+{
+    auto val = opt_idx == -1 ? config->opt_string(opt_key) : config->opt_string(opt_key, opt_idx);
+    return ToggleExpr(compare(val, comp_type, comp_val), opt_key).set_comparison(comp_type, comp_val);
+}
+
+ToggleExprFragment<std::string> ToggleExpr::FromConfigString(const DynamicPrintConfig* config, const std::string& opt_key, unsigned opt_idx)
+{
+    return {config, opt_key, opt_idx};
 }
 
 std::string ToggleExpr::build_reasons_string(std::string beginning_message, const std::vector<std::string>& reasons)
