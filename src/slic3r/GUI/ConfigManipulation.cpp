@@ -581,7 +581,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     toggle_field("enable_arc_fitting", !have_volumetric_extrusion_rate_slope);
     toggle_line("max_volumetric_extrusion_rate_slope_segment_length", have_volumetric_extrusion_rate_slope);
     toggle_line("extrusion_rate_smoothing_external_perimeter_only", have_volumetric_extrusion_rate_slope);
-    if(have_volumetric_extrusion_rate_slope.get_value()) config->set_key_value("enable_arc_fitting", new ConfigOptionBool(false));
+    if(have_volumetric_extrusion_rate_slope) config->set_key_value("enable_arc_fitting", new ConfigOptionBool(false));
     if(have_volumetric_extrusion_rate_slope_segment_length < 0.5) {
         DynamicPrintConfig new_conf = *config;
         new_conf.set_key_value("max_volumetric_extrusion_rate_slope_segment_length", new ConfigOptionFloat(1));
@@ -610,7 +610,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
                                         pattern == ipLockedZag || pattern == ipMonotonic || pattern == ipMonotonicLine || pattern == ipZigZag ||
                                             ToggleExpr(pattern_e == ipConcentricInternal || pattern_e == ipSupportBase, "");
     // If there is infill, enable/disable fill_multiline according to whether the pattern supports multiline infill.
-    if (have_infill.get_value()) {
+    if (have_infill) {
         toggle_field("fill_multiline", !non_multiline_infill_pattern);
         // If the infill pattern does not support multiline fill_multiline is changed to 1.
         // Necessary when the pattern contains params.multiline (for example, triangles because they belong to the rectilinear class)
@@ -678,7 +678,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
         toggle_field(el, have_default_acceleration);
 
     auto machine_supports_junction_deviation = gcflavor == gcfMarlinFirmware;
-    if (machine_supports_junction_deviation.get_value()) {
+    if (machine_supports_junction_deviation) {
         if (const auto *machine_jd = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("machine_max_junction_deviation")) {
             machine_supports_junction_deviation = ToggleExpr(!machine_jd->values.empty(), "machine_max_junction_deviation is not set").disable_postfix() && ToggleExpr(machine_jd->values.front() > 0.0, "machine_max_junction_deviation[0]") > 0;
         }
@@ -688,7 +688,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     ToggleExpr have_default_jerk = ToggleExpr(config->has("default_jerk") && config->opt_float("default_jerk") > 0, "default_jerk") > "0";
     for (auto el : { "outer_wall_jerk", "inner_wall_jerk", "initial_layer_jerk", "top_surface_jerk", "travel_jerk", "infill_jerk"}) {
         toggle_line(el, !machine_supports_junction_deviation);
-        if (machine_supports_junction_deviation.get_value())
+        if (machine_supports_junction_deviation)
             toggle_field(el, have_default_jerk);
     }
 
@@ -884,7 +884,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
 
     for (auto el : {"accel_to_decel_enable", "accel_to_decel_factor"})
         toggle_line(el, gcflavor == gcfKlipper);
-    if((gcflavor == gcfKlipper).get_value())
+    if(gcflavor == gcfKlipper)
         toggle_field("accel_to_decel_factor", ToggleExpr::FromConfigBool(config, "accel_to_decel_enable"));
 
     auto have_make_overhang_printable = ToggleExpr::FromConfigBool(config, "make_overhang_printable");
@@ -903,7 +903,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     toggle_line("overhang_reverse", allow_overhang_reverse);
     toggle_line("overhang_reverse_internal_only", allow_overhang_reverse && has_overhang_reverse);
     auto has_overhang_reverse_internal_only = ToggleExpr::FromConfigBool(config, "overhang_reverse_internal_only");
-    if (has_overhang_reverse_internal_only.get_value()){
+    if (has_overhang_reverse_internal_only){
         DynamicPrintConfig new_conf = *config;
         new_conf.set_key_value("overhang_reverse_threshold", new ConfigOptionFloatOrPercent(0,true));
         apply(config, &new_conf);

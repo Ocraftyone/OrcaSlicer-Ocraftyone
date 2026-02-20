@@ -41,6 +41,11 @@ public:
         }
     }
 
+    explicit operator bool() const
+    {
+        return get_value();
+    }
+
     friend ToggleExpr operator&&(const ToggleExpr& lhs, const ToggleExpr& rhs)
     {
         if (lhs.m_value && rhs.m_value)

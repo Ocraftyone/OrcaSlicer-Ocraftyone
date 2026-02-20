@@ -1420,7 +1420,7 @@ void Tab::toggle_option(const std::string& opt_key, const ToggleExpr& toggle_exp
     Field* field = m_active_page->get_field(opt_key, opt_index);
     if (field) {
         field->toggle(toggle_expr.get_value());
-        if (toggle_expr.get_value())
+        if (toggle_expr)
             field->disabled_reasons.clear();
         else
             field->disabled_reasons = toggle_expr.get_reasons();
@@ -1433,7 +1433,7 @@ void Tab::toggle_line(const std::string& opt_key, const ToggleExpr& toggle_expr,
     Line *line = m_active_page->get_line(opt_key, opt_index);
     if (line) {
         line->toggle_visible = toggle_expr.get_value();
-        if (toggle_expr.get_value())
+        if (toggle_expr)
             line->hidden_reasons.clear();
         else
             line->hidden_reasons = toggle_expr.get_reasons();
@@ -4208,7 +4208,7 @@ void TabFilament::toggle_options()
         DynamicConfig& proj_cfg               = m_preset_bundle->project_config;
         std::string    bed_temp_1st_layer_key;
         auto           has_bed_type= ToggleExpr(proj_cfg.has("curr_bed_type"), "curr_bed_type").set_postfixes(" not set", " is set");
-        if (has_bed_type.get_value())
+        if (has_bed_type)
         {
             bed_temp_1st_layer_key = get_bed_temp_1st_layer_key(proj_cfg.opt_enum<BedType>("curr_bed_type"));
         }
@@ -5262,7 +5262,7 @@ void TabPrinter::toggle_options()
             toggle_option(el, !is_BBL_printer && !is_QIDI_printer);
 
         auto bSEMM = ToggleExpr::FromConfigBool(m_config, "single_extruder_multi_material");
-        if ((!bSEMM && ToggleExpr::FromConfigBool(m_config, "manual_filament_change")).get_value()) {
+        if (!bSEMM && ToggleExpr::FromConfigBool(m_config, "manual_filament_change")) {
             DynamicPrintConfig new_conf = *m_config;
             new_conf.set_key_value("manual_filament_change", new ConfigOptionBool(false));
             load_config(new_conf);
@@ -5321,7 +5321,7 @@ void TabPrinter::toggle_options()
         auto wipe = retraction && ToggleExpr::FromConfigBool(m_config, "wipe", variant_index);
         toggle_option("retract_before_wipe", wipe, i);
 
-        if ((use_firmware_retraction && wipe).get_value()) {
+        if (use_firmware_retraction && wipe) {
             //wxMessageDialog dialog(parent(),
             MessageDialog dialog(parent(),
                 _(L("The Wipe option is not available when using the Firmware Retraction mode.\n"
@@ -5369,7 +5369,7 @@ void TabPrinter::toggle_options()
 
         // Check if junction deviation value is non-zero and firmware is Marlin
         auto enable_jerk = !gcf_is_marlin;
-        if ((gcf == gcfMarlinFirmware).get_value()) {
+        if (gcf == gcfMarlinFirmware) {
             const auto *junction_deviation = m_config->option<ConfigOptionFloats>("machine_max_junction_deviation");
             if (junction_deviation != nullptr) {
                 const auto &values = junction_deviation->values;
