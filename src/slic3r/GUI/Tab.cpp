@@ -4264,8 +4264,8 @@ void TabFilament::toggle_options()
         auto support_chamber_temp_control = ToggleExpr::FromConfigBool(&cfg, "support_chamber_temp_control");
         toggle_line("chamber_temperature", support_chamber_temp_control);
 
-        std::string volumetric_speed_cos = m_config->opt_string("volumetric_speed_coefficients", 0u);
-        auto enable_fit = ToggleExpr(volumetric_speed_cos != "0 0 0 0 0 0", "volumetric_speed_coefficients").set_postfixes(" != \"0 0 0 0 0 0\"", " == \"0 0 0 0 0 0\"");
+        auto volumetric_speed_cos = ToggleExpr::FromConfigString(m_config, "volumetric_speed_coefficients", 0u);
+        auto enable_fit = volumetric_speed_cos != "0 0 0 0 0 0";
         toggle_option("filament_adaptive_volumetric_speed", enable_fit, 256 + 0u);
     }
 
@@ -5241,10 +5241,10 @@ void TabPrinter::toggle_options()
     //if (m_active_page->title() == "Custom G-code") {
     //    toggle_option("change_filament_gcode", have_multiple_extruders);
     //}
-    auto gcf = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
-    auto gcf_is_marlin = ToggleExpr(gcf == gcfMarlinFirmware, "gcode_flavor").set_comparison(CompareType::EQ, "Marlin 2");
-    auto gcf_is_marlin_legacy = ToggleExpr(gcf == gcfMarlinLegacy, "gcode_flavor").set_comparison(CompareType::EQ, "Marlin (Legacy)");
-    auto gcf_is_klipper = ToggleExpr(gcf == gcfKlipper, "gcode_flavor").set_comparison(CompareType::EQ, "Klipper");
+    auto gcf = ToggleExpr::FromConfigEnum<GCodeFlavor>(m_config, "gcode_flavor");
+    auto gcf_is_marlin = gcf == gcfMarlinFirmware;
+    auto gcf_is_marlin_legacy = gcf == gcfMarlinLegacy;
+    auto gcf_is_klipper = gcf == gcfKlipper;
     if (m_active_page->title() == L("Basic information")) {
 
         // SoftFever: hide BBL specific settings
@@ -5295,17 +5295,17 @@ void TabPrinter::toggle_options()
     {
         size_t i = size_t(val - 1);
         int variant_index = get_index_for_extruder(i);
-        auto have_retract_length = ToggleExpr::FromConfigFloat(m_config, "retraction_length", CompareType::GT, 0, variant_index);
+        auto have_retract_length = ToggleExpr::FromConfigFloat(m_config, "retraction_length", variant_index) > 0;
 
         auto hardcoded_disabled = ToggleExpr(false, "Disabled").disable_postfix();
-        auto two_extruders = ToggleExpr(m_preset_bundle->get_printer_extruder_count() == 2, "Printer extruder count").set_comparison(CompareType::EQ, "2");
+        auto two_extruders = ToggleExpr(m_preset_bundle->get_printer_extruder_count() == 2, "Printer extruder count") > "2";
         toggle_option("extruder_printable_area", hardcoded_disabled, i);          // disable
         toggle_line("extruder_printable_area", two_extruders, i);  //hide
         toggle_option("extruder_printable_height", hardcoded_disabled, i);
         toggle_line("extruder_printable_height", two_extruders, i);
 
         // when using firmware retraction, firmware decides retraction length
-        auto use_firmware_retraction = ToggleExpr(m_config->opt_bool("use_firmware_retraction"), "use_firmware_retraction");
+        auto use_firmware_retraction = ToggleExpr::FromConfigBool(m_config, "use_firmware_retraction");
         toggle_option("retract_length", !use_firmware_retraction, i);
 
         // user can customize travel length if we have retraction length or we"re using
@@ -5323,7 +5323,7 @@ void TabPrinter::toggle_options()
         vec.resize(0);
         vec = {"retract_lift_above", "retract_lift_below", "retract_lift_enforce"};
         for (auto el : vec)
-          toggle_option(el, retraction && ToggleExpr::FromConfigFloat(m_config, "z_hop", CompareType::GT, 0, i), i);
+          toggle_option(el, retraction && ToggleExpr::FromConfigFloat(m_config, "z_hop", i) > 0, i);
 
         // some options only apply when not using firmware retraction
         vec.resize(0);
@@ -5361,15 +5361,15 @@ void TabPrinter::toggle_options()
 
         // toggle_option("retract_length_toolchange", have_multiple_extruders, i);
 
-        auto toolchange_retraction = ToggleExpr::FromConfigFloat(m_config, "retract_length_toolchange", CompareType::GT, 0, variant_index);
+        auto toolchange_retraction = ToggleExpr::FromConfigFloat(m_config, "retract_length_toolchange", variant_index) > 0;
         toggle_option("retract_restart_extra_toolchange", toolchange_retraction, i);
 
         toggle_option("long_retractions_when_cut",
-                      !use_firmware_retraction && ToggleExpr::FromConfigInt(m_config, "enable_long_retraction_when_cut", CompareType::NEQ, 0), i);
+                      !use_firmware_retraction && ToggleExpr::FromConfigInt(m_config, "enable_long_retraction_when_cut") != 0, i);
         toggle_line("retraction_distances_when_cut", ToggleExpr::FromConfigBool(m_config, "long_retractions_when_cut", variant_index), i);
 
         toggle_option("travel_slope",
-                      ToggleExpr(m_config->opt_enum("z_hop_types", i) != ZHopType::zhtNormal, "z_hop_types").set_comparison(CompareType::NEQ, "Normal"),
+                      ToggleExpr::FromConfigEnum<ZHopType>(m_config, "z_hop_types", i) != ZHopType::zhtNormal,
                       i);
     }
 
@@ -5385,11 +5385,11 @@ void TabPrinter::toggle_options()
 
         // Check if junction deviation value is non-zero and firmware is Marlin
         auto enable_jerk = !gcf_is_marlin;
-        if (gcf == gcfMarlinFirmware) {
+        if ((gcf == gcfMarlinFirmware).get_value()) {
             const auto *junction_deviation = m_config->option<ConfigOptionFloats>("machine_max_junction_deviation");
             if (junction_deviation != nullptr) {
                 const auto &values = junction_deviation->values;
-                enable_jerk = ToggleExpr(std::all_of(values.begin(), values.end(), [](double val) { return val == 0.0; }), "machine_max_junction_deviation").set_comparison(CompareType::EQ, "0");
+                enable_jerk = ToggleExpr(std::all_of(values.begin(), values.end(), [](double val) { return val == 0.0; }), "machine_max_junction_deviation") == "0";
             } else {
                 enable_jerk = ToggleExpr(true, "");
             }
@@ -7441,7 +7441,7 @@ void TabSLAMaterial::reload_config()
 void TabSLAMaterial::toggle_options()
 {
     const Preset &current_printer = m_preset_bundle->printers.get_edited_preset();
-    std::string model = current_printer.config.opt_string("printer_model");
+    auto model = ToggleExpr::FromConfigString(&current_printer.config, "printer_model");
     m_config_manipulation.toggle_field("material_print_speed", model != "SL1");
 }
 
@@ -7644,12 +7644,12 @@ ConfigManipulation Tab::get_config_manipulation()
         update();
     };
 
-    auto cb_toggle_field = [this](const t_config_option_key& opt_key, bool toggle, int opt_index) {
-        return toggle_option(opt_key, toggle, opt_index >= 0 ? opt_index + 256 : opt_index);
+    auto cb_toggle_field = [this](const t_config_option_key& opt_key, const ToggleExpr& toggle_expr, int opt_index) {
+        return toggle_option(opt_key, toggle_expr, opt_index >= 0 ? opt_index + 256 : opt_index);
     };
 
-    auto cb_toggle_line = [this](const t_config_option_key &opt_key, bool toggle, int opt_index) {
-        return toggle_line(opt_key, toggle, opt_index >= 0 ? opt_index + 256 : opt_index);
+    auto cb_toggle_line = [this](const t_config_option_key &opt_key, const ToggleExpr& toggle_expr, int opt_index) {
+        return toggle_line(opt_key, toggle_expr, opt_index >= 0 ? opt_index + 256 : opt_index);
     };
 
     auto cb_value_change = [this](const std::string& opt_key, const boost::any& value) {
