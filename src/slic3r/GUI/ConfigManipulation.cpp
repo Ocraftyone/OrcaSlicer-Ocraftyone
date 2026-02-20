@@ -817,7 +817,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
         toggle_line(el, have_prime_tower);
 
     toggle_line("enable_tower_interface_cooldown_during_tower",
-                have_prime_tower && config->opt_bool("enable_tower_interface_features"));
+                have_prime_tower && ToggleExpr::FromConfigBool(config, "enable_tower_interface_features"));
 
     for (auto el : {"wall_filament", "sparse_infill_filament", "solid_infill_filament", "wipe_tower_filament"})
         toggle_line(el, !bSEMM);
