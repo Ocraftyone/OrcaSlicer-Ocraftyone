@@ -391,8 +391,8 @@ public:
     Field*          get_field(const t_config_option_key &opt_key, Page** selected_page, int opt_index = -1);
 
     void            toggle_option(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index = -1);
-
     void            toggle_line(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index = -1);
+    void            clear_disabled_reasons();
 
     wxSizer*		description_line_widget(wxWindow* parent, ogStaticText** StaticText, wxString text = wxEmptyString);
 	bool			current_preset_is_dirty() const;

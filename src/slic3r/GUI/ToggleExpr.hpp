@@ -10,36 +10,75 @@ template<typename T> class ToggleExprFragment;
 
 class ToggleExpr
 {
-    bool m_value{};
-    bool m_is_not{};
+    struct Result
+    {
+        bool value;
+        std::set<std::string> reasons;
+    };
 
-    // If the value indicates toggle off, these are the reasons why
-    std::vector<std::string> m_reasons{};
-    bool                     m_unformatted_reason{false};
+    struct Node;
+    using NodePtr = std::shared_ptr<Node>;
 
-    bool        m_has_prefixes{};
-    std::string m_standard_prefix{};
-    std::string m_inverted_prefix{};
+    struct And
+    {
+        NodePtr lhs, rhs;
+    };
+    struct Or
+    {
+        NodePtr lhs, rhs;
+    };
+    struct Not
+    {
+        NodePtr child;
+    };
+    struct Leaf
+    {
+        bool m_value;
+        std::string m_name;
 
-    bool        m_disable_postfix{};
-    std::string m_standard_postfix{" disabled"};
-    std::string m_inverted_postfix{" enabled"};
+        bool        m_has_prefixes{};
+        std::string m_standard_prefix{};
+        std::string m_inverted_prefix{};
 
-    CompareType m_comp_type{CompareType::NO_CT};
-    std::string m_comparison_val{};
+        bool        m_disable_postfix{};
+        std::string m_standard_postfix{" disabled"};
+        std::string m_inverted_postfix{" enabled"};
 
-    ToggleExpr(bool value, std::vector<std::string> reasons) : m_reasons(std::move(reasons)) {}
+        CompareType m_comp_type{CompareType::NO_CT};
+        std::string m_comparison_val{};
 
-    static void get_reasons(std::vector<std::string>& reasons, const ToggleExpr& expr);
+        Leaf(const bool value, std::string name) : m_value(value), m_name(std::move(name)) {}
+
+        [[nodiscard]] std::string get_reason(bool inverted) const;
+    private:
+        [[nodiscard]] std::string get_prefix(bool inverted) const;
+        [[nodiscard]] std::string get_postfix(bool inverted) const;
+    };
+
+    struct Node
+    {
+        using NodeData = std::variant<And, Or, Not, Leaf>;
+        NodeData data;
+
+        explicit Node(NodeData _data) : data(std::move(_data)) {}
+
+        std::pair<bool, std::set<std::string>> evaluate(bool inverted = false) const;
+    };
+
+    template<class... Ts>
+    struct visitor : Ts... { using Ts::operator()...; };
+    template<class... Ts>
+    visitor(Ts...) -> visitor<Ts...>;
+
+    NodePtr m_node;
 
 public:
-    ToggleExpr(bool value, std::string name) : m_value(value)
+    ToggleExpr(const bool value, std::string name)
     {
-        if (!name.empty()) {
-            m_unformatted_reason = true;
-            m_reasons            = {std::move(name)};
-        }
+        m_node = std::make_shared<Node>(Leaf{value, std::move(name)});
     }
+
+    ToggleExpr(std::shared_ptr<Node> node) : m_node(std::move(node)) {}
 
     explicit operator bool() const
     {
@@ -48,35 +87,17 @@ public:
 
     friend ToggleExpr operator&&(const ToggleExpr& lhs, const ToggleExpr& rhs)
     {
-        if (lhs.m_value && rhs.m_value)
-            return {true, ""};
-
-        std::vector<std::string> reasons;
-        if (!lhs.m_value)
-            get_reasons(reasons, lhs);
-        if (!rhs.m_value)
-            get_reasons(reasons, rhs);
-
-        return {false, reasons};
+        return ToggleExpr(std::make_shared<Node>(And{lhs.m_node, rhs.m_node}));
     }
 
     friend ToggleExpr operator||(const ToggleExpr& lhs, const ToggleExpr& rhs)
     {
-        if (lhs.m_value || rhs.m_value)
-            return {true, ""};
-
-        std::vector<std::string> reasons;
-        get_reasons(reasons, lhs);
-        get_reasons(reasons, rhs);
-        return {false, reasons};
+        return ToggleExpr(std::make_shared<Node>(Or{lhs.m_node, rhs.m_node}));
     }
 
     friend ToggleExpr operator!(const ToggleExpr& rhs)
     {
-        auto copy     = rhs;
-        copy.m_value  = !copy.m_value;
-        copy.m_is_not = !copy.m_is_not;
-        return copy;
+        return ToggleExpr(std::make_shared<Node>(Not{rhs.m_node}));
     }
 
     // For ToggleExpr objects that can be LHS
@@ -95,31 +116,38 @@ public:
     friend ToggleExpr& operator>=(ToggleExpr lhs, std::string rhs) { return lhs.set_comparison(CompareType::GTE, std::move(rhs)); }
     friend ToggleExpr& operator<=(ToggleExpr lhs, std::string rhs) { return lhs.set_comparison(CompareType::LTE, std::move(rhs)); }
 
-    [[nodiscard]] std::string get_prefix() const;
-
-    [[nodiscard]] std::string get_postfix() const;
-
     ///
     /// \param value_false_prefix When the provided value is false, what should the prefix be?
     /// \param opposite_prefix When the provided value is false when inverted ('!' operator), what should the prefix be?
     /// \return self
     ToggleExpr& set_prefixes(std::string value_false_prefix, std::string opposite_prefix)
     {
-        m_standard_prefix = std::move(value_false_prefix);
-        m_inverted_prefix = std::move(opposite_prefix);
+        std::visit(visitor{[](auto& data) { static_assert("Calling set_prefixes on a non leaf node"); },
+                           [&](Leaf& leaf) {
+                               leaf.m_standard_prefix = std::move(value_false_prefix);
+                               leaf.m_inverted_prefix = std::move(opposite_prefix);
+                           }},
+                   m_node->data);
         return *this;
     }
 
     ToggleExpr& disable_postfix()
     {
-        m_disable_postfix = true;
+        std::visit(visitor{[](auto&) { static_assert("Calling disable_postfix on a non leaf node"); },
+                           [&](Leaf& leaf) { leaf.m_disable_postfix = true; }},
+                   m_node->data);
         return *this;
     }
 
     ToggleExpr& set_postfixes(std::string value_false_postfix, std::string opposite_postfix)
     {
-        m_standard_postfix = std::move(value_false_postfix);
-        m_inverted_postfix = std::move(opposite_postfix);
+        std::visit(visitor{[](auto&) { static_assert("Calling set_postfixes on a non leaf node"); },
+                           [&](Leaf& leaf) {
+                               leaf.m_standard_postfix = std::move(value_false_postfix);
+                               leaf.m_inverted_postfix = std::move(opposite_postfix);
+                           }},
+                   m_node->data);
+
         return *this;
     }
 
@@ -127,18 +155,26 @@ public:
     /// \return self
     ToggleExpr& set_comparison(CompareType comp_type, std::string comparison_val)
     {
-        m_comp_type      = comp_type;
-        m_comparison_val = std::move(comparison_val);
+        std::visit(visitor{[](auto& data) { static_assert("Calling set_comparison on a non leaf node"); },
+                           [&](Leaf& leaf) {
+                               leaf.m_comp_type      = comp_type;
+                               leaf.m_comparison_val = std::move(comparison_val);
+                           }},
+                   m_node->data);
+
         return *this;
     }
 
-    [[nodiscard]] bool get_value() const { return m_value; }
+    [[nodiscard]] bool get_value() const { return m_node->evaluate().first; }
 
-    [[nodiscard]] std::vector<std::string> get_reasons() const
+    [[nodiscard]] std::set<std::string> get_reasons() const
     {
-        std::vector<std::string> out;
-        get_reasons(out, *this);
-        return out;
+        return m_node->evaluate().second;
+    }
+
+    [[nodiscard]] std::pair<bool, std::set<std::string>> get_result() const
+    {
+        return m_node->evaluate();
     }
 
     template<typename T> static bool compare(T value, CompareType comp_type, T comp_value)
@@ -197,7 +233,7 @@ public:
                                                             const std::string&        opt_key,
                                                             unsigned                  opt_idx = -1);
 
-    static std::string build_reasons_string(std::string beginning_message, const std::vector<std::string>& reasons);
+    static std::string build_reasons_string(std::string beginning_message, const std::set<std::string>& reasons);
 };
 
 template<typename T> class ToggleExprFragment

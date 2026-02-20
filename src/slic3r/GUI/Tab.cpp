@@ -1419,11 +1419,12 @@ void Tab::toggle_option(const std::string& opt_key, const ToggleExpr& toggle_exp
         return;
     Field* field = m_active_page->get_field(opt_key, opt_index);
     if (field) {
-        field->toggle(toggle_expr.get_value());
-        if (toggle_expr)
+        auto [value, reasons] = toggle_expr.get_result();
+        field->toggle(value);
+        if (value)
             field->disabled_reasons.clear();
         else
-            field->disabled_reasons = toggle_expr.get_reasons();
+            field->disabled_reasons.merge(reasons);
     }
 }
 
@@ -1432,12 +1433,20 @@ void Tab::toggle_line(const std::string& opt_key, const ToggleExpr& toggle_expr,
     if (!m_active_page) return;
     Line *line = m_active_page->get_line(opt_key, opt_index);
     if (line) {
-        line->toggle_visible = toggle_expr.get_value();
-        if (toggle_expr)
+        auto [value, reasons] = toggle_expr.get_result();
+        line->toggle_visible = value;
+        if (value)
             line->hidden_reasons.clear();
         else
-            line->hidden_reasons = toggle_expr.get_reasons();
+            line->hidden_reasons.merge(reasons);
     }
+}
+
+void Tab::clear_disabled_reasons()
+{
+    if (!m_active_page) return;
+    for (auto optgroup : m_active_page->m_optgroups)
+        optgroup->clear_disabled_reasons();
 }
 
 // To be called by custom widgets, load a value into a config,
@@ -2758,6 +2767,7 @@ void TabPrint::toggle_options()
 {
     if (!m_active_page) return;
     // BBS: whether the preset is Bambu Lab printer
+    this->clear_disabled_reasons();
     if (m_preset_bundle) {
         bool is_BBL_printer = wxGetApp().preset_bundle->is_bbl_vendor();
         m_config_manipulation.set_is_BBL_Printer(is_BBL_printer);
@@ -4179,6 +4189,7 @@ void TabFilament::toggle_options()
 {
     if (!m_active_page)
         return;
+    this->clear_disabled_reasons();
     bool b_is_BBL_printer = false;
     if (m_preset_bundle) {
       b_is_BBL_printer =
@@ -5197,6 +5208,7 @@ void TabPrinter::toggle_options()
 {
     if (!m_active_page || m_presets->get_edited_preset().printer_technology() == ptSLA)
         return;
+    this->clear_disabled_reasons();
 
     auto nozzle_volumes = m_preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
     auto extruders      = m_config->option<ConfigOptionEnumsGeneric>("extruder_type");
@@ -7424,6 +7436,7 @@ void TabSLAMaterial::reload_config()
 
 void TabSLAMaterial::toggle_options()
 {
+    this->clear_disabled_reasons();
     const Preset &current_printer = m_preset_bundle->printers.get_edited_preset();
     auto model = ToggleExpr::FromConfigString(&current_printer.config, "printer_model");
     m_config_manipulation.toggle_field("material_print_speed", model != "SL1");
@@ -7579,6 +7592,7 @@ void TabSLAPrint::update_description_lines()
 
 void TabSLAPrint::toggle_options()
 {
+    this->clear_disabled_reasons();
     if (m_active_page)
         m_config_manipulation.toggle_print_sla_options(m_config);
 }
