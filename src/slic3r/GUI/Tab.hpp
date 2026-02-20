@@ -390,12 +390,8 @@ public:
 
     Field*          get_field(const t_config_option_key &opt_key, Page** selected_page, int opt_index = -1);
 
-    [[deprecated]]
-    void            toggle_option(const std::string &opt_key, bool toggle, int opt_index = -1);
     void            toggle_option(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index = -1);
 
-    [[deprecated]]
-    void            toggle_line(const std::string &opt_key, bool toggle, int opt_index = -1); // BBS: hide some line
     void            toggle_line(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index = -1);
 
     wxSizer*		description_line_widget(wxWindow* parent, ogStaticText** StaticText, wxString text = wxEmptyString);

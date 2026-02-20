@@ -1413,15 +1413,6 @@ Field* Tab::get_field(const t_config_option_key& opt_key, Page** selected_page, 
     return field;
 }
 
-void Tab::toggle_option(const std::string& opt_key, bool toggle, int opt_index/* = -1*/)
-{
-    if (!m_active_page)
-        return;
-    Field* field = m_active_page->get_field(opt_key, opt_index);
-    if (field)
-        field->toggle(toggle);
-}
-
 void Tab::toggle_option(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index /*= -1*/)
 {
     if (!m_active_page)
@@ -1435,13 +1426,6 @@ void Tab::toggle_option(const std::string& opt_key, const ToggleExpr& toggle_exp
             field->disabled_reasons = toggle_expr.get_reasons();
     }
 }
-
-void Tab::toggle_line(const std::string &opt_key, bool toggle, int opt_index)
-{
-    if (!m_active_page) return;
-    Line *line = m_active_page->get_line(opt_key, opt_index);
-    if (line) line->toggle_visible = toggle;
-};
 
 void Tab::toggle_line(const std::string& opt_key, const ToggleExpr& toggle_expr, int opt_index /*= -1*/)
 {
