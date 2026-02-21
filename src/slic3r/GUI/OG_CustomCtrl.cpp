@@ -407,8 +407,9 @@ void OG_CustomCtrl::OnMotion(wxMouseEvent& event)
                 if (!field) continue;
                 auto win = field->getWindow();
                 if (!win) continue;
+                auto tooltips = win->GetToolTip();
 
-                auto tip = win->HasToolTips() ? win->GetToolTipText() : "";
+                auto tip = tooltips ? tooltips->GetTip() : "";
                 tip += "\n\n";
                 tip += ToggleExpr::build_reasons_string("Option is disabled.", field->disabled_reasons);
                 tip.Trim(true);
