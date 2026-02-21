@@ -2078,6 +2078,7 @@ namespace client
                   (assignment_statement(_r1)  [_val = _1])
                 | (new_variable_statement(_r1)[_val = _1])
                 | (conditional_expression(_r1)[px::bind(&expr::to_string2, _1, _val)])
+                | (function(_r1) [px::bind(&expr::to_string2, _1, _val)])
                 ;
 
             // An if expression enclosed in {} (the outmost {} are already parsed by the caller).
@@ -2219,7 +2220,17 @@ namespace client
                 |   (lit('-')  > unary_expression(_r1)           )  [ px::bind(&FactorActions::minus_,  _1,     _val) ]
                 |   (lit('+')  > unary_expression(_r1) > iter_pos)  [ px::bind(&FactorActions::expr_,   _1, _2, _val) ]
                 |   ((kw["not"] | '!') > unary_expression(_r1) > iter_pos) [ px::bind(&FactorActions::not_, _1, _val) ]
-                |   (kw["min"] > '(' > conditional_expression(_r1) [_val = _1] > ',' > conditional_expression(_r1) > ')')
+                |   function(_r1) [_val = _1]
+                |   (strict_double > iter_pos)                      [ px::bind(&FactorActions::double_, _r1, _1, _2, _val) ]
+                |   (int_      > iter_pos)                          [ px::bind(&FactorActions::int_,    _r1, _1, _2, _val) ]
+                |   (kw[bool_] > iter_pos)                          [ px::bind(&FactorActions::bool_,   _r1, _1, _2, _val) ]
+                |   raw[lexeme['"' > *((utf8char - char_('\\') - char_('"')) | ('\\' > char_)) > '"']]
+                                                                    [ px::bind(&FactorActions::string_, _r1, _1,     _val) ]
+                );
+            unary_expression.name("unary_expression");
+
+            function = iter_pos[px::bind(&FactorActions::set_start_pos, _1, _val)] >> (
+                 (kw["min"] > '(' > conditional_expression(_r1) [_val = _1] > ',' > conditional_expression(_r1) > ')')
                                                                     [ px::bind(&expr::min, _val, _2) ]
                 |   (kw["max"] > '(' > conditional_expression(_r1) [_val = _1] > ',' > conditional_expression(_r1) > ')')
                                                                     [ px::bind(&expr::max, _val, _2) ]
@@ -2239,13 +2250,8 @@ namespace client
                 |   (kw["empty"] > '(' > variable_reference(_r1) > ')') [px::bind(&MyContext::is_vector_empty, _r1, _1, _val)]
                 |   (kw["size"] > '(' > variable_reference(_r1) > ')') [px::bind(&MyContext::vector_size, _r1, _1, _val)]
                 |   (kw["interpolate_table"] > '(' > interpolate_table(_r1) > ')') [ _val = _1 ]
-                |   (strict_double > iter_pos)                      [ px::bind(&FactorActions::double_, _r1, _1, _2, _val) ]
-                |   (int_      > iter_pos)                          [ px::bind(&FactorActions::int_,    _r1, _1, _2, _val) ]
-                |   (kw[bool_] > iter_pos)                          [ px::bind(&FactorActions::bool_,   _r1, _1, _2, _val) ]
-                |   raw[lexeme['"' > *((utf8char - char_('\\') - char_('"')) | ('\\' > char_)) > '"']]
-                                                                    [ px::bind(&FactorActions::string_, _r1, _1,     _val) ]
-                );
-            unary_expression.name("unary_expression");
+            );
+            function.name("function");
 
             one_of = (unary_expression(_r1)[_a = _1] > one_of_list(_r1, _a))[_val = _2];
             one_of.name("one_of");
@@ -2343,6 +2349,7 @@ namespace client
                 debug(additive_expression);
                 debug(multiplicative_expression);
                 debug(unary_expression);
+                debug(function);
                 debug(one_of);
                 debug(one_of_list);
                 debug(optional_parameter);
@@ -2383,6 +2390,8 @@ namespace client
         RuleExpression multiplicative_expression;
         // Number literals, functions, braced expressions, variable references, variable indexing references.
         RuleExpression unary_expression;
+        // Function call (max, min, random, etc)
+        RuleExpression function;
         // Accepting an optional parameter.
         RuleExpression optional_parameter;
         // Rule to capture a regular expression enclosed in //.
