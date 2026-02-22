@@ -53,7 +53,8 @@ public:
 
     enum class WarningLevel {
         NON_CRITICAL,
-        CRITICAL
+        CRITICAL,
+        CRITICAL_DIALOG
     };
 
     enum SlicingNotificationType
@@ -457,7 +458,7 @@ public:
             RELOAD_SLA_PREVIEW                  = 1 << 3,
             // UPDATE_PRINT_STEP_WARNINGS is mutually exclusive with UPDATE_PRINT_OBJECT_STEP_WARNINGS.
             UPDATE_PRINT_STEP_WARNINGS          = 1 << 4,
-            UPDATE_PRINT_OBJECT_STEP_WARNINGS   = 1 << 5
+            UPDATE_PRINT_OBJECT_STEP_WARNINGS   = 1 << 5,
         };
         // Bitmap of FlagBits
         unsigned int    flags;

@@ -9366,6 +9366,10 @@ void Plater::priv::on_slicing_update(SlicingStatusEvent &evt)
         // Now process state.warnings.
         for (auto const& warning : state.warnings) {
             if (warning.current) {
+                if (warning.level == PrintStateBase::WarningLevel::CRITICAL_DIALOG) {
+                    show_error(this->q, warning.message);
+                    continue;
+                }
                 NotificationManager::NotificationLevel notif_level = NotificationManager::NotificationLevel::WarningNotificationLevel;
                 if (evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingReplaceInitEmptyLayers || evt.status.message_type == PrintStateBase::SlicingNotificationType::SlicingEmptyGcodeLayers) {
                     notif_level = NotificationManager::NotificationLevel::SeriousWarningNotificationLevel;

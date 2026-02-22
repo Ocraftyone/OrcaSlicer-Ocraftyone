@@ -2082,7 +2082,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
             message.seekp(-2, std::ios_base::end);
             message << std::endl;
         }
-        throw Slic3r::PlaceholderParserError(message.str());
+        m_print->active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL_DIALOG, message.str());
     }
 #endif
 
