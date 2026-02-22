@@ -1882,6 +1882,14 @@ public:
     OtherPresetsConfigDef();
 };
 
+class FunctionsConfigDef : public ConfigDef {
+public:
+    FunctionsConfigDef();
+
+protected:
+    ConfigOptionDef* add_function(const t_config_option_key &function);
+};
+
 // This classes defines all custom G-code specific placeholders.
 class CustomGcodeSpecificConfigDef : public ConfigDef
 {

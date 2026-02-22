@@ -44,6 +44,7 @@ class EditGCodeDialog : public DPIDialog
     TemperaturesConfigDef           cgp_temperatures_config_def;
     TimestampsConfigDef             cgp_timestamps_config_def;
     OtherPresetsConfigDef           cgp_other_presets_config_def;
+    FunctionsConfigDef              cgp_functions_config_def;
 
 public:
     EditGCodeDialog(wxWindow*parent, const std::string&key, const std::string&value);
@@ -82,6 +83,7 @@ enum class ParamType {
     Scalar,
     Vector,
     FilamentVector,
+    Function
 };
 
 // On all of 3 different platforms Bitmap+Text icon column looks different 
