@@ -2116,7 +2116,7 @@ namespace client
             legacy_variable_expansion.name("legacy_variable_expansion");
 
             identifier =
-                ! kw[keywords] >>
+                ! kw[keywords | function_keywords] >>
                 raw[lexeme[(alpha | '_') >> *(alnum | '_')]];
             identifier.name("identifier");
 
@@ -2229,6 +2229,7 @@ namespace client
                 );
             unary_expression.name("unary_expression");
 
+            // Any changes to these items should be added/updated in PrintConfig.cpp::FunctionsConfigDef() to keep EditGCodeDialog up-to-date
             function = iter_pos[px::bind(&FactorActions::set_start_pos, _1, _val)] >> (
                  (kw["min"] > '(' > conditional_expression(_r1) [_val = _1] > ',' > conditional_expression(_r1) > ')')
                                                                     [ px::bind(&expr::min, _val, _2) ]
@@ -2298,14 +2299,11 @@ namespace client
             regular_expression = raw[lexeme['/' > *((utf8char - char_('\\') - char_('/')) | ('\\' > char_)) > '/']];
             regular_expression.name("regular_expression");
 
-            keywords.add
+            (void)keywords.add
                 ("and")
-                ("digits")
-                ("zdigits")
                 ("empty")
                 ("if")
                 ("int")
-                ("is_nil")
                 ("local")
                 //("inf")
                 ("else")
@@ -2313,22 +2311,26 @@ namespace client
                 ("endif")
                 ("false")
                 ("global")
+                ("repeat")
+                ("not")
+                ("or")
+                ("true");
+
+            (void)function_keywords.add
+                ("digits")
+                ("zdigits")
+                ("is_nil")
                 ("interpolate_table")
                 ("min")
                 ("max")
                 ("random")
                 ("filament_change")
-                ("repeat")
                 ("round")
                 ("floor")
                 ("ceil")
-                ("not")
                 ("one_of")
-                ("or")
-                ("size")
-                ("true");
-
-            if (0) {
+                ("size");
+        if (0) {
                 debug(start);
                 debug(text);
                 debug(text_block);
@@ -2417,7 +2419,8 @@ namespace client
         qi::rule<Iterator, std::string(const MyContext*), qi::locals<bool, MyContext::NewOldVariable>, skipper> new_variable_statement;
         qi::rule<Iterator, std::vector<expr>(const MyContext*), skipper> initializer_list;
 
-        qi::symbols<char> keywords;
+        qi::symbols<> keywords;
+        qi::symbols<> function_keywords;
     };
 }
 
@@ -2459,4 +2462,11 @@ bool PlaceholderParser::evaluate_boolean_expression(const std::string &templ, co
     return process_macro(templ, context) == "true";
 }
 
+std::set<std::string> PlaceholderParser::get_function_keywords()
+{
+    std::set<std::string> function_keywords;
+    g_macro_processor_instance.function_keywords.for_each(
+        [&function_keywords](const std::string& key, auto) { function_keywords.emplace(key); });
+    return function_keywords;
 }
+} // namespace Slic3r

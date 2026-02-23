@@ -10808,6 +10808,7 @@ CustomGcodeSpecificConfigDef::CustomGcodeSpecificConfigDef()
 }
 
 const CustomGcodeSpecificConfigDef custom_gcode_specific_config_def;
+const FunctionsConfigDef           functions_config_def;
 
 #undef new_def
 

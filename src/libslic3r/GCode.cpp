@@ -2072,11 +2072,16 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
     check_placeholder_parser_failed();
 
 #if ORCA_CHECK_GCODE_PLACEHOLDERS
+    for (auto& function_keyword : PlaceholderParser::get_function_keywords()) {
+        if (!functions_config_def.has(function_keyword)) {
+            m_placeholder_error_messages[function_keyword + " - function has no definition (FunctionsConfigDef)"];
+        }
+    }
     if (!m_placeholder_error_messages.empty()){
         std::ostringstream message;
         message << "Some EditGcodeDialog defs were not specified properly. Do so in PrintConfig under SlicingStatesConfigDef:" << std::endl;
         for (const auto& error : m_placeholder_error_messages) {
-            message << std::endl << error.first << ": " << std::endl;
+            message << std::endl << error.first << ":" << std::endl;
             for (const auto& str : error.second)
                 message << str << ", ";
             message.seekp(-2, std::ios_base::end);

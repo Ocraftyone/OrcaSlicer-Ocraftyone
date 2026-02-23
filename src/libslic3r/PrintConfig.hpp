@@ -1897,6 +1897,7 @@ public:
     CustomGcodeSpecificConfigDef();
 };
 extern const CustomGcodeSpecificConfigDef    custom_gcode_specific_config_def;
+extern const FunctionsConfigDef              functions_config_def;
 
 // This class defines the command line options representing actions.
 extern const CLIActionsConfigDef    cli_actions_config_def;

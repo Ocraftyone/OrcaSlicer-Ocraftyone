@@ -226,9 +226,9 @@ void EditGCodeDialog::init_params_list(const std::string& custom_gcode_name)
 
         // Add function subgroup
 
-        if (!cgp_functions_config_def.empty()) {
+        if (!functions_config_def.empty()) {
             wxDataViewItem functions = m_params_list->AppendGroup(_L("Functions"), "custom-gcode_function");
-            for (const auto& [opt_key, def] : cgp_functions_config_def.options)
+            for (const auto& [opt_key, def] : functions_config_def.options)
                 m_params_list->AppendParam(functions, get_type(opt_key, def), opt_key);
         }
     }
@@ -362,7 +362,7 @@ void EditGCodeDialog::selection_changed(wxDataViewEvent& evt)
                  &cgp_temperatures_config_def,
                  &cgp_timestamps_config_def,
                  &cgp_other_presets_config_def,
-                 &cgp_functions_config_def
+                 &functions_config_def
              }) {
             if (config->has(opt_key)) {
                 def = config->get(opt_key);
