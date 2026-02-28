@@ -573,14 +573,7 @@ private:
     float                               m_max_layer_z{ 0.0f };
     float                               m_last_width{ 0.0f };
 
-    // Always check gcode placeholders when building in debug mode.
-#if !defined(NDEBUG)
-#define ORCA_CHECK_GCODE_PLACEHOLDERS 1
-#endif
-    
-#if ORCA_CHECK_GCODE_PLACEHOLDERS
     std::map<std::string, std::vector<std::string>> m_placeholder_error_messages;
-#endif
 
     Point                               m_last_pos;
     bool                                m_last_pos_defined;

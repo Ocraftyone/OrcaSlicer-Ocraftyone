@@ -7651,6 +7651,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
     }
 
     background_process.fff_print()->set_check_multi_filaments_compatibility(wxGetApp().app_config->get("enable_high_low_temp_mixed_printing") == "false");
+    background_process.fff_print()->set_dev_mode(wxGetApp().get_mode() == comDevelop);
 
     Print::ApplyStatus invalidated;
     const auto& preset_bundle = wxGetApp().preset_bundle;
