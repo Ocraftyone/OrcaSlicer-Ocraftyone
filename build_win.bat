@@ -39,8 +39,8 @@ call :add_arg install_deps bool u install-deps "download and install system depe
 call :add_arg use_ninja bool x ninja "Use Ninja Multi-Config as the generator"
 call :add_arg use_vs2019 bool "" vs2019 "Use Visual Studio 16 2019 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
 call :add_arg use_vs2022 bool "" vs2022 "Use Visual Studio 17 2022 as the generator. Can be used with '-u'. (Default: Autodetect or Visual Studio 18 2026)"
-call :add_arg install_ide bool "" install-ide "Install the full Visual Studio IDE instead of only the build tools. Use with '-u'"
-call :add_arg bypass_vs_install bool "" no-vs "Skip installing Visual Studio. Select this option if you are providing your own installation. Use with '-u'"
+call :add_arg install_ide bool "" install-ide "Install the full Visual Studio IDE. Use with '-u'"
+call :add_arg install_buildtools bool "" install-buildtools "Install the Visual Studio buildtools. Use with '-u'"
 
 :: handle arguments from input
 call :handle_args %*
@@ -77,31 +77,23 @@ if "%install_deps%" == "ON" (
         echo WinGet was not found
         exit /b 1
     )
+    if not "%install_buildtools%" == "ON" if not "%install_ide%" == "ON" goto :after_vs_install
     set "winget_args=-e --source=winget"
-    if not "%bypass_vs_install%" == "ON" (
-        set ide_component_flag=
-        set vs_edition=BuildTools
-        if "%use_vs2019%" == "ON" (
-            if "%install_ide%" == "ON" (
-                echo The community edition of Visual Studio 16 2019 is no longer available.
-                echo Resolve this issue by doing one of the following:
-                echo    1^) Manually install your own copy of Visual Studio 16 2019 Professional/Enterprise ^(run '%script_name% -u --no-vs' to install the remaining dependencies^)
-                echo    2^) Install Visual Studio 16 2019 Build Tools ^(no '--install-ide'^)
-                echo    3^) Install Visual Studio 17 2022 Community edition ^(no '--vs2019'^)
-                exit /b 1
-            )
-            set vs_year=.2019
-        ) else (
-        	if "%use_vs2022%" == "ON" (
-				set vs_year=.2022
-        	)
-            if "%install_ide%" == "ON" (
-                set vs_edition=Community
-                set ide_component_flag=Microsoft.VisualStudio.Component.VC.CoreIde
-            )
-        )
-        call :print_and_run winget install !winget_args! --id=Microsoft.VisualStudio!vs_year!.!vs_edition! --force --custom "--add !ide_component_flag! Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project Microsoft.VisualStudio.Component.Windows11SDK.22621"
-    )
+	set ide_component_flag=
+	set vs_edition=BuildTools
+	if "%use_vs2019%" == "ON" (
+		set vs_year=.2019
+	)
+	if "%use_vs2022%" == "ON" (
+		set vs_year=.2022
+	)
+	if "%install_ide%" == "ON" (
+		set vs_edition=Community
+		set ide_component_flag=Microsoft.VisualStudio.Component.VC.CoreIde
+	)
+	call :print_and_run winget install !winget_args! --id=Microsoft.VisualStudio!vs_year!.!vs_edition! --force --custom "--add !ide_component_flag! Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project Microsoft.VisualStudio.Component.Windows11SDK.22621"
+
+    :after_vs_install
     call :print_and_run winget install !winget_args! --id=Kitware.CMake
     call :print_and_run winget install !winget_args! --id=StrawberryPerl.StrawberryPerl
     call :print_and_run winget install !winget_args! --id=Git.Git
