@@ -59,7 +59,8 @@ if "%kill_jobs%" == "ON" (
 	exit /b 0
 )
 
-if "%*" == "" (
+set "all_args=%*"
+if "%all_args:"=%" == "" (
     set print_help=ON
 )
 
