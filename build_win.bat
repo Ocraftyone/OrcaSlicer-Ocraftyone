@@ -32,6 +32,7 @@ call :add_arg build_debuginfo bool e debuginfo "build in RelWithDebInfo mode"
 call :add_arg print_help bool h help "print this help message"
 call :add_arg pack_deps bool p pack "bundle build deps into a zip file"
 call :add_arg build_slicer bool s slicer "build OrcaSlicer"
+call :add_arg deps_target string t deps-target "Build specific deps target"
 call :add_arg kill_jobs bool x kill-jobs "Kills all MSBuild jobs"
 call :add_arg deps_args string "" deps-args "Add args to the deps configure command"
 call :add_arg slicer_args string "" slicer-args "Add args to the slicer configure command"
@@ -119,6 +120,11 @@ if not "%use_ninja%" == "ON"  (
 	set "gen_arch=-A x64"
 )
 
+if "%deps_target%" == "" (
+echo default deps target
+	set "deps_target=deps"
+)
+
 cmake --version >nul 2>nul
 if not !errorlevel! == 0 (
     echo CMake was not found. Have you installed the system dependencies?
@@ -157,7 +163,7 @@ if "%build_deps%" == "ON" (
     call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_arch% -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
     %error_check%
 
-    call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target deps -- -m
+    call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target %deps_target% -- -m
     %error_check%
 )
 
