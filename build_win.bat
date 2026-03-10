@@ -483,7 +483,7 @@ exit /b 0
 	exit /b 0
 
 	:vs_path_found
-	call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" >nul 2>nul
+	call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 >nul 2>nul
 	set "VS_PATH="
 
 	exit /b 0
