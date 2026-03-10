@@ -17,7 +17,29 @@ if(WIN32)
     set(_conf_cmd perl Configure )
     set(_cross_comp_prefix_line "")
     set(_make_cmd nmake)
-    set(_install_cmd nmake install_sw )
+    set(_install_cmd nmake install_sw)
+    unset(_jom_opts)
+    if (OPENSSL_USE_JOM)
+        if (NOT EXISTS ${DEP_DOWNLOAD_DIR}/jom/jom.zip)
+            file(DOWNLOAD
+                https://qt.mirror.constant.com/official_releases/jom/jom_1_1_6.zip
+                ${DEP_DOWNLOAD_DIR}/jom/jom.zip
+                EXPECTED_MD5 d1dffac4e4771c91207821d2426ba5aa
+            )
+        endif ()
+        if (NOT EXISTS ${DEP_DOWNLOAD_DIR}/jom/extracted/jom.exe)
+            file(MAKE_DIRECTORY ${DEP_DOWNLOAD_DIR}/jom/extracted)
+            execute_process(
+                COMMAND ${CMAKE_COMMAND} -E tar xvf ${DEP_DOWNLOAD_DIR}/jom/jom.zip
+                WORKING_DIRECTORY ${DEP_DOWNLOAD_DIR}/jom/extracted
+            )
+        endif ()
+        set(_jom ${DEP_DOWNLOAD_DIR}/jom/extracted/jom.exe)
+        set(_make_cmd ${_jom} -j${NPROC})
+        # Force serial writes to the PDB file
+        set(_jom_opts /FS)
+        message(STATUS "Using qt's JOM for OpenSSL build")
+    endif ()
     if (IS_CLANG_CL)
         set(_clang_cl_opts CC=clang-cl CXX=clang-cl)
         get_patch_dir_flag(OpenSSL)
@@ -58,8 +80,10 @@ ExternalProject_Add(dep_OpenSSL
         no-shared
         no-asm
         no-ssl3-method
+        no-tests
         no-dynamic-engine
         ${_clang_cl_opts}
+        ${_jom_opts}
     ${_patch_cmd}
     BUILD_IN_SOURCE ON
     BUILD_COMMAND ${_make_cmd}
