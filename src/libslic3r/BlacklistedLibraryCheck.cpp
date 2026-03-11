@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <boost/nowide/convert.hpp>
+#include <boost/filesystem/path.hpp>
 
 #ifdef  WIN32
 #include <psapi.h>

@@ -37,7 +37,12 @@ target_include_directories(Clipper2
 )
 
 if (WIN32)
-  target_compile_options(Clipper2 PRIVATE /W4 /WX)
+  if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+    target_compile_options(Clipper2 PRIVATE /W4)
+  else ()
+    target_compile_options(Clipper2 PRIVATE /W4 /WX)
+  endif ()
+
 else()
   target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
   target_link_libraries(Clipper2 PUBLIC -lm)

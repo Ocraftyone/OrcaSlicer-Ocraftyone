@@ -1,3 +1,4 @@
+#include <wx/dc.h>
 #include "SideTools.hpp"
 #include "bambu_networking.hpp"
 #include <wx/dcmemory.h>

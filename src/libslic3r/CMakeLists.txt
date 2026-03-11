@@ -625,6 +625,7 @@ endif()
 
 if(WIN32)
     target_link_libraries(libslic3r PRIVATE Psapi.lib bcrypt.lib)
+    target_compile_definitions(libslic3r PUBLIC "WIN32_LEAN_AND_MEAN" "NOMINMAX")
 endif()
 
 if(SLIC3R_PROFILE)

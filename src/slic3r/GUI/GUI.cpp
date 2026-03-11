@@ -16,9 +16,6 @@
 #if __APPLE__
 #import <IOKit/pwr_mgt/IOPMLib.h>
 #elif _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
 #include "boost/nowide/convert.hpp"
 #endif
 

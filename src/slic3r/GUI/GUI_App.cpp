@@ -34,6 +34,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/beast/core/detail/base64.hpp>
+#include <boost/locale/encoding_utf.hpp>
 
 #include <wx/stdpaths.h>
 #include <wx/imagpng.h>

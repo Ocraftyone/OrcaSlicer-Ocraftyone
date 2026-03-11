@@ -1,3 +1,4 @@
+#include <wx/dc.h>
 #include <wx/dcgraph.h>
 #include "GUI.hpp"
 #include "GUI_App.hpp"

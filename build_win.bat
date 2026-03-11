@@ -26,10 +26,12 @@ set "CMAKE=cmake"
 call :add_arg slicer_asan bool a asan "Build slicer with ASAN enabled"
 call :add_arg build_debug bool b debug "build in Debug mode"
 call :add_arg clean bool c clean "force a clean build"
+call :add_arg use_cache bool C cache "use sccache to cache compilation of the slicer build. Can be used with '-u'"
 call :add_arg build_deps bool d deps "download and build dependencies in ./deps/ (build prerequisite)"
 call :add_arg dry_run bool D dry-run "perform a dry run of the script"
 call :add_arg build_debuginfo bool e debuginfo "build in RelWithDebInfo mode"
 call :add_arg print_help bool h help "print this help message"
+call :add_arg use_clang_cl bool l clang-cl "Use clang-cl as the compiler. Can be used with '-u'"
 call :add_arg pack_deps bool p pack "bundle build deps into a zip file"
 call :add_arg build_slicer bool s slicer "build OrcaSlicer"
 call :add_arg deps_target string t deps-target "Build specific deps target"
@@ -70,6 +72,12 @@ if "%print_help%" == "ON" (
     exit /b 0
 )
 
+if "%use_cache%" == "ON" if "%build_slicer%" == "ON" (
+	echo Using sccache! Auto setting --ninja and --clang-cl...
+	set "use_ninja=ON"
+	set "use_clang_cl=ON"
+)
+
 call :autodetect_vs
 %error_check%
 
@@ -93,12 +101,19 @@ if "%install_deps%" == "ON" (
 		set vs_edition=Community
 		set ide_component_flag=Microsoft.VisualStudio.Component.VC.CoreIde
 	)
-	call :print_and_run winget install !winget_args! --id=Microsoft.VisualStudio!vs_year!.!vs_edition! --force --custom "--add !ide_component_flag! Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project Microsoft.VisualStudio.Component.Windows11SDK.22621"
+	if "%use_clang_cl%" == "ON" (
+		set clang_cl_flag=Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset
+	)
+
+	call :print_and_run winget install !winget_args! --id=Microsoft.VisualStudio!vs_year!.!vs_edition! --force --custom "--add !ide_component_flag! Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.CMake.Project Microsoft.VisualStudio.Component.Windows11SDK.22621 !clang_cl_flag!"
 
     :after_vs_install
     call :print_and_run winget install !winget_args! --id=Kitware.CMake
     call :print_and_run winget install !winget_args! --id=StrawberryPerl.StrawberryPerl
     call :print_and_run winget install !winget_args! --id=Git.Git
+    if "%use_cache%" == "ON" (
+    	call :print_and_run winget install !winget_args! --id=Mozilla.sccache
+    )
     echo System dependencies have been installed. Restart the shell to reload the environment.
     exit /b 0
 )
@@ -113,11 +128,21 @@ if "%use_vs2019%" == "ON" (
 		if "%use_ninja%" == "ON"  (
 			set "generator=Ninja Multi-Config"
 			call :setup_dev_env
+			%error_check%
+			set "using_ninja=ON"
 		)
 	)
 )
-if not "%use_ninja%" == "ON"  (
-	set "gen_arch=-A x64"
+
+if "%using_ninja%" == "ON" (
+	if "%use_clang_cl%" == "ON" (
+		set "gen_args=-DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe -DCMAKE_LINKER=link.exe"
+	)
+) else (
+	set "gen_args=-A x64"
+	if "%use_clang_cl%" == "ON" (
+		set "gen_args=!gen_args -T ClangCL"
+	)
 )
 
 if "%deps_target%" == "" (
@@ -160,10 +185,10 @@ if "%build_deps%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_arch% -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
+    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_args% -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
     %error_check%
 
-    call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target %deps_target% -- -m
+    call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target %deps_target%
     %error_check%
 )
 
@@ -191,10 +216,14 @@ if "%build_slicer%" == "ON" (
     	set "slicer_args=!slicer_args! -DSLIC3R_ASAN=ON"
     )
 
-    call :print_and_run cmake -B %build_dir% -G "%generator%" %gen_arch% -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type% !slicer_args!
+    if "%use_cache%" == "ON" (
+    	set "slicer_args=!slicer_args! -DUSE_CCACHE=ON -DSLIC3R_PCH=OFF"
+    )
+
+    call :print_and_run cmake -B %build_dir% -G "%generator%" %gen_args% -DORCA_TOOLS=ON %SIG_FLAG% -DCMAKE_BUILD_TYPE=%build_type% !slicer_args!
     %error_check%
 
-    call :print_and_run cmake --build %build_dir% --config %build_type% --target ALL_BUILD -- -m
+    call :print_and_run cmake --build %build_dir% --config %build_type%
     %error_check%
 
     call :print_and_run call scripts/run_gettext.bat
