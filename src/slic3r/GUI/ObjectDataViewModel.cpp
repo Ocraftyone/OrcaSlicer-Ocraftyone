@@ -534,6 +534,7 @@ wxDataViewItem ObjectDataViewModel::AddOutsidePlate(bool refresh)
 {
     wxDataViewItem plate_item = AddPlate(nullptr, _L("Outside"));
     m_plate_outside = (ObjectDataViewModelNode*)plate_item.GetID();
+    HandleOutsidePlateVisibility();
 
     return plate_item;
 }
@@ -634,6 +635,7 @@ wxDataViewItem ObjectDataViewModel::AddObject(ModelObject *model_object, std::st
     if (refresh) {
         ItemAdded(parent, child);
     }
+    HandleOutsidePlateVisibility();
     return child;
 }
 
@@ -1908,6 +1910,20 @@ void ObjectDataViewModel::ReparentObject(ObjectDataViewModelNode* plate, ObjectD
     object->m_parent = plate;
     plate->Append(object);
     ItemAdded(wxDataViewItem(plate), wxDataViewItem(object));
+    HandleOutsidePlateVisibility();
+}
+
+void ObjectDataViewModel::HandleOutsidePlateVisibility()
+{
+    if ( m_plate_outside->GetChildCount() > 0) {
+        if (!m_plate_outside_shown) {
+            m_plate_outside_shown = true;
+            ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(m_plate_outside));
+        }
+    } else {
+        m_plate_outside_shown = false;
+        ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(m_plate_outside));
+    }
 }
 
 wxDataViewItem ObjectDataViewModel::ReorganizeChildren( const int current_volume_id,

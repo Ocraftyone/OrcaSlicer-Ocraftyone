@@ -348,6 +348,7 @@ class ObjectDataViewModel :public wxDataViewModel
     wxBitmap                              m_lock_bmp;
 
     ObjectDataViewModelNode*                    m_plate_outside;
+    bool                                        m_plate_outside_shown{true};
 
     wxDataViewCtrl*                             m_ctrl { nullptr };
     std::vector<std::tuple<ObjectDataViewModelNode*, wxString, wxString>> assembly_name_list;
@@ -546,6 +547,7 @@ private:
     void            AddAllChildren(const wxDataViewItem& parent);
 
     void            ReparentObject(ObjectDataViewModelNode* plate, ObjectDataViewModelNode* object);
+    void           HandleOutsidePlateVisibility();
     wxDataViewItem  AddOutsidePlate(bool refresh = true);
 
     void UpdateBitmapForNode(ObjectDataViewModelNode *node);
