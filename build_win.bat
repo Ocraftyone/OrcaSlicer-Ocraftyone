@@ -175,6 +175,7 @@ if defined ORCA_UPDATER_SIG_KEY set "SIG_FLAG=-DORCA_UPDATER_SIG_KEY=%ORCA_UPDAT
 
 REM Set minimum CMake policy to avoid <3.5 errors
 set CMAKE_POLICY_VERSION_MINIMUM=3.5
+set _START_TIME=%TIME%
 
 set DEPS=%WP%\deps\%build_dir%\OrcaSlicer_dep
 if "%build_deps%" == "ON" (
@@ -231,6 +232,17 @@ if "%build_slicer%" == "ON" (
     call :print_and_run cmake --build %build_dir% --target install --config %build_type%
     %error_check%
 )
+
+for /f "tokens=1-3 delims=:.," %%a in ("%_START_TIME: =0%") do set /a "_start_s=%%a*3600+%%b*60+%%c"
+for /f "tokens=1-3 delims=:.," %%a in ("%TIME: =0%") do set /a "_end_s=%%a*3600+%%b*60+%%c"
+set /a "_elapsed=_end_s - _start_s"
+if %_elapsed% lss 0 set /a "_elapsed+=86400"
+set /a "_hours=_elapsed / 3600"
+set /a "_remainder=_elapsed - _hours * 3600"
+set /a "_mins=_remainder / 60"
+set /a "_secs=_remainder - _mins * 60"
+echo.
+echo Build completed in %_hours%h %_mins%m %_secs%s
 
 :: End of script
 exit /b 0
