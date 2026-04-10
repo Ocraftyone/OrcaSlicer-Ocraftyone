@@ -55,7 +55,7 @@ protected:
     SpoolmanDynamicConfig* m_config;
     wxPanel*               m_main_panel;
     wxPanel*               m_loading_panel;
-    wxBoxSizer*            m_info_widgets_parent_sizer;
+    wxScrolled<wxPanel>*   m_info_widgets_panel;
     wxGridSizer*           m_info_widgets_grid_sizer;
     wxBoxSizer*            m_spoolman_error_label_sizer;
     Label*                 m_spoolman_error_label;

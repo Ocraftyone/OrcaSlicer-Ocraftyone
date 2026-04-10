@@ -97,7 +97,7 @@ void SpoolInfoWidget::rescale()
 }
 
 SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
-    : DPIDialog(parent, wxID_ANY, _L("Spoolman"), wxDefaultPosition, {-1, 45 * EM}, wxDEFAULT_DIALOG_STYLE)
+    : DPIDialog(parent, wxID_ANY, _L("Spoolman"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE)
 {
     this->SetBackgroundColour(*wxWHITE);
 
@@ -131,11 +131,13 @@ SpoolmanDialog::SpoolmanDialog(wxWindow* parent)
     m_spoolman_error_label_sizer->AddStretchSpacer(1);
     main_panel_sizer->Add(m_spoolman_error_label_sizer, 1, wxALL | wxALIGN_CENTER | wxEXPAND, EM);
 
-    m_info_widgets_parent_sizer = new wxBoxSizer(wxVERTICAL);
+    m_info_widgets_panel = new wxScrolled<wxPanel>(m_main_panel, wxID_ANY);
+    auto info_widgets_sizer = new wxBoxSizer(wxVERTICAL);
+    m_info_widgets_panel->SetSizer(info_widgets_sizer);
     m_info_widgets_grid_sizer   = new wxGridSizer(2, EM, EM);
-    m_info_widgets_parent_sizer->Add(m_info_widgets_grid_sizer, 0, wxALIGN_CENTER);
-    m_info_widgets_parent_sizer->AddStretchSpacer();
-    main_panel_sizer->Add(m_info_widgets_parent_sizer, 1, wxALL | wxALIGN_CENTER, EM);
+    info_widgets_sizer->Add(m_info_widgets_grid_sizer, 0, wxALIGN_CENTER);
+    info_widgets_sizer->AddStretchSpacer();
+    main_panel_sizer->Add(m_info_widgets_panel, 1, wxALL | wxALIGN_CENTER, EM);
 
     m_buttons = new DialogButtons(m_main_panel, {"Refresh", "OK"});
     m_buttons->UpdateButtons();
@@ -187,7 +189,7 @@ void SpoolmanDialog::build_options_group() const
 void SpoolmanDialog::build_spool_info()
 {
     show_loading();
-    m_info_widgets_parent_sizer->Show(false);
+    m_info_widgets_panel->Show(false);
     m_spoolman_error_label_sizer->Show(false);
     create_thread([&] {
         m_info_widgets_grid_sizer->Clear();
@@ -205,12 +207,21 @@ void SpoolmanDialog::build_spool_info()
         // Finish loading on the main thread
         this->CallAfter([&, show_widgets] {
             if (show_widgets) {
-                m_info_widgets_parent_sizer->Show(true);
+                m_info_widgets_panel->Show(true);
                 auto preset_bundle = wxGetApp().preset_bundle;
                 for (auto& filament_preset_name : preset_bundle->filament_presets) {
-                    m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_main_panel,
+                    m_info_widgets_grid_sizer->Add(new SpoolInfoWidget(m_info_widgets_panel,
                                                                        preset_bundle->filaments.find_preset(filament_preset_name)),
                                                    0, wxEXPAND);
+                }
+                auto row_count = m_info_widgets_grid_sizer->GetEffectiveRowsCount();
+                if (row_count < 3) {
+                    m_info_widgets_panel->SetMinClientSize(wxDefaultSize);
+                    m_info_widgets_panel->SetScrollRate(0, 0);
+                } else {
+                    auto height = (m_info_widgets_grid_sizer->CalcMin().GetHeight() / row_count) * 2;
+                    m_info_widgets_panel->SetMinClientSize({wxDefaultCoord, height});
+                    m_info_widgets_panel->SetScrollRate(0, EM);
                 }
             }
             show_loading(false);
