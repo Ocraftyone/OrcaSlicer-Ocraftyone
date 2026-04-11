@@ -663,16 +663,22 @@ std::string MoonrakerPrinterAgent::get_filament_id(int spoolman_spool_id, const 
     auto* bundle = GUI::wxGetApp().preset_bundle;
     // Attempt to find filament associated with Spoolman first
     if (spoolman_spool_id > 0) {
+        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << "Spoolman ID available. Attempting to find an associated spool with ID " << spoolman_spool_id << "...";
         auto spoolman = Spoolman::get_instance();
         auto spool   = spoolman->get_spoolman_spool_by_id(spoolman_spool_id);
         if (spool.has_value()) {
             auto spoolman_filament_id = spool->get()->filament->id;
+            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << "Attempting to find a filament with Spoolman filament ID " << spoolman_filament_id << "...";
             for (auto filament : bundle->filaments.get_compatible()) {
                 if (filament->config.opt_int("spoolman_filament_id", 0) == spoolman_filament_id) {
+                    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << "Found filament: " << filament->filament_id;
                     return filament->filament_id;
                 }
             }
+        } else {
+            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << "Could not find a spool with ID " << spoolman_spool_id;
         }
+        BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << "Falling back to generic filaments";
     }
     // Fallback to generic filaments
     return bundle ? bundle->filaments.filament_id_by_type(filament_type) : map_filament_type_to_generic_id(filament_type);
@@ -781,6 +787,8 @@ bool MoonrakerPrinterAgent::fetch_moonraker_filament_data(std::vector<AmsTrayDat
         return false;
     }
 
+    BOOST_LOG_TRIVIAL(trace) << "MoonrakerPrinterAgent::fetch_moonraker_filament_data: Received JSON data: " << response_body;
+
     auto json = nlohmann::json::parse(response_body, nullptr, false, true);
     if (json.is_discarded()) {
         BOOST_LOG_TRIVIAL(warning) << "MoonrakerPrinterAgent::fetch_moonraker_filament_data: Invalid JSON response";
@@ -875,6 +883,8 @@ bool MoonrakerPrinterAgent::fetch_hh_filament_info(std::vector<AmsTrayData>& tra
         BOOST_LOG_TRIVIAL(debug) << "MoonrakerPrinterAgent::fetch_hh_filament_info: Failed to fetch HH data: " << http_error;
         return false;
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "MoonrakerPrinterAgent::fetch_hh_filament_data: Received JSON data: " << response_body;
 
     auto json = nlohmann::json::parse(response_body, nullptr, false, true);
     if (json.is_discarded()) {
