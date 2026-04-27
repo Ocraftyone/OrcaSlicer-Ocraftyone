@@ -62,10 +62,17 @@ if "%kill_jobs%" == "ON" (
 	exit /b 0
 )
 
+if "%*" == "" (
+	set print_help=ON
+	goto :before_print_help
+)
+
 set "all_args=%*"
 if "%all_args:"=%" == "" (
-    set print_help=ON
+	set print_help=ON
 )
+
+:before_print_help
 
 if "%print_help%" == "ON" (
     call :print_help_msg
