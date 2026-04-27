@@ -7986,7 +7986,7 @@ bool GUI_App::check_url_association(std::wstring url_prefix, std::wstring& reg_b
 {
     reg_bin = L"";
 #ifdef WIN32
-    wxRegKey key_full(wxRegKey::HKCU, "Software\\Classes\\" + url_prefix + "\\shell\\open\\command");
+    wxRegKey key_full(wxRegKey::HKCU, wxString("Software\\Classes\\") + url_prefix + "\\shell\\open\\command");
     if (!key_full.Exists()) {
         return false;
     }
@@ -8010,8 +8010,8 @@ void GUI_App::associate_url(std::wstring url_prefix)
 
     wxString key_string = "\"" + wbinary + "\" \"%1\"";
 
-    wxRegKey key_first(wxRegKey::HKCU, "Software\\Classes\\" + url_prefix);
-    wxRegKey key_full(wxRegKey::HKCU, "Software\\Classes\\" + url_prefix + "\\shell\\open\\command");
+    wxRegKey key_first(wxRegKey::HKCU, wxString("Software\\Classes\\") + url_prefix);
+    wxRegKey key_full(wxRegKey::HKCU, wxString("Software\\Classes\\") + url_prefix + "\\shell\\open\\command");
     if (!key_first.Exists()) {
         key_first.Create(false);
     }
@@ -8029,7 +8029,7 @@ void GUI_App::associate_url(std::wstring url_prefix)
 void GUI_App::disassociate_url(std::wstring url_prefix)
 {
 #ifdef WIN32
-    wxRegKey key_full(wxRegKey::HKCU, "Software\\Classes\\" + url_prefix + "\\shell\\open\\command");
+    wxRegKey key_full(wxRegKey::HKCU, wxString("Software\\Classes\\") + url_prefix + "\\shell\\open\\command");
     if (!key_full.Exists()) {
         return;
     }

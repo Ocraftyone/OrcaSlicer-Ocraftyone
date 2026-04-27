@@ -79,7 +79,7 @@ if "%print_help%" == "ON" (
     exit /b 0
 )
 
-if "%use_cache%" == "ON" if "%build_slicer%" == "ON" (
+if "%use_cache%" == "ON" (
 	echo Using sccache! Auto setting --ninja and --clang-cl...
 	set "use_ninja=ON"
 	set "use_clang_cl=ON"
@@ -193,7 +193,11 @@ if "%build_deps%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_args% -DCMAKE_BUILD_TYPE=%build_type% %deps_args%
+    if "%use_cache%" == "ON" (
+    	set "deps_args=!deps_args! -DUSE_CCACHE=ON -DSLIC3R_PCH=OFF"
+    )
+
+    call :print_and_run cmake -S deps -B deps/%build_dir% -G "%generator%" %gen_args% -DCMAKE_BUILD_TYPE=%build_type% !deps_args!
     %error_check%
 
     call :print_and_run cmake --build deps/%build_dir% --config %build_type% --target %deps_target%

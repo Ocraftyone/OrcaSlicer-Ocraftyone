@@ -1,0 +1,21 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e7b8f15..2935e02 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1108,14 +1108,14 @@ else()
+   # Draco app targets.
+   draco_add_executable(
+     NAME draco_decoder
+-    SOURCES "${draco_src_root}/tools/draco_decoder.cc" ${draco_io_sources}
++    SOURCES "${draco_src_root}/tools/draco_decoder.cc"
+     DEFINES ${draco_defines}
+     INCLUDES ${draco_include_paths}
+     LIB_DEPS ${draco_dependency})
+ 
+   draco_add_executable(
+     NAME draco_encoder
+-    SOURCES "${draco_src_root}/tools/draco_encoder.cc" ${draco_io_sources}
++    SOURCES "${draco_src_root}/tools/draco_encoder.cc"
+     DEFINES ${draco_defines}
+     INCLUDES ${draco_include_paths}
+     LIB_DEPS ${draco_dependency})

@@ -59,6 +59,14 @@ if (NPROC EQUAL 0)
     set(NPROC 1)
 endif ()
 
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/modules/)
+if (USE_CCACHE)
+    if (MSVC)
+        set(CCACHE_PROGRAMS "sccache" CACHE STRING _ FORCE)
+    endif ()
+    find_package(ccache REQUIRED)
+endif ()
+
 set(DEP_DOWNLOAD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/DL_CACHE CACHE PATH "Path for downloaded source packages.")
 set(FLATPAK FALSE CACHE BOOL "Toggles various build settings for flatpak, like /usr/local in DESTDIR or not building wxwidgets")
 
@@ -160,8 +168,12 @@ if (NOT _is_multi AND NOT CMAKE_BUILD_TYPE)
     message(STATUS "Forcing CMAKE_BUILD_TYPE to Release as it was not specified.")
 endif ()
 
+foreach (var IN LISTS CCACHE_VARS_SET)
+    list(APPEND CCACHE_LINE -D${var}=${${var}})
+endforeach ()
+
 function(orcaslicer_add_cmake_project projectname)
-    cmake_parse_arguments(P_ARGS "" "INSTALL_DIR;BUILD_COMMAND;INSTALL_COMMAND" "CMAKE_ARGS" ${ARGN})
+    cmake_parse_arguments(P_ARGS "" "INSTALL_DIR;BUILD_COMMAND;INSTALL_COMMAND;FORCE_VS" "CMAKE_ARGS" ${ARGN})
 
     set(_configs_line -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE})
     if (_is_multi OR MSVC)
@@ -176,13 +188,24 @@ function(orcaslicer_add_cmake_project projectname)
     set(_build_j "-j${NPROC}")
     set(_clang_cl_args)
     if (MSVC)
-        set(_gen CMAKE_GENERATOR "${DEP_MSVC_GEN}" CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}")
-        set(_build_j "/m")
-        if (IS_CLANG_CL)
-            set(_clang_cl_args -T=${CMAKE_GENERATOR_TOOLSET}
-                # TODO: Find a more elegant way to add this flag
-                "-DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE} /MP"
-                "-DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE} /MP")
+        if ("${CMAKE_GENERATOR}" MATCHES "Ninja" AND NOT P_ARGS_FORCE_VS)
+            set(_gen CMAKE_GENERATOR ${CMAKE_GENERATOR})
+            if (IS_CLANG_CL)
+                set(_clang_cl_args
+                    -DCMAKE_C_COMPILER=clang-cl.exe
+                    -DCMAKE_CXX_COMPILER=clang-cl.exe
+                    -DCMAKE_LINKER=link.exe
+                )
+            endif ()
+        else ()
+            set(_gen CMAKE_GENERATOR "${DEP_MSVC_GEN}" CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}")
+            set(_build_j "/m")
+            if (IS_CLANG_CL AND NOT P_ARGS_FORCE_VS)
+                set(_clang_cl_args -T ClangCL
+                    # TODO: Find a more elegant way to add this flag
+                    "-DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE} /MP"
+                    "-DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE} /MP")
+            endif ()
         endif ()
     endif ()
 
@@ -208,6 +231,7 @@ if (NOT IS_CROSS_COMPILE OR NOT APPLE)
             -DCMAKE_MODULE_LINKER_FLAGS:STRING=${CMAKE_MODULE_LINKER_FLAGS}
             -DBUILD_SHARED_LIBS:BOOL=OFF
             ${_clang_cl_args}
+            ${CCACHE_LINE}
             ${_cmake_osx_arch}
             "${_configs_line}"
             ${DEP_CMAKE_OPTS}
@@ -250,6 +274,7 @@ else()
             -DCMAKE_IGNORE_PREFIX_PATH:STRING=${CMAKE_IGNORE_PREFIX_PATH}
             -DBUILD_SHARED_LIBS:BOOL=OFF
             ${_cmake_osx_arch}
+            ${CCACHE_LINE}
             "${_configs_line}"
             ${DEP_CMAKE_OPTS}
             ${P_ARGS_CMAKE_ARGS}

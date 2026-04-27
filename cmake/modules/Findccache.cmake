@@ -68,6 +68,13 @@ find_package_handle_standard_args(ccache
 )
 
 if (CCACHE_FOUND)
+    macro(set_var var_name var_value)
+        if (NOT "${var_value}" STREQUAL "")
+            set(${var_name} ${var_value})
+        endif ()
+        list(APPEND CCACHE_VARS_SET ${var_name})
+    endmacro()
+
     set(CCACHE_SUPPORTED YES)
 
     if (CMAKE_GENERATOR STREQUAL "Xcode")
@@ -85,6 +92,11 @@ if (CCACHE_FOUND)
         set(CMAKE_XCODE_ATTRIBUTE_CXX        "${CMAKE_BINARY_DIR}/launch-cxx" CACHE INTERNAL _)
         set(CMAKE_XCODE_ATTRIBUTE_LD         "${CMAKE_BINARY_DIR}/launch-c"   CACHE INTERNAL _)
         set(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS "${CMAKE_BINARY_DIR}/launch-cxx" CACHE INTERNAL _)
+
+        set_var(CMAKE_XCODE_ATTRIBUTE_CC)
+        set_var(CMAKE_XCODE_ATTRIBUTE_CXX)
+        set_var(CMAKE_XCODE_ATTRIBUTE_LD)
+        set_var(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS)
     elseif (CMAKE_GENERATOR MATCHES "Visual Studio")
         # Copy original ccache.exe and rename to cl.exe, this way intermediate cmd file is not needed
         file(COPY_FILE ${CCACHE_PROGRAM} ${CMAKE_BINARY_DIR}/cl.exe ONLY_IF_DIFFERENT)
@@ -98,10 +110,11 @@ if (CCACHE_FOUND)
             "UseMultiToolTask=true"
             "UseStructuredOutput=false"
         )
+        set_var(CMAKE_VS_GLOBALS)
     elseif(CMAKE_GENERATOR MATCHES "Ninja" OR CMAKE_GENERATOR MATCHES "Unix Makefiles")
         # Support Unix Makefiles and Ninja
-        set(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set_var(CMAKE_C_COMPILER_LAUNCHER   "${CCACHE_PROGRAM}")
+        set_var(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
     else()
         message(WARNING "Unsupported generator for compiler cache: ${CMAKE_GENERATOR}")
         set(CCACHE_SUPPORTED NO)
