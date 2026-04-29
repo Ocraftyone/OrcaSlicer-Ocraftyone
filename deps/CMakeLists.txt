@@ -185,7 +185,6 @@ function(orcaslicer_add_cmake_project projectname)
     endif ()
 
     set(_gen "")
-    set(_build_j "-j${NPROC}")
     set(_clang_cl_args)
     if (MSVC)
         if ("${CMAKE_GENERATOR}" MATCHES "Ninja" AND NOT P_ARGS_FORCE_VS)
@@ -199,7 +198,6 @@ function(orcaslicer_add_cmake_project projectname)
             endif ()
         else ()
             set(_gen CMAKE_GENERATOR "${DEP_MSVC_GEN}" CMAKE_GENERATOR_PLATFORM "${DEP_PLATFORM}")
-            set(_build_j "/m")
             if (IS_CLANG_CL AND NOT P_ARGS_FORCE_VS)
                 set(_clang_cl_args -T ClangCL
                     # TODO: Find a more elegant way to add this flag
@@ -207,6 +205,14 @@ function(orcaslicer_add_cmake_project projectname)
                     "-DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE} /MP")
             endif ()
         endif ()
+    endif ()
+
+    if ($ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+        set(_build_j "")  # assume environment will control --build parallel setting
+    elseif(MSVC)
+        set(_build_j "/m")
+    else()
+        set(_build_j "-j${NPROC}")
     endif ()
 
 if (NOT IS_CROSS_COMPILE OR NOT APPLE)
