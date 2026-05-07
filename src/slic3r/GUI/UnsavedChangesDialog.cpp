@@ -1087,7 +1087,7 @@ bool UnsavedChangesDialog::save(PresetCollection* dependent_presets, bool show_s
         // for system/default/external presets we should take an edited name
         //BBS: add project embedded preset logic and refine is_external
         bool save_to_project = false;
-        if (preset.is_system || preset.is_default) {
+        if (!preset.can_overwrite()) {
         //if (preset.is_system || preset.is_default || preset.is_external) {
             SavePresetDialog save_dlg(this, preset.type);
             if (save_dlg.ShowModal() != wxID_OK) {
@@ -1114,7 +1114,7 @@ bool UnsavedChangesDialog::save(PresetCollection* dependent_presets, bool show_s
             if (tab->supports_printer_technology(printer_technology) && tab->current_preset_is_dirty()) {
                 const Preset& preset = tab->get_presets()->get_edited_preset();
                 //BBS: add project embedded preset logic and refine is_external
-                if (preset.is_system || preset.is_default)
+                if (!preset.can_overwrite())
                 //if (preset.is_system || preset.is_default || preset.is_external)
                     types_for_save.emplace_back(preset.type);
 
@@ -1668,7 +1668,7 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
         // process changes of extruders count
         if (type == Preset::TYPE_PRINTER && old_pt == ptFFF &&
             old_config.opt<ConfigOptionFloats>("nozzle_diameter")->values.size() != new_config.opt<ConfigOptionFloats>("nozzle_diameter")->values.size()) {
-            wxString local_label = _L("Extruders count");
+            wxString local_label = _L("Extruder count");
             wxString old_val = from_u8((boost::format("%1%") % old_config.opt<ConfigOptionFloats>("nozzle_diameter")->values.size()).str());
             wxString new_val = from_u8((boost::format("%1%") % new_config.opt<ConfigOptionFloats>("nozzle_diameter")->values.size()).str());
 
@@ -2228,7 +2228,7 @@ void DiffPresetDialog::update_tree()
         // process changes of extruders count
         if (type == Preset::TYPE_PRINTER && left_pt == ptFFF &&
             left_config.opt<ConfigOptionStrings>("extruder_colour")->values.size() != right_congig.opt<ConfigOptionStrings>("extruder_colour")->values.size()) {
-            wxString local_label = _L("Extruders count");
+            wxString local_label = _L("Extruder count");
             wxString left_val = from_u8((boost::format("%1%") % left_config.opt<ConfigOptionStrings>("extruder_colour")->values.size()).str());
             wxString right_val = from_u8((boost::format("%1%") % right_congig.opt<ConfigOptionStrings>("extruder_colour")->values.size()).str());
 
