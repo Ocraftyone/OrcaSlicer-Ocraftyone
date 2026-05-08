@@ -716,7 +716,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     toggle_line("brim_ears_detection_length", have_brim_ear);
 
     // Hide Elephant foot compensation layers if elefant_foot_compensation is not enabled
-    toggle_line("elefant_foot_compensation_layers", ToggleExpr::FromConfigFloat(config, "elefant_foot_compensation") > 0 || config->option<ConfigOptionPercent>("elefant_foot_layers_density")->get_abs_value(1.0f) < 1.0f);
+    toggle_line("elefant_foot_compensation_layers", ToggleExpr::FromConfigFloat(config, "elefant_foot_compensation") > 0 || ToggleExpr::FromConfigFloat(config, "elefant_foot_layers_density") < 100.f);
 
     auto have_raft = ToggleExpr::FromConfigInt(config, "raft_layers") > 0;
     auto have_support_material = ToggleExpr::FromConfigBool(config, "enable_support") || have_raft;
@@ -791,13 +791,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     auto has_ironing = ToggleExpr::FromConfigEnum<IroningType>(config, "ironing_type") != IroningType::NoIroning;
     for (auto el : { "ironing_pattern", "ironing_flow", "ironing_spacing", "ironing_angle", "ironing_inset", "ironing_angle_fixed" })
         toggle_line(el, has_ironing);
-bool has_rectilinear_ironing = (config->opt_enum<InfillPattern>("ironing_pattern") == InfillPattern::ipRectilinear);
+    auto has_rectilinear_ironing = ToggleExpr::FromConfigEnum<InfillPattern>(config, "ironing_pattern") == InfillPattern::ipRectilinear;
     for (auto el : {"ironing_angle", "ironing_angle_fixed"})
         toggle_field(el, has_ironing && has_rectilinear_ironing);
 
     toggle_line("ironing_speed", has_ironing || has_support_ironing);
 
-    bool has_zaa = config->opt_bool("zaa_enabled");
+    auto has_zaa = ToggleExpr::FromConfigBool(config, "zaa_enabled");
     for (auto el : {"zaa_minimize_perimeter_height", "zaa_min_z", "zaa_dont_alternate_fill_direction", "ironing_expansion"})
         toggle_line(el, has_zaa);
 
@@ -810,7 +810,7 @@ bool has_rectilinear_ironing = (config->opt_enum<InfillPattern>("ironing_pattern
     toggle_field("single_extruder_multi_material", !is_BBL_printer);
 
     auto bSEMM = ToggleExpr::FromConfigBool(&preset_bundle->printers.get_edited_preset().config, "single_extruder_multi_material");
-    const bool supports_wipe_tower_2 = !is_BBL_Printer && preset_bundle->printers.get_edited_preset().config.opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
+    const auto supports_wipe_tower_2 = !is_BBL_printer && ToggleExpr::FromConfigEnum<WipeTowerType>(&preset_bundle->printers.get_edited_preset().config, "wipe_tower_type") == WipeTowerType::Type2;
 
     toggle_field("ooze_prevention", !bSEMM);
     auto have_ooze_prevention = ToggleExpr::FromConfigBool(config, "ooze_prevention");
@@ -878,7 +878,7 @@ bool has_rectilinear_ironing = (config->opt_enum<InfillPattern>("ironing_pattern
 
     // Show noise type specific options with the same logic
     const auto fuzzy_skin_noise_type = ToggleExpr::FromConfigEnum<NoiseType>(config, "fuzzy_skin_noise_type");
-    const bool is_ripple = fuzzy_skin_noise_type == NoiseType::Ripple;
+    const auto is_ripple = fuzzy_skin_noise_type == NoiseType::Ripple;
     toggle_line("fuzzy_skin_scale", fuzzy_skin_noise_type != NoiseType::Classic && has_fuzzy_skin && !is_ripple);
     toggle_line("fuzzy_skin_octaves", fuzzy_skin_noise_type != NoiseType::Classic && fuzzy_skin_noise_type != NoiseType::Voronoi && has_fuzzy_skin && !is_ripple);
     toggle_line("fuzzy_skin_persistence", (fuzzy_skin_noise_type == NoiseType::Perlin || fuzzy_skin_noise_type == NoiseType::Billow) && has_fuzzy_skin && !is_ripple);

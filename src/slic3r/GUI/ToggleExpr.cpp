@@ -154,6 +154,16 @@ ToggleExprFragment<std::string> ToggleExpr::FromConfigString(const DynamicPrintC
     return {config, opt_key, opt_idx};
 }
 
+ToggleExpr ToggleExpr::FromConfigSize(const DynamicPrintConfig* config, const std::string& opt_key, CompareType comp_type, size_t comp_val)
+{
+    return ToggleExpr(compare(config->opt<ConfigOptionVectorBase>(opt_key)->size(), comp_type, comp_val), opt_key + " size").set_comparison(comp_type, std::to_string(comp_val));
+}
+
+ToggleExprFragment<size_t> ToggleExpr::FromConfigSize(const DynamicPrintConfig* config, const std::string& opt_key)
+{
+    return {config, opt_key, 0};
+}
+
 std::string ToggleExpr::build_reasons_string(std::string beginning_message, const std::set<std::string>& reasons)
 {
     if (reasons.empty()) return "";

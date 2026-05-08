@@ -222,16 +222,22 @@ public:
 
     static ToggleExpr FromConfigFloat(
         const DynamicPrintConfig* config, const std::string& opt_key, CompareType comp_type, double comp_val, unsigned opt_idx = -1);
+
     static ToggleExprFragment<double> FromConfigFloat(const DynamicPrintConfig* config, const std::string& opt_key, unsigned opt_idx = -1);
 
-    static ToggleExpr                      FromConfigString(const DynamicPrintConfig* config,
-                                                            const std::string&        opt_key,
-                                                            CompareType               comp_type,
-                                                            const std::string&        comp_val,
-                                                            unsigned                  opt_idx = -1);
+    static ToggleExpr FromConfigString(const DynamicPrintConfig* config,
+                                       const std::string& opt_key,
+                                       CompareType comp_type,
+                                       const std::string& comp_val,
+                                       unsigned opt_idx = -1);
+
     static ToggleExprFragment<std::string> FromConfigString(const DynamicPrintConfig* config,
-                                                            const std::string&        opt_key,
-                                                            unsigned                  opt_idx = -1);
+                                                            const std::string& opt_key,
+                                                            unsigned opt_idx = -1);
+
+    static ToggleExpr FromConfigSize(const DynamicPrintConfig* config, const std::string& opt_key, CompareType comp_type, size_t comp_val);
+
+    static ToggleExprFragment<size_t> FromConfigSize(const DynamicPrintConfig* config, const std::string& opt_key);
 
     static std::string build_reasons_string(std::string beginning_message, const std::set<std::string>& reasons);
 };
@@ -252,6 +258,8 @@ template<typename T> class ToggleExprFragment
             return ToggleExpr::FromConfigString(config, opt_key, comp_type, comp_val, opt_idx);
         } else if constexpr (std::is_enum_v<T>) {
             return ToggleExpr::FromConfigEnum(config, opt_key, comp_type, comp_val, opt_idx);
+        } else if constexpr (std::is_same_v<T, size_t>) {
+            return ToggleExpr::FromConfigSize(config, opt_key, comp_type, comp_val);
         } else {
             // Unsupported
             static_assert(false, "The provided type is unsupported by this class");

@@ -4250,21 +4250,21 @@ void TabFilament::toggle_options()
             toggle_option(el, has_enable_overhang_bridge_fan);
 
         // Orca: toggle dont slow down for external perimeters if
-        bool has_slow_down_for_layer_cooling = m_config->opt_bool("slow_down_for_layer_cooling", 0);
+        auto has_slow_down_for_layer_cooling = ToggleExpr::FromConfigBool(m_config, "slow_down_for_layer_cooling", 0);
         toggle_option("dont_slow_down_outer_wall", has_slow_down_for_layer_cooling);
 
-        toggle_line("additional_cooling_fan_speed", printer_cfg.opt_bool("auxiliary_fan"));
+        toggle_line("additional_cooling_fan_speed", ToggleExpr::FromConfigBool(&printer_cfg, "auxiliary_fan"));
 
-        bool support_air_filtration = printer_cfg.opt_bool("support_air_filtration");
+        auto support_air_filtration = ToggleExpr::FromConfigBool(&printer_cfg, "support_air_filtration");
         for (auto el : {"activate_air_filtration", "during_print_exhaust_fan_speed", "complete_print_exhaust_fan_speed"})
             toggle_line(el, support_air_filtration);
 
         if (support_air_filtration) {
-            bool activate_air_filtration = m_config->opt_bool("activate_air_filtration", 0);
+            auto activate_air_filtration = ToggleExpr::FromConfigBool(m_config, "activate_air_filtration", 0);
             toggle_option("activate_air_filtration_during_print", activate_air_filtration);
-            toggle_option("during_print_exhaust_fan_speed", activate_air_filtration && m_config->opt_bool("activate_air_filtration_during_print", 0));
+            toggle_option("during_print_exhaust_fan_speed", activate_air_filtration && ToggleExpr::FromConfigBool(m_config, "activate_air_filtration_during_print", 0));
             toggle_option("activate_air_filtration_on_completion", activate_air_filtration);
-            toggle_option("complete_print_exhaust_fan_speed", activate_air_filtration && m_config->opt_bool("activate_air_filtration_on_completion", 0));
+            toggle_option("complete_print_exhaust_fan_speed", activate_air_filtration && ToggleExpr::FromConfigBool(m_config, "activate_air_filtration_on_completion", 0));
         }
     }
     if (m_active_page->title() == L("Filament"))
@@ -4334,7 +4334,7 @@ void TabFilament::toggle_options()
         toggle_option("filament_multitool_ramming_volume", multitool_ramming);
         toggle_option("filament_multitool_ramming_flow", multitool_ramming);
 
-        bool is_BBL_multi_extruder = is_BBL_printer && printer_cfg.option<ConfigOptionFloats>("nozzle_diameter")->size() > 1;
+        auto is_BBL_multi_extruder = is_BBL_printer && ToggleExpr::FromConfigSize(&printer_cfg, "nozzle_diameter") > 1;
         const int extruder_idx = 0; // m_variant_combo->GetSelection(); // TODO: Orca hack
         toggle_line("long_retractions_when_ec", is_BBL_multi_extruder, 256 + extruder_idx);
         auto long_retractions_ec = ToggleExpr::FromConfigBool(m_config, "long_retractions_when_ec", extruder_idx);
@@ -5282,6 +5282,8 @@ void TabPrinter::toggle_options()
        b_is_BBL_printer = wxGetApp().preset_bundle->is_bbl_vendor();
     }
 
+    auto is_BBL_printer = ToggleExpr(b_is_BBL_printer, "BBL printer").set_prefixes("Isn't ", "Is ").disable_postfix();
+
     // bool have_multiple_extruders = true;
     //m_extruders_count > 1;
     //if (m_active_page->title() == "Custom G-code") {
@@ -5312,7 +5314,7 @@ void TabPrinter::toggle_options()
     }
 
     if (m_active_page->title() == L("Multimaterial")) {
-        const bool supports_wipe_tower_2 = !is_BBL_printer && m_config->opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
+        const auto supports_wipe_tower_2 = !is_BBL_printer && ToggleExpr::FromConfigEnum<WipeTowerType>(m_config, "wipe_tower_type") == WipeTowerType::Type2;
         toggle_line("wipe_tower_type", !is_BBL_printer);
         // SoftFever: hide specific settings for BBL printer
         for (auto el : {
