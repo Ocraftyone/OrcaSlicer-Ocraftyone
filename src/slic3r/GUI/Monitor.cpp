@@ -362,7 +362,7 @@ void MonitorPanel::update_all()
         // only disconnected server in cloud mode
         if (obj->connection_type() != "lan") {
             if (m_agent) {
-                server_status = m_agent->is_server_connected() ? 0 : (int)MONITOR_DISCONNECTED_SERVER;
+                server_status = m_agent->is_server_connected(wxGetApp().get_printer_cloud_provider()) ? 0 : (int)MONITOR_DISCONNECTED_SERVER;
             }
         }
         show_status((int) MONITOR_DISCONNECTED + server_status);
@@ -518,6 +518,16 @@ void MonitorPanel::jump_to_HMS()
         m_tabpanel->SetSelection(PT_HMS);
 }
 
+void MonitorPanel::jump_to_Upgrade()
+{
+    if (this->IsShown()) {
+        auto page = m_tabpanel->GetCurrentPage();
+        if (page && page != m_upgrade_panel) {
+            m_tabpanel->SetSelection(PT_UPDATE);
+        }
+    }
+}
+
 void MonitorPanel::jump_to_LiveView()
 {
     if (!this->IsShown()) { return; }
@@ -529,6 +539,20 @@ void MonitorPanel::jump_to_LiveView()
     }
 
     m_status_info_panel->get_media_play_ctrl()->jump_to_play();
+}
+
+void MonitorPanel::jump_to_Rack()
+{
+    if (!this->IsShown()) {
+        return;
+    }
+
+    auto page = m_tabpanel->GetCurrentPage();
+    if (page && page != m_status_info_panel) {
+        m_tabpanel->SetSelection(PT_STATUS);
+    }
+
+    m_status_info_panel->jump_to_Rack();
 }
 
 void MonitorPanel::update_network_version_footer()
