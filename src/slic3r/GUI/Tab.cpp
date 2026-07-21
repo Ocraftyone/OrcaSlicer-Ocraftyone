@@ -6202,7 +6202,8 @@ void TabPrinter::toggle_options()
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})
           toggle_line(el, !is_BBL_printer);
 
-        bool gcf_is_marlin_firmware = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == GCodeFlavor::gcfMarlinFirmware;
+        auto gcf = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
+        bool gcf_is_marlin_firmware = gcf == GCodeFlavor::gcfMarlinFirmware;
         bool spoolman_enabled = Spoolman::is_enabled();
 
         toggle_line("handles_spoolman_consumption", spoolman_enabled);
